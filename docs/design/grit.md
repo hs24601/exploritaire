@@ -1,0 +1,11 @@
+# Grit buff keru
+
+Grit appears among available keru when the Momentum gauge reveals the hand. Inspect the card and choose a friendly kin. That kin pays 2 current AP; Grit becomes exhausted and disappears from offers, and the kin receives a circular Grit buff. It creates no kin/foundation slot and does not increase AP capacity. Invalid, unaffordable, silenced, dead or enemy-turn applications change nothing. One Grit can be used in this draft; it does not stack.
+
+An attack against the living buffed kin grants 1 AP, capped at its existing ceiling. Each distinct enemy can trigger this once in a turn; a second attack from the same enemy cannot. The buff stores enemy IDs with the current round token, so the next turn permits those enemies again. Even a full-cap attack consumes that enemy's trigger. Guarded, blocked and evaded attacks count as attacks; DoT, Thorns and passive Indominable damage do not. A lethal hit does not bank AP on a downed kin. Effects are integrated into normal, paced, tutorial and legacy timed enemy attack paths.
+
+Scenario links capture the buff's owner, turn token, enemy set and exhaustion exactly. Continued encounters keep the owner/buff and exhaustion but clear the enemy set for the new encounter's turn. A fresh restart resets them. No removal/dispel mechanic is introduced here. Common, Rare, Epic and Legendary are four explicit testing drafts with the same 2-AP cost and exact +1/once-per-enemy-per-turn contract; additional rarity perks remain unauthored rather than adding unrequested behavior. A geometric gem emblem is a temporary code-native card treatment, not new generated character artwork.
+
+Buff trays are left-aligned to their kin's actual foundation width, including the 80%-sized support face. AP meters count their actual wrapped pip rows from max capacity, not current bank. Single-row meters release the formerly reserved second-row space while larger capacities keep the overflow row.
+
+Validation: `grit.test.ts` checks every rarity, cost, exhaustion, eligibility, per-enemy/per-turn limits, full-cap consumption, event exclusions, real attacks, snapshot serialization and continuation. `tools/grit-check.cjs` checks the offer/inspection flow, insufficient AP, cost/exhaustion, buff, left-edge alignment, dynamic AP rows and an enemy attack in the browser on phone.

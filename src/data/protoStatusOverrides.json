@@ -1,0 +1,10 @@
+{
+  "duskscale": {
+    "name": "Duskscale Armor",
+    "glyph": "🐉",
+    "kind": "buff",
+    "expires": null,
+    "description": "Immune to stagger. Loses Duskscale Armor when using [[deep-breath|Deep Breath]].",
+    "blocksStagger": true
+  }
+}

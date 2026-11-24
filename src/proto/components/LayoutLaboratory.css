@@ -1,0 +1,37 @@
+.layout-laboratory{grid-column:1/-1;grid-row:2;min-width:0;display:grid;gap:7px;margin-top:8px}
+.layout-laboratory nav{display:flex;flex-wrap:wrap;gap:5px}
+.layout-laboratory [role=tab],.layout-position-controls button{font:16px/1.15 system-ui;border:1px solid #718e86;border-radius:6px;padding:7px 10px;background:#13292b;color:#dcebe4;cursor:pointer}
+.layout-laboratory [aria-selected=true]{background:#365449;border-color:#f1d797;color:#fff4c9}
+.layout-laboratory p{font:16px/1.3 system-ui!important}.layout-laboratory p span{display:block;color:#aabeb7}
+.layout-position-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:16px system-ui}.layout-position-controls button:disabled{opacity:.4;cursor:default}
+/* The lab's taller header pushes the notes down; stop them above the 180px Momentum emblem (bottom 52px) and let the panel scroll. */
+.combat-sandbox .battle-field[data-layout-experiment] .scenario-notes{--scenario-notes-max-h:calc(100dvh - 360px)}
+.combat-sandbox .battle-field[data-layout-experiment='position'] .scenario-notes{--scenario-notes-max-h:calc(100dvh - 404px)}
+/* Reserve sits beside the rack at full card size, so Hero keeps her place and no lane is covered. */
+.layout-reserve{position:absolute;left:calc(50% + 3 * var(--spatial-card-w) + 15px + 20px);top:50%;translate:0 -50%;min-width:0;color:#e9dba7;font:16px/1.2 system-ui;pointer-events:auto;white-space:nowrap}
+.layout-reserve>div{display:flex;gap:6px;margin-top:5px;--classic-card-w:var(--spatial-card-w)}.layout-reserve button{position:relative;width:var(--spatial-card-w);height:var(--spatial-card-h);flex:none;box-shadow:0 4px 8px rgba(0,0,0,.5)}.layout-reserve .proto-card-center-rank{font-size:max(20px,calc(var(--spatial-card-w) * .38))}
+.layout-reserve button:not([data-gameplay-disabled]){outline:3px solid #f6d27a;outline-offset:2px;box-shadow:0 0 18px rgba(246,210,122,.45),0 4px 8px rgba(0,0,0,.5)}
+
+/* Reach cues: gold rim = Hero can play it now; dimmed = out of Hero's reach under this tab; plum top edge = the dragon can take it too. */
+.combat-sandbox .battle-field[data-layout-experiment] .battle-spatial-lane .battle-field__column > button{box-shadow:0 4px 8px rgba(0,0,0,.5),inset 0 0 0 1px rgba(241,215,151,.25);transition:filter .2s,translate .2s}
+.combat-sandbox .battle-field[data-layout-experiment] .battle-spatial-lane .battle-field__column > button:is([data-reach='none'],[data-reach='enemy']){filter:saturate(.3) brightness(.5)}
+.combat-sandbox .battle-field[data-layout-experiment] .battle-spatial-lane .battle-field__column > button[data-reach='both']{box-shadow:0 -5px 0 #c58bd0,0 4px 8px rgba(0,0,0,.5),inset 0 0 0 1px rgba(241,215,151,.25)}
+.combat-sandbox .battle-field[data-layout-experiment] .battle-spatial-lane .battle-field__column > button[data-legal]{outline:3px solid #f6d27a;outline-offset:2px;translate:-50% -4px;box-shadow:0 0 18px rgba(246,210,122,.45),0 6px 10px rgba(0,0,0,.55)}
+.combat-sandbox .battle-field[data-layout-experiment] .battle-spatial-lane .battle-field__column > button[data-legal][data-reach='both']{box-shadow:0 -5px 0 #c58bd0,0 0 18px rgba(246,210,122,.45),0 6px 10px rgba(0,0,0,.55)}
+.combat-sandbox .battle-field[data-layout-experiment='fanned'] .battle-spatial-lane .battle-field__column > button[data-legal]{translate:-50% 0}
+
+/* Lane labels touch the rack's left edge and say who reaches each lane. */
+.combat-sandbox .battle-field[data-layout-experiment][data-spatial-lanes] .battle-spatial-lane .battle-spatial-lane__label{left:auto;right:calc(50% + 3 * var(--spatial-card-w) + 15px + 14px);top:18px;bottom:auto;display:grid;justify-items:end;text-align:right;font:16px/1.15 system-ui;padding-right:8px;border-right:3px solid currentColor;white-space:nowrap}
+.battle-spatial-lane__label strong{font-weight:600}.battle-spatial-lane__label span{color:#aabeb7}
+.combat-sandbox .battle-field[data-layout-experiment='rotating'][data-spatial-lanes] .battle-spatial-lane[data-lane='enemy-rear'] .battle-spatial-lane__label{top:0}
+.battle-field[data-layout-experiment] .battle-field__board{height:auto!important;min-height:100%;align-content:start!important;padding-top:14px!important;padding-bottom:8px!important;transform:scale(var(--combat-fit,1))!important;transform-origin:top center}
+.battle-field[data-layout-experiment='position'] .battle-field__team[data-team='party']{translate:clamp(calc(116px - 50cqw),calc((var(--hero-position) - 2.5) * (var(--spatial-card-w) + 6px)),calc(50cqw - 116px)) 0}
+/* Fanned: the front (party-rear) card drops by --fan-drop, so the back (frontier) card keeps its rank and AP tag in the exposed strip. */
+.combat-sandbox .battle-field[data-layout-experiment='fanned'] .battle-field__board{--fan-drop:max(48px,calc(var(--spatial-card-h) * .53))}
+.battle-field[data-layout-experiment='fanned'] .battle-field__middle{height:calc(var(--spatial-card-h) + var(--fan-drop) + 24px)!important}
+.battle-field[data-layout-experiment='fanned'] .battle-spatial-lane[data-lane='frontier']{height:calc(var(--spatial-card-h) + var(--fan-drop) + 24px)!important}
+.battle-field[data-layout-experiment='fanned'] .battle-spatial-lane .battle-field__column{overflow:visible}
+.battle-field[data-layout-experiment='fanned'] [data-battle-depth='1'] .proto-card-center-rank{inset:0 auto auto 2px;height:28px;font-size:20px}
+.battle-field[data-layout-experiment='fanned'] [data-battle-depth='1'] .proto-card-icon{position:absolute;top:max(30px,calc(var(--spatial-card-w) * .4));left:3px;margin:0;font:600 16px/1 system-ui;color:#ffe7a8}
+.combat-sandbox .battle-field[data-layout-experiment='fanned'] .battle-spatial-lane .battle-field__column > button[data-battle-depth='2']{border-color:#78b8a7}
+@media(max-height:760px){.combat-sandbox .battle-field[data-layout-experiment] .battle-field__board{--spatial-card-w:min(calc((100cqw - 30px) / 6),44px);padding-top:8px!important}}

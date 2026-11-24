@@ -1,0 +1,31 @@
+.card-jumbo-backdrop { position: fixed; inset: 0; z-index: 120000; display: grid; place-items: center; background: #020807c9; }
+.card-jumbo { position: relative; width: min(calc(78vh * var(--jumbo-ratio)), 82vw); color: #fff0d2; font-family: 'Classic Pixel', monospace; }
+.card-jumbo__face { width: 100%; aspect-ratio: var(--jumbo-ratio); --classic-card-w: min(calc(78vh * var(--jumbo-ratio)), 82vw); --classic-radius: 14px; }
+.card-jumbo:has(.trading-card__below) { width: min(calc((100vh - 164px) * var(--jumbo-ratio)), 82vw); margin-bottom: 100px; }
+.card-jumbo__close { position: absolute; z-index: 5; right: -12px; top: -22px; width: 44px; height: 44px; border: 2px solid #d9b963; border-radius: 50%; background: #182221; color: #fff0d2; font-size: 28px; }
+.card-jumbo__action { display: block; margin: 12px auto 0; padding: 10px 20px; border: 2px solid #d9b963; background: #243b2c; color: #fff0d2; font-size: 20px; }
+.card-jumbo:has(.event-card-details) { width:min(calc((100dvh - 180px) * var(--jumbo-ratio)),82vw); }
+.card-jumbo__actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:12px; }
+.card-jumbo__actions .card-jumbo__action { margin:0; min-height:44px; font-size:16px; padding:8px; }
+.card-jumbo__face > .playing-card, .card-jumbo__face > .quest-card, .card-jumbo__face > .proto-ordinary-day { width: 100%; height: 100%; transform: none; opacity: 1; }
+.card-jumbo__face .quest-card { padding: 16px; gap: 12px; font-size: 20px; }
+.card-jumbo__face .quest-card__title { font-size: 26px; padding: 10px; }
+.card-jumbo__face .quest-card__text { font-size: 20px; padding: 12px; flex: none; display: block; -webkit-line-clamp: unset; overflow: visible; }
+.card-jumbo__face .quest-card__status, .card-jumbo__face .quest-card__reward { font-size: 20px; }
+.card-jumbo__face .proto-ordinary-day { display: flex; flex-direction: column; padding: 16px; gap: 12px; border: 6px solid #160d0b; border-radius: 16px; background: var(--quest-frame-image), #703d2d; }
+.card-jumbo__face .proto-ordinary-day__actions { display: flex; flex-direction: column; }
+.card-jumbo__face .quest-card-back { display: grid; place-items: center; }
+.card-jumbo__face .proto-rest-receiver { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 48px; background: linear-gradient(145deg,#40202a,#180d16); border: 3px solid #d9b963; border-radius: 14px; }
+.card-jumbo__face .proto-ordinary-day__heading strong { font-size: 28px; }
+.card-jumbo__face .proto-ordinary-day__thought { flex: none; padding: 12px; font-size: 20px; }
+.card-jumbo__face .proto-ordinary-day__thought > span { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.card-jumbo__face .proto-ordinary-day button, .card-jumbo__face .proto-ordinary-day__actions > span { font-size: 20px; }
+.card-jumbo__face .proto-card-rank { font-size: calc(var(--classic-card-w) * .3); }
+.card-jumbo__face .proto-card-icon { font-size: calc(var(--classic-card-w) * .18); }
+.card-jumbo__face .proto-pond__fish { --fish-card-w: var(--classic-card-w); transform: none; background: linear-gradient(145deg,#10323a,#07191d); border: 3px solid #96c6c0; border-radius: 14px; }
+.card-jumbo__face .proto-pond__fish[data-revealed] { background: linear-gradient(145deg,#40202a,#180d16); border-color: #ffd166; }
+.card-jumbo__face .proto-pond__band { font-size: 24px; }
+.card-jumbo__face > .proto-pond__fish:nth-child(n) { transform: none; }
+
+.card-jumbo:has(.trading-card__available) {width:min(calc((100vh - 164px) * var(--jumbo-ratio)),calc(100vw - 280px));transform:translateX(120px);}
+@media(max-width:900px){.card-jumbo:has(.trading-card__available){width:min(calc((100vh - 164px) * var(--jumbo-ratio)),calc(100vw - 190px));transform:translateX(79px);}}

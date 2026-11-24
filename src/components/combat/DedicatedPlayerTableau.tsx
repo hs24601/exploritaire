@@ -41,7 +41,7 @@ export const DedicatedPlayerTableau = memo(function DedicatedPlayerTableau({
   startIndex = 0,
 }: DedicatedPlayerTableauProps) {
   const neonMode = FORCE_NEON_CARD_STYLE;
-  const tableGlobalScale = useCardScalePreset('table');
+  const tableGlobalScale = useCardScalePreset('board');
   const cardSize = useMemo(() => ({
     width: Math.round(CARD_SIZE.width * cardScale * tableGlobalScale),
     height: Math.round(CARD_SIZE.height * cardScale * tableGlobalScale),

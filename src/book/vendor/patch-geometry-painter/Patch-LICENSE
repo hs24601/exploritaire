@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2026 Patch
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+Third-party parts
+
+GeometryPainterThreeJS (vendor/geometry-painter/), commit 79c7556, by
+mohamedachrefelouafi, Copyright (c) 2026 mohamedachrefelouafi, MIT License:
+vendor/geometry-painter/LICENSE. Changes are listed in
+vendor/geometry-painter/VENDOR.md. The studio look in src/stage.ts is adapted
+from its src/app.ts, under the same licence.
+https://github.com/achrefelouafi/GeometryPainterThreeJS
+
+three.js and three-mesh-bvh (installed by npm): MIT License, the three.js
+authors and Garrett Johnson.
+
+Art, all CC0 1.0: Marble Bust 01 and Horse Statue 01 (public/models/) from
+Poly Haven, textures recompressed to WebP; the pictures in thumbs/ and cover.jpg
+(stills of this demo, Patch).
+
+Red Hat Mono (fonts/): The Red Hat Project Authors, SIL Open Font License 1.1,
+fonts/OFL-red-hat-mono.txt.

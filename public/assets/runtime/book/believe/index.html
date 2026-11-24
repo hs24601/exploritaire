@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Believe · Page 23</title><style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #020204; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  /* the film's own still, there the moment the page opens (nothing dark to wait through, and something to see for a
+     thumbnail taken early); it fades into the live film once that has been drawn */
+  #poster { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;
+    background: #020204 url('./poster.webp') center / cover no-repeat; transition: opacity 1.6s ease; }
+  #poster.gone { opacity: 0; }
+  #sound { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10;
+    width: 44px; height: 44px; padding: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    color: #eef2fb; background: rgba(6, 8, 14, .42); border: 1px solid rgba(210, 225, 250, .3);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); -webkit-tap-highlight-color: transparent;
+    opacity: .78; transition: opacity .7s, background .3s, border-color .3s, transform .15s; }
+  #sound:hover { opacity: 1; background: rgba(6, 8, 14, .62); border-color: rgba(210, 225, 250, .6); }
+  #sound:active { transform: scale(.93); }
+  #sound:focus-visible { outline: 2px solid rgba(210, 225, 250, .85); outline-offset: 3px; }
+  #sound.idle { opacity: 0; }
+  #sound.stuck { border-color: rgba(255, 140, 90, .9); opacity: 1; }
+  #sound svg { width: 22px; height: 22px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  #sound .spk { fill: currentColor; stroke-width: 1.2; }
+  #sound .wave { display: none; }
+  #sound.on .wave { display: inline; animation: wave 1.8s ease-in-out infinite; }
+  #sound.on .wave.w2 { animation-delay: .25s; }
+  #sound.on .mute { display: none; }
+  @keyframes wave { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+  #sound.hint { animation: hint 2.6s ease-in-out 3; }
+  @keyframes hint { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 190, 110, 0); } 50% { box-shadow: 0 0 0 5px rgba(255, 190, 110, .14), 0 0 18px rgba(255, 170, 80, .38); } }
+  @media (prefers-reduced-motion: reduce) { #sound.hint, #sound.on .wave { animation: none; } }
+</style><script>addEventListener('error',e=>parent.postMessage({type:'believe:error',message:e.message},location.origin));addEventListener('unhandledrejection',e=>parent.postMessage({type:'believe:error',message:String(e.reason)},location.origin));</script><script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script></head><body><div id="poster" aria-hidden="true"></div><button id="sound" class="hint" type="button" aria-label="Sound on" aria-pressed="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path class="spk" d="M3.5 9.2h3.3l4.7-4v13.6l-4.7-4H3.5z"/>
+    <path class="mute" d="M15.6 9.4l5 5.2M20.6 9.4l-5 5.2"/>
+    <path class="wave" d="M15.2 9.1a4.2 4.2 0 0 1 0 5.8"/>
+    <path class="wave w2" d="M17.9 6.6a7.8 7.8 0 0 1 0 10.8"/>
+  </svg>
+</button><script>
+// Sound on and off. Browsers only let a page make sound after a click, so the
+// sound starts from this button. It works even before the room has been built:
+// the audio is made here, inside the click, and the rest of the page builds its
+// sounds on it when it is ready. M on the keyboard does the same.
+(() => {
+  const btn = document.getElementById('sound');
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) { btn.remove(); return; }
+  const S = window.__penAudio = { ctx: null, on: [], want: false, set: null, stuck: false };
+  // a short loop of silence played through an ordinary audio element: Safari and
+  // iPhones treat the page as playing music, and the ringer switch does not mute it
+  let el = null;
+  function silentLoop() {
+    const n = 4000, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    const a = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); a.loop = true; a.setAttribute('playsinline', ''); return a;
+  }
+  const quiet = (p) => { if (p && p.catch) p.catch(() => { }); };
+  function start() {
+    // the kind of audio this page plays has to be set before the audio itself exists
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { }
+    try { if (!el) el = silentLoop(); quiet(el.play()); } catch (e) { }
+    let c = S.ctx;
+    // a context that never got going (or was closed) is replaced by a new one, made in this click
+    if (c && (S.stuck || c.state === 'closed')) { try { quiet(c.close()); } catch (e) { } c = S.ctx = null; }
+    if (!c) {
+      try { c = S.ctx = new AC(); } catch (e) { return; }
+      S.stuck = false;
+      try { c.addEventListener('statechange', () => { if (c.state === 'running' && S.ctx === c) { S.stuck = false; show(); } }); } catch (e) { }
+      for (const f of S.on) { try { f(c); } catch (e) { } }
+    }
+    if (c.state !== 'running') { try { quiet(c.resume()); } catch (e) { } }
+    try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, c.sampleRate); s.connect(c.destination); s.start(0); } catch (e) { }
+    const mine = c;
+    // still silent a moment later: say so on the button, and the next press starts over
+    setTimeout(() => { if (S.ctx === mine && S.want && mine.state !== 'running') { S.stuck = true; show(); } }, 1500);
+  }
+  function show() {
+    const stuck = S.want && S.stuck, label = stuck ? 'Tap again for sound' : S.want ? 'Sound off' : 'Sound on';
+    btn.classList.toggle('on', S.want); btn.classList.toggle('stuck', stuck); btn.setAttribute('aria-pressed', S.want ? 'true' : 'false');
+    btn.setAttribute('aria-label', label);
+  }
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); btn.classList.remove('hint');
+    // pressed while the sound should be on but never started: try again rather than turn it off
+    const retry = S.want && S.ctx && S.ctx.state !== 'running' && S.stuck;
+    if (!retry) S.want = !S.want;
+    if (S.want) start();
+    else { try { if (el) el.pause(); } catch (e) { } }
+    if (S.set) S.set(S.want);
+    else if (!S.want && S.ctx && S.ctx.state === 'running') { try { quiet(S.ctx.suspend()); } catch (e) { } }
+    show(); awake();
+  });
+  btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  addEventListener('keydown', (e) => { if ((e.key === 'm' || e.key === 'M') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) btn.click(); });
+  // while the sound plays and nothing moves, the button fades away; any move or touch brings it back
+  let idle = 0;
+  function awake() { btn.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => { if (S.want && !btn.matches(':hover')) btn.classList.add('idle'); }, 3500); }
+  for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) addEventListener(ev, awake, { capture: true, passive: true });
+  setTimeout(() => btn.classList.remove('hint'), 9000);
+})();
+</script><script type="module" src="./film-core.js"></script></body></html>

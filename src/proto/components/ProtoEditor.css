@@ -1,0 +1,44 @@
+.proto-editor { min-height:100dvh; background:#0c1718; color:#e9eee8; font:16px/1.45 system-ui,sans-serif; }
+.proto-editor * { box-sizing:border-box; }
+.pe-header { min-height:76px; display:flex; align-items:center; gap:32px; padding:0 32px; border-bottom:1px solid #29403c; background:#0c1919; }
+.pe-brand { display:flex; align-items:center; gap:11px; flex:none; }
+.pe-brand__mark { display:grid; place-items:center; width:40px; height:40px; border:1px solid #9b946c; border-radius:12px; color:#e3d79e; background:#273b33; font-size:23px; }
+.pe-brand span:not(.pe-brand__mark) { display:block; color:#90a9a0; font-size:10px; font-weight:700; letter-spacing:.18em; }
+.pe-brand h1 { margin:0; color:#f1f5ee; font:600 18px/1.2 system-ui; }
+.pe-header nav { align-self:stretch; display:flex; align-items:stretch; gap:6px; }
+.pe-header nav button { position:relative; min-width:76px; padding:0 13px; border:0; background:transparent; color:#a8bbb3; font:600 14px system-ui; cursor:pointer; }
+.pe-header nav button[aria-pressed=true] { color:#f4e6bb; }
+.pe-header nav button[aria-pressed=true]::after { content:''; position:absolute; left:12px; right:12px; bottom:0; height:3px; border-radius:3px 3px 0 0; background:#e5c984; }
+.pe-header button:focus-visible,.pe-header a:focus-visible,.pe-status :is(button,input,textarea,select):focus-visible { outline:3px solid #99dec5; outline-offset:2px; }
+.pe-sandbox { margin-left:auto; color:#c1d7cd; text-decoration:none; white-space:nowrap; font-size:14px; }
+.pe-sandbox span { color:#e8cd8e; }
+.proto-editor > .actor-entity-editor { min-height:calc(100dvh - 76px); }
+.pe-status { padding:30px 32px; display:grid; grid-template-columns:minmax(210px,300px) minmax(0,760px); gap:24px; }
+.pe-status aside { display:flex; flex-direction:column; gap:7px; }
+.pe-status aside button { text-align:left; }
+.pe-status small { display:block; color:#9cb2a9; }
+.pe-status form { min-width:0; padding:24px; border:1px solid #304a42; border-radius:18px; background:#142620; }
+.pe-status label { display:block; margin:16px 0; }
+.pe-status :is(button,input,select,textarea) { font:inherit; color:inherit; background:#1d322d; border:1px solid #496259; border-radius:9px; padding:9px 11px; }
+.pe-status button { cursor:pointer; }
+.pe-status button[aria-pressed=true] { border-color:#d8c38a; background:#34473a; }
+.pe-status label > input:not([type=checkbox]),.pe-status select,.pe-status textarea { display:block; width:100%; margin-top:6px; }
+.pe-status textarea { resize:vertical; }
+.pe-status a { color:#bedfd1; }
+.proto-editor > .ability-browser { min-height:calc(100dvh - 76px); }
+@media(max-width:750px) { .pe-header { padding:12px 16px; min-height:0; flex-wrap:wrap; gap:8px 18px; } .pe-header nav { order:3; width:100%; height:42px; } .pe-header nav button { flex:1; } .pe-sandbox { font-size:13px; } .pe-status { padding:16px; grid-template-columns:1fr; } .pe-status aside { max-height:220px; overflow:auto; } }
+.proto-editor { height:100dvh; overflow:auto; overscroll-behavior:contain; }
+.proto-editor > .actor-entity-editor { height:auto; overflow:visible; }
+.pe-panel[hidden] { display:none; }
+.proto-editor .pe-panel > .actor-entity-editor { height:auto; overflow:visible; min-height:calc(100dvh - 76px); }
+@media(min-width:751px) {
+ .pe-status { max-width:1700px; grid-template-columns:minmax(230px,300px) minmax(0,1fr); }
+ .pe-status aside { position:sticky; top:12px; max-height:calc(100dvh - 106px); overflow:auto; padding-right:4px; scrollbar-width:thin; scrollbar-color:#476157 transparent; }
+ .pe-status form { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,220px); gap:0 18px; align-items:start; }
+ .pe-status form > :is(h2,p) { grid-column:1 / -1; }
+ .pe-status form > label:nth-of-type(3),.pe-status form > label:nth-of-type(6) { grid-column:1 / -1; }
+ .pe-status form > h2 { font:600 25px/1.2 Georgia,serif; color:#f4f3e4; margin:0; }
+ .pe-status form > p { color:#abc0b4; margin:8px 0; }
+ .pe-status form > label { margin:10px 0; }
+ .pe-status form > button { justify-self:start; }
+}

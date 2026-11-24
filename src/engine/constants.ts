@@ -1,4 +1,4 @@
-import type { Suit, GameConfig, Element, Card } from './types';
+import type { Suit, PlayingCardSuit, GameConfig, Element, Card } from './types';
 
 export const SUITS: Suit[] = ['💨', '⛰️', '🔥', '💧', '⭐', '🌙', '☀️'];
 
@@ -67,7 +67,12 @@ export const ELEMENT_TO_SUIT: Record<Element, Suit> = {
   L: '☀️',
 };
 
-export function getSuitDisplay(suit: Suit, showGraphics: boolean): string {
+export function isElementalSuit(suit: Suit | PlayingCardSuit): suit is Suit {
+  return suit in SUIT_TO_ELEMENT;
+}
+
+export function getSuitDisplay(suit: Suit | PlayingCardSuit, showGraphics: boolean): string {
+  if (!isElementalSuit(suit)) return suit;
   return showGraphics ? suit : SUIT_TO_ELEMENT[suit];
 }
 
@@ -85,7 +90,7 @@ export const EFFECT_IDS = {
   ELEMENT_MATCHING: 'element_matching',
 } as const;
 
-// Wild sentinel for randomly generated biome foundations
+// Wild sentinel for randomly generated combat foundations
 export const WILD_SENTINEL_RANK = 0;
 
 export function createWildSentinel(index: number): Card {

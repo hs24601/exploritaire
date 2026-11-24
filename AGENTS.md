@@ -1,0 +1,13 @@
+# Exploritaire agent guidance
+
+Read [GAME.md](./GAME.md) before planning, editing, or reviewing this project. It is the project-specific baseline for gameplay, components, presentation, interactions, and validation.
+
+Apply this guidance throughout the Exploritaire project. The parent `C:\dev\AGENTS.md` describes Power Platform workflows; its Power Platform response contracts do not define this game's development workflow. Do not edit the parent document as part of Exploritaire work.
+
+Follow the user's current instructions when they change the project baseline. Preserve unrelated work and existing useful comments. Update GAME.md when the user authorizes a new standing rule; distinguish temporary scaffolding from lasting requirements.
+
+Browser testing is approved for Exploritaire when a browser test is needed and it will not take mouse control away from the human user during the test (for example the desktop app's built-in browser pane or headless Playwright). This overrides the parent `C:\dev\AGENTS.md` browser restriction for this project only.
+
+Implement authorized work through completion without adding unnecessary confirmation steps. Report relevant changes, actual validation, and remaining limitations plainly.
+
+For image generation, read [art.md](./art.md) and follow its current authoring standard and ImageGen reference, prompting and visual review workflow. Use the specified Hero painting as an actual style reference, alongside any separate subject or pose references.

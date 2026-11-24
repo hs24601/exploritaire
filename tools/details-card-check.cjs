@@ -1,0 +1,32 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const {findLayoutDefects}=require('./lib/layout-check.cjs');
+(async()=>{const b=await chromium.launch({headless:true});try{
+for(const [width,height] of [[1912,914],[1280,720]]){
+const p=await b.newPage({viewport:{width,height},deviceScaleFactor:3,hasTouch:true});await p.goto('http://localhost:5178/proto.html');
+const hero=p.locator('[data-board-piece="actor"]').first();await hero.click();const card=p.locator('.details-card-viewer[data-inspection-id="hero"]');const face=card.locator('.trading-card');await card.waitFor();
+assert.equal(await card.getByRole('button',{name:'Close details card',exact:true}).count(),1);assert.equal(await card.evaluate(e=>e===document.activeElement),true);assert.equal(await card.evaluate(e=>getComputedStyle(e).outlineStyle),'none');
+assert.deepEqual(await findLayoutDefects(p,'.trading-card',{parts:'.trading-card__header, .trading-card__body, .trading-card__description, .trading-card__sections, .trading-card__section'}),[]);
+assert.ok(await card.locator('.trading-card__art img').evaluate(i=>i.complete&&i.naturalWidth>0&&i.src.endsWith('hero-card-v2.png')));
+const box=await card.boundingBox();assert.ok(Math.abs(box.width/box.height-63/88)<.001);
+await p.mouse.move(10,10);await card.screenshot({path:`artifacts/hero-holo-${width}-idle-3x.png`});
+await p.mouse.move(box.x+box.width*.2,box.y+box.height*.3);await p.waitForTimeout(100);
+assert.ok(await face.evaluate(e=>Math.abs(parseFloat(e.style.getPropertyValue('--tilt-y')))>1));
+const first=await face.evaluate(e=>e.style.getPropertyValue('--foil-x'));await p.waitForTimeout(350);
+const tilted=await face.boundingBox();assert.ok(tilted.x>=0&&tilted.y>=0&&tilted.x+tilted.width<=width&&tilted.y+tilted.height<=height);
+await p.screenshot({path:`artifacts/hero-holo-${width}-active-3x.png`,clip:{x:Math.max(0,box.x-20),y:Math.max(0,box.y-20),width:box.width+40,height:box.height+40}});
+await p.mouse.move(box.x+box.width*.8,box.y+box.height*.6);await p.waitForTimeout(100);assert.notEqual(await face.evaluate(e=>e.style.getPropertyValue('--foil-x')),first);
+await p.mouse.move(10,10);
+await p.waitForFunction(()=>document.querySelector('.trading-card').style.getPropertyValue('--card-lift')==='0');
+assert.equal(await face.evaluate(e=>e.style.getPropertyValue('--tilt-x')),'0deg');
+const desc=card.locator('.trading-card__description');await desc.hover();await p.getByRole('tooltip').waitFor();assert.match(await p.getByRole('tooltip').innerText(),/gathers resources/);
+await p.mouse.move(10,10);await desc.focus();await p.getByRole('tooltip').waitFor();
+await p.keyboard.press('Escape');await card.waitFor({state:'detached'});await hero.tap();await card.waitFor();
+const d=await desc.boundingBox();await p.touchscreen.tap(d.x+d.width/2,d.y+d.height/2);await p.locator('[data-card-state="jumbo"]').waitFor();await p.getByRole('button',{name:'Close jumbo card'}).click();
+const cdp=await p.context().newCDPSession(p);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width*.3,y:box.y+box.height*.35}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:box.x+box.width*.7,y:box.y+box.height*.4}]});await p.waitForTimeout(100);assert.equal(await face.evaluate(e=>e.style.getPropertyValue('--foil-active')),'1');assert.ok(await face.evaluate(e=>parseFloat(e.style.getPropertyValue('--card-lift'))>0));await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await face.evaluate(e=>e.style.getPropertyValue('--foil-active')),'0');
+await p.emulateMedia({reducedMotion:'reduce'});assert.equal(await face.evaluate(e=>getComputedStyle(e).transform),'none');assert.equal(await card.locator('.trading-card__foil').evaluate(e=>getComputedStyle(e).opacity),'0.16');await card.screenshot({path:`artifacts/hero-holo-${width}-reduced-3x.png`});
+await card.getByRole('button',{name:'Close details card',exact:true}).tap();await card.waitFor({state:'detached'});
+await hero.click();await card.waitFor();await card.getByRole('button',{name:'Close details card',exact:true}).click();await card.waitFor({state:'detached'});
+await hero.focus();await p.keyboard.press('Enter');await card.waitFor();await card.getByRole('button',{name:'Close details card',exact:true}).focus();await p.keyboard.press('Enter');await card.waitFor({state:'detached'});assert.equal(await p.locator('[data-inspection-id="hero-den"]').evaluate(e=>e===document.activeElement),true);await p.keyboard.press('Escape');assert.equal(await hero.evaluate(e=>e===document.activeElement),true);
+console.log(`${width}x${height}: layout, image, ratio, spring tilt/depth/return, mouse/touch foil, hover/focus/touch tooltip, reduced motion and dismissal passed`);await p.close();
+}}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

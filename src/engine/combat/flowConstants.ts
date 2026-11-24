@@ -1,0 +1,7 @@
+export const DEFAULT_RANDOM_BIOME_TABLEAU_COUNT = 7;
+export const DEFAULT_RANDOM_BIOME_TABLEAU_DEPTH = 4;
+export const DEFAULT_RANDOM_BIOME_TURN_DURATION_MS = 10000;
+export const RANDOM_BIOME_DEADLOCK_SURGE_LABEL = 'Deadlock Surge';
+export const COMBAT_DEADLOCK_SURGE_DETAIL = 'Combat pressure surges. Lines reweave.';
+export const RANDOM_BIOME_DEADLOCK_SURGE_COOLDOWN_MS = 1200;
+

@@ -1,0 +1,668 @@
+ 6279:           {kinInspectIndex !== null && inspectedKinCard && inspectedKinTaxonomy ? (
+ 6280:             <div ref={benchInspectorRef} className="flex w-full max-w-[1560px] flex-1 flex-col items-center justify-start gap-6 pt-4">
+ 6281:               <div className="flex w-full flex-col items-center justify-center gap-6 xl:flex-row xl:items-start">
+ 6282:                 <div className="shrink-0">
+ 6283:                   <KinBenchCard
+ 6284:                     card={inspectedKinCard}
+ 6285:                     vitals={getCombatVitals(game, inspectedKinCard)}
+ 6286:                     combatant={getCombatantForCard(game, inspectedKinCard)}
+ 6287:                     actionPoints={kinInspectIndex === -1 ? game.playerStockActionPoints : (game.playerBenchActionPoints[kinInspectIndex] ?? 0)}
+ 6288:                     apSegments={normalizeApSegments([], kinInspectIndex === -1 ? game.playerStockActionPoints : (game.playerBenchActionPoints[kinInspectIndex] ?? 0), inspectedKinCard.element)}
+ 6289:                     cardSize={boardCardSize}
+ 6290:                     heuristicLabel={null}
+ 6291:                     highlighted={false}
+ 6292:                     breathing={highlightPanForBadLuck && inspectedKinCard.name === 'Pan'}
+ 6293:                     discardCount={game.playerDiscardPile.length}
+ 6294:                     canInteract={false}
+ 6295:                     onClick={() => {}}
+ 6296:                   />
+ 6297:                 </div>
+ 6298:                 <div className="w-full max-w-[760px] rounded-[28px] border border-game-gold/18 bg-[linear-gradient(180deg,rgba(8,10,16,0.92),rgba(4,6,10,0.86))] px-5 py-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.34)]">
+ 6299:                   <div className="text-[11px] font-black uppercase tracking-[0.22em] text-game-gold">
+ 6300:                     {inspectorNarrative.title}
+ 6301:                   </div>
+ 6302:                   <div className="mt-3 text-[14px] font-semibold leading-[1.5] text-white/88">
+ 6303:                     {inspectorNarrative.summary}
+ 6304:                   </div>
+ 6305:                   {inspectorNarrative.detail ? (
+ 6306:                     <div className="mt-3 text-[12px] leading-[1.6] text-white/66">
+ 6307:                       {inspectorNarrative.detail}
+ 6308:                     </div>
+ 6309:                   ) : null}
+ 6310:                 </div>
+ 6311:               </div>
+ 6312:               <div className="grid w-full gap-4 md:grid-cols-2 2xl:grid-cols-4">
+ 6313:                 {inspectedKinSections.map((section) => (
+ 6314:                   <div
+ 6315:                     key={section.key}
+ 6316:                     className="rounded-[24px] border border-white/10 bg-black/46 px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.24)]"
+ 6317:                   >
+ 6318:                     <div className="text-[10px] font-black uppercase tracking-[0.18em] text-game-teal/88">
+ 6319:                       {section.title}
+ 6320:                     </div>
+ 6321:                     <div className="mt-4 flex flex-wrap items-start gap-3">
+ 6322:                       {section.slots.map((slot, index) => (
+ 6323:                         <Tooltip
+ 6324:                           key={`${inspectedKinCard.id}-${section.key}-${slot.effect ?? slot.name ?? slot.slotId}-${index}`}
+ 6325:                           content={renderAbilityTooltip(slot)}
+ 6326:                           pinnable={false}
+ 6327:                         >
+ 6328:                           <HandSlotCard
+ 6329:                             slot={slot}
+ 6330:                             canUse={false}
+ 6331:                             onClick={() => {}}
+ 6332:                             cooldownRemaining={getAbilityCooldown(game, slot.effect)}
+ 6333:                             taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
+ 6334:                             cardSize={handCardSize}
+ 6335:                           />
+ 6336:                         </Tooltip>
+ 6337:                       ))}
+ 6338:                     </div>
+ 6339:                   </div>
+ 6340:                 ))}
+ 6341:               </div>
+ 6342:             </div>
+ 6343:           ) : (
+ 6344:           <div className="flex w-full flex-col items-center gap-3">
+ 6345:           <div className="flex w-full justify-center">
+ 6346:             <div className="relative flex items-center justify-center" style={{ gap: benchGap }}>
+ 6347:               {game.enemyBench.map((card, benchIndex) => (
+ 6348:                 <KinBenchCard
+ 6349:                   key={card.id}
+ 6350:                   card={card}
+ 6351:                   vitals={getCombatVitals(game, card)}
+ 6352:                   combatant={getCombatantForCard(game, card)}
+ 6353:                   actionPoints={0}
+ 6354:                   apSegments={normalizeApSegments([], 0, card.element)}
+ 6355:                   discardCount={0}
+ 6356:                   canInteract={false}
+ 6357:                   onClick={() => {}}
+ 6358:                   cardRef={(node) => {
+ 6359:                     enemyBenchRefs.current[benchIndex] = node;
+ 6360:                   }}
+ 6361:                   cardSize={handCardSize}
+ 6362:                 />
+ 6363:               ))}
+ 6364:               <div className="relative">
+ 6365:                 <StockActorShellView
+ 6366:                   actor={currentEnemyProfile.actor}
+ 6367:                   stock={game.enemyStock}
+ 6368:                   vitals={getCombatVitals(game, game.enemyStock)}
+ 6369:                   combatant={getCombatantForCard(game, game.enemyStock)}
+ 6370:                   stockRef={enemyStockRef}
+ 6371:                   cardSize={boardCardSize}
+ 6372:                   indicatorSize={indicatorSize}
+ 6373:                   compact={boardCompact}
+ 6374:                   apSegments={normalizeApSegments([], game.enemyStockActionPoints, game.enemyStock.element)}
+ 6375:                 />
+ 6376:                 {game.enemyDefeatFx ? (
+ 6377:                   <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-[20px]">
+ 6378:                     <BurnEdgesEffect
+ 6379:                       className="!h-full !w-full !p-0"
+ 6380:                       fitContainer
+ 6381:                       hideLabel
+ 6382:                       config={{
+ 6383:                         progress: enemyBurnProgress,
+ 6384:                         burnColor: '#ff6b35',
+ 6385:                         burnWidth: 0.05,
+ 6386:                         noiseScale: 0.75,
+ 6387:                         aspectRatio: boardCardSize.width / boardCardSize.height,
+ 6388:                       }}
+ 6389:                     />
+ 6390:                   </div>
+ 6391:                 ) : null}
+ 6392:               </div>
+ 6393:             </div>
+ 6394:           </div>
+ 6395: 
+ 6396:           {enemyStealSelectorOpen ? (
+ 6397:             <div className="flex w-full justify-center">
+ 6398:               <div className="rounded-2xl border border-game-gold/30 bg-black/80 px-4 py-3 shadow-[0_0_24px_rgba(230,179,30,0.14)] backdrop-blur-sm">
+ 6399:                 <div className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-game-gold">
+ 6400:                   Sticky Paws: Snatch One
+ 6401:                 </div>
+ 6402:                 <div className="mt-3 flex items-start justify-center" style={{ gap: benchGap }}>
+ 6403:                   {enemyStealOptions.map((option) => (
+ 6404:                     <button
+ 6405:                       key={option.id}
+ 6406:                       type="button"
+ 6407:                       onClick={() => useStickyPawsCombat(option)}
+ 6408:                       className="rounded-[16px] border border-game-gold/25 bg-black/45 p-1 transition-colors hover:border-game-gold/50 hover:bg-black/65"
+ 6409:                     >
+ 6410:                       <div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/55">
+ 6411:                         {option.source === 'prime' ? 'Prime' : 'Reserve'}
+ 6412:                       </div>
+ 6413:                       <div className="mt-1">
+ 6414:                         <Card
+ 6415:                           card={option.card}
+ 6416:                           showGraphics={false}
+ 6417:                           size={handCardSize}
+ 6418:                           suitFontSizeOverride={indicatorSize}
+ 6419:                           disableAnimation
+ 6420:                           disableTilt
+ 6421:                           disableHoverLift
+ 6422:                         />
+ 6423:                       </div>
+ 6424:                     </button>
+ 6425:                   ))}
+ 6426:                 </div>
+ 6427:                 <div className="mt-3 flex justify-center">
+ 6428:                   <button
+ 6429:                     type="button"
+ 6430:                     onClick={() => setEnemyStealSelectorOpen(false)}
+ 6431:                     className="rounded-full border border-white/15 bg-black/65 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/65 hover:border-white/25 hover:text-white"
+ 6432:                   >
+ 6433:                     Cancel
+ 6434:                   </button>
+ 6435:                 </div>
+ 6436:               </div>
+ 6437:             </div>
+ 6438:           ) : null}
+ 6439: 
+ 6440:           <div className="flex w-full justify-center">
+ 6441:             <div className="flex items-start" style={{ gap: columnGap }}>
+ 6442:               {game.tableau.map((column, columnIndex) => {
+ 6443:                 const topCard = column[column.length - 1] ?? null;
+ 6444:                 const eligibleTargets = topCard ? getEligiblePlayerTargetsForCard(game, topCard) : [];
+ 6445:                 const stickyPreviewRank = column.length > 1 ? rankLabel(column[column.length - 2].rank) : null;
+ 6446:                 const showStickyPreview =
+ 6447:                   !!topCard &&
+ 6448:                   !!stickyPreviewRank &&
+ 6449:                   stickyPawsPreviewActive &&
+ 6450:                   (eligibleTargets.length > 0 || canRouteCardIntoConstruct(game, topCard));
+ 6451:                 const isPlayable =
+ 6452:                   !!topCard &&
+ 6453:                   currentTurn === 'player' &&
+ 6454:                   eligibleTargets.length > 0 &&
+ 6455:                   (!stickyPawsArmed || column.length > 1);
+ 6456:                 const tableauSourcePrimed =
+ 6457:                   currentTurn === 'player' &&
+ 6458:                   pendingPlayerPlay?.source === 'tableau' &&
+ 6459:                   typeof pendingPlayerPlay.columnIndex === 'number';
+ 6460:                 const peekAmount = playerPeek;
+ 6461:                 const edgePeekAmount = playerPeek;
+ 6462:                 const columnHeight = boardCardSize.height + Math.max(0, column.length - 2) * peekAmount + (column.length > 1 ? edgePeekAmount : 0);
+ 6463:                 const orderedCards = column;
+ 6464: 
+ 6465:                 return (
+ 6466:                   <div
+ 6467:                     key={`column-${columnIndex}`}
+ 6468:                     className="relative"
+ 6469:                     style={{ width: boardCardSize.width + 4, height: (columnHeight || boardCardSize.height) + 4 }}
+ 6470:                   >
+ 6471:                     {column.length === 0 ? (
+ 6472:                       (() => {
+ 6473:                         tableauTopRefs.current[columnIndex] = null;
+ 6474:                         return (
+ 6475:                       <div className="flex h-full items-center justify-center rounded-[22px] border border-dashed border-game-teal/15 bg-black/20 text-[10px] font-black uppercase tracking-[0.32em] text-game-teal/25">
+ 6476:                         Cleared
+ 6477:                       </div>
+ 6478:                         );
+ 6479:                       })()
+ 6480:                     ) : (
+ 6481:                       orderedCards.map((card, displayIndex) => {
+ 6482:                         const actualIndex = displayIndex;
+ 6483:                         const isTopCard = actualIndex === column.length - 1;
+ 6484:                         const isEnemyDragSource =
+ 6485:                           enemyDragAnim?.mode === 'drag' &&
+ 6486:                           enemyDragAnim.sourceColumnIndex === columnIndex &&
+ 6487:                           isTopCard;
+ 6488:                         const visualTop =
+ 6489:                           actualIndex === column.length - 1
+ 6490:                             ? Math.max(0, actualIndex - 1) * peekAmount + edgePeekAmount
+ 6491:                             : actualIndex * peekAmount;
+ 6492:                         const guidanceGlow =
+ 6493:                           currentTurn === 'player' &&
+ 6494:                           effectiveOracleMode !== 'off' &&
+ 6495:                           isTopCard &&
+ 6496:                           guidanceNextColumn === columnIndex;
+ 6497:                         const isSelectedSource =
+ 6498:                           currentTurn === 'player' &&
+ 6499:                           pendingPlayerPlay?.source === 'tableau' &&
+ 6500:                           pendingPlayerPlay.columnIndex === columnIndex &&
+ 6501:                           isTopCard;
+ 6502:                         const backgroundTableauCard = tableauSourcePrimed && !isSelectedSource;
+ 6503: 
+ 6504:                         return (
+ 6505:                           <button
+ 6506:                             key={card.id}
+ 6507:                             ref={
+ 6508:                               isTopCard
+ 6509:                                 ? (node) => {
+ 6510:                                     tableauTopRefs.current[columnIndex] = node;
+ 6511:                                   }
+ 6512:                                 : undefined
+ 6513:                             }
+ 6514:                             type="button"
+ 6515:                             onClick={isTopCard ? () => playToPlayerStock(columnIndex) : undefined}
+ 6516:                             disabled={!isTopCard || !isPlayable}
+ 6517:                             className={`absolute left-0 overflow-hidden rounded-[16px] p-0.5 text-left transition-transform ${
+ 6518:                               isTopCard && isPlayable
+ 6519:                                 ? 'cursor-pointer hover:-translate-y-1'
+ 6520:                                 : isTopCard
+ 6521:                                   ? 'cursor-default'
+ 6522:                                   : 'pointer-events-none'
+ 6523:                             }`}
+ 6524:                             style={{
+ 6525:                               top: visualTop,
+ 6526:                               width: boardCardSize.width + 4,
+ 6527:                               height: boardCardSize.height + 4,
+ 6528:                               zIndex: displayIndex + 1,
+ 6529:                               transform: isSelectedSource
+ 6530:                                 ? 'translateY(-10px) scale(1.06)'
+ 6531:                                 : backgroundTableauCard
+ 6532:                                   ? 'scale(0.985)'
+ 6533:                                   : undefined,
+ 6534:                               animation: isSelectedSource ? 'golf-selected-card-float 1.4s ease-in-out infinite' : undefined,
+ 6535:                               filter: backgroundTableauCard ? 'grayscale(1) saturate(0.45) brightness(0.42)' : undefined,
+ 6536:                               opacity: backgroundTableauCard ? 0.7 : 1,
+ 6537:                             }}
+ 6538:                           >
+ 6539:                             <div
+ 6540:                               className={`rounded-[16px] border p-0.5 shadow-[0_0_18px_rgba(255,255,255,0.08)] ${
+ 6541:                                 isTopCard ? 'border-white/15 bg-black/62' : 'border-white/10 bg-black/55'
+ 6542:                               }`}
+ 6543:                               style={
+ 6544:                                 isSelectedSource
+ 6545:                                   ? {
+ 6546:                                       borderColor: 'rgba(230,179,30,0.7)',
+ 6547:                                       boxShadow: '0 0 28px rgba(230,179,30,0.32), 0 0 10px rgba(230,179,30,0.2)',
+ 6548:                                       background: 'rgba(14, 10, 3, 0.82)',
+ 6549:                                     }
+ 6550:                                   : backgroundTableauCard
+ 6551:                                     ? {
+ 6552:                                         borderColor: 'rgba(255,255,255,0.08)',
+ 6553:                                         boxShadow: 'none',
+ 6554:                                         background: 'rgba(0, 0, 0, 0.82)',
+ 6555:                                       }
+ 6556:                                   : guidanceGlow
+ 6557:                                     ? { boxShadow: effectiveOracleMode === 'ancestors' ? '0 0 24px rgba(230,179,30,0.28)' : '0 0 20px rgba(230,179,30,0.16)' }
+ 6558:                                     : undefined
+ 6559:                               }
+ 6560:                             >
+ 6561:                               {isEnemyDragSource ? (
+ 6562:                                 <div
+ 6563:                                   className="rounded-[14px] border border-white/14 bg-black/94 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
+ 6564:                                   style={{ width: boardCardSize.width, height: boardCardSize.height }}
+ 6565:                                 />
+ 6566:                               ) : (
+ 6567:                                 <div className="relative">
+ 6568:                                   <Card
+ 6569:                                     card={card}
+ 6570:                                     showGraphics={false}
+ 6571:                                     size={boardCardSize}
+ 6572:                                     canPlay={isTopCard && isPlayable}
+ 6573:                                     suitFontSizeOverride={indicatorSize}
+ 6574:                                     disableAnimation={!isTopCard}
+ 6575:                                     disableTilt
+ 6576:                                     disableHoverLift
+ 6577:                                   />
+ 6578:                                   {isTopCard && showStickyPreview ? (
+ 6579:                                     <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 -translate-y-[120%]">
+ 6580:                                       <div className="rounded-full border border-game-gold/45 bg-black/88 px-2 py-1 shadow-[0_0_18px_rgba(230,179,30,0.24)]">
+ 6581:                                         <div className="text-[8px] font-black uppercase tracking-[0.16em] text-game-gold/70">under</div>
+ 6582:                                         <div className="mt-[1px] text-center text-[12px] font-black leading-none text-white">{stickyPreviewRank}</div>
+ 6583:                                       </div>
+ 6584:                                     </div>
+ 6585:                                   ) : null}
+ 6586:                                 </div>
+ 6587:                               )}
+ 6588:                             </div>
+ 6589:                           </button>
+ 6590:                         );
+ 6591:                       })
+ 6592:                     )}
+ 6593:                   </div>
+ 6594:                 );
+ 6595:               })}
+ 6596:             </div>
+ 6597:           </div>
+ 6598: 
+ 6599:           <div className="flex w-full flex-col items-center gap-3">
+ 6600:             <div className="grid w-full items-center gap-3 md:grid-cols-[minmax(0,1fr)_var(--prime-zone)_minmax(0,1fr)]" style={{ ['--prime-zone' as const]: `${primeVisualZoneWidth}px` }}>
+ 6601:               <div className="flex items-center justify-end" style={{ gap: benchGap }}>
+ 6602:                 {leftHandSlots.map((slot) =>
+ 6603:                   slot.kind === 'ability' ? (
+ 6604:                     <Tooltip
+ 6605:                       key={String(slot.slotId)}
+ 6606:                       content={renderAbilityTooltip(slot)}
+ 6607:                       pinnable
+ 6608:                       isPinned={pinnedTooltipSlotId === (slot.slotId === 'pan-left' ? 'left' : slot.slotId)}
+ 6609:                       onPinnedChange={(pinned) => setPinnedTooltipSlotId(pinned ? 'left' : null)}
+ 6610:                     >
+ 6611:                       <HandSlotCard
+ 6612:                         slot={slot}
+ 6613:                         canUse={canUseAbilitySlot(slot)}
+ 6614:                         interactive={currentTurn === 'player'}
+ 6615:                         onClick={() => {
+ 6616:                           if (slot.effect === 'paw-sperity') {
+ 6617:                             usePanPawSperity();
+ 6618:                           } else if (slot.effect === 'ironfur') {
+ 6619:                             useHandSlot('left');
+ 6620:                           } else if (slot.effect === 'slipstream') {
+ 6621:                             useHandSlot('left');
+ 6622:                           } else if (slot.effect === 'battery') {
+ 6623:                             useHandSlot('jet-left-2');
+ 6624:                           } else if (slot.effect === 'rewire') {
+ 6625:                             useHandSlot('jet-left-3');
+ 6626:                           } else if (slot.effect === 'aegis-shunt') {
+ 6627:                             useHandSlot('jet-right-4');
+ 6628:                           }
+ 6629:                         }}
+ 6630:                         onPointerDown={(event) => handleAbilityDevPointerDown(event, slot)}
+ 6631:                         onPointerUp={handleAbilityDevPointerEnd}
+ 6632:                         onPointerCancel={handleAbilityDevPointerEnd}
+ 6633:                         onClickCapture={(event) => {
+ 6634:                           if (suppressAbilityClickRef.current) {
+ 6635:                             suppressAbilityClickRef.current = false;
+ 6636:                             event.stopPropagation();
+ 6637:                             event.preventDefault();
+ 6638:                           }
+ 6639:                         }}
+ 6640:                         breathing={slot.effect === 'paw-sperity' && pawSperityEligible}
+ 6641:                         holdProgress={devAbilityHoldSlotId === slot.slotId ? devAbilityHoldProgress : 0}
+ 6642:                         cooldownRemaining={getAbilityCooldown(game, slot.effect)}
+ 6643:                         taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
+ 6644:                         cardSize={handCardSize}
+ 6645:                         slotRef={(node) => {
+ 6646:                           playerHandRefs.current.left = node;
+ 6647:                         }}
+ 6648:                       />
+ 6649:                     </Tooltip>
+ 6650:                   ) : (
+ 6651:                     <HandSlotCard
+ 6652:                       key={slot.slotId}
+ 6653:                       slot={slot}
+ 6654:                       canUse={
+ 6655:                         currentTurn === 'player' &&
+ 6656:                         (slot.kind === 'captured' || slot.kind === 'generated') &&
+ 6657:                         !!slot.card &&
+ 6658:                         getEligiblePlayerTargetsForCard(game, slot.card).length > 0
+ 6659:                       }
+ 6660:                       interactive={currentTurn === 'player'}
+ 6661:                       onClick={() => useHandSlot('left')}
+ 6662:                       cardSize={handCardSize}
+ 6663:                       slotRef={(node) => {
+ 6664:                         playerCaptureRefs.current.left = node;
+ 6665:                       }}
+ 6666:                     />
+ 6667:                   )
+ 6668:                 )}
+ 6669:               </div>
+ 6670:               {kinInspectIndex === null ? (
+ 6671:                 <div className="relative flex items-center justify-center">
+ 6672:                   {activeActorName === 'Jet' && (game.riggedConstructCards.length > 0 || game.riggedConstructCooldown > 0) ? (
+ 6673:                     <div className="absolute right-[calc(100%+12px)] top-1/2 -translate-y-1/2">
+ 6674:                       <RiggedConstructCard
+ 6675:                         topCard={game.riggedConstructCards[game.riggedConstructCards.length - 1] ?? null}
+ 6676:                         depth={game.riggedConstructCards.length}
+ 6677:                         armed={game.riggedConstructArmed}
+ 6678:                         cooldownRemaining={game.riggedConstructCooldown}
+ 6679:                         onClick={useRiggedConstructCard}
+ 6680:                         cardSize={handCardSize}
+ 6681:                       />
+ 6682:                     </div>
+ 6683:                   ) : null}
+ 6684:                   <StockActorShellView
+ 6685:                     actor={PLAYER_STOCK_ACTOR}
+ 6686:                     stock={game.playerStock}
+ 6687:                     vitals={getCombatVitals(game, game.playerStock)}
+ 6688:                     combatant={getCombatantForCard(game, game.playerStock)}
+ 6689:                     stockRef={playerStockRef}
+ 6690:                     onClick={() => {
+ 6691:                       if (confirmPendingPlayerPlay(game.playerStock.id)) {
+ 6692:                         return;
+ 6693:                       }
+ 6694:                     }}
+ 6695:                     onPointerDown={() => handleKinInspectPointerDown(-1)}
+ 6696:                     onPointerUp={handleKinInspectPointerEnd}
+ 6697:                     onPointerCancel={handleKinInspectPointerEnd}
+ 6698:                     holdProgress={kinInspectHoldIndexRef.current === -1 ? kinInspectHoldProgress : 0}
+ 6699:                     cardSize={boardCardSize}
+ 6700:                     indicatorSize={indicatorSize}
+ 6701:                   compact={boardCompact}
+ 6702:                   heuristicLabel={null}
+ 6703:                   highlighted={false}
+ 6704:                   apSegments={normalizeApSegments(game.playerPrimeApSegments, game.playerStockActionPoints, game.playerStock.element)}
+ 6705:                 />
+ 6706:                 </div>
+ 6707:               ) : null}
+ 6708:               <div className="flex items-center justify-start" style={{ gap: benchGap }}>
+ 6709:                 {rightHandSlots.map((slot) =>
+ 6710:                   slot.kind === 'ability' ? (
+ 6711:                     <Tooltip
+ 6712:                       key={slot.slotId}
+ 6713:                       content={renderAbilityTooltip(slot)}
+ 6714:                       pinnable
+ 6715:                       isPinned={pinnedTooltipSlotId === 'right'}
+ 6716:                       onPinnedChange={(pinned) => setPinnedTooltipSlotId(pinned ? 'right' : null)}
+ 6717:                     >
+ 6718:                       <HandSlotCard
+ 6719:                         slot={slot}
+ 6720:                         canUse={canUseAbilitySlot(slot)}
+ 6721:                         interactive={currentTurn === 'player'}
+ 6722:                         onClick={() => {
+ 6723:                           if (slot.effect === 'sticky-paws') {
+ 6724:                             if (game.jetBatteryPrimeArmed) {
+ 6725:                               useHandSlot('right');
+ 6726:                               return;
+ 6727:                             }
+ 6728:                             if (canOpenStickyPawsSteal) {
+ 6729:                               setPinnedTooltipSlotId(null);
+ 6730:                               setEnemyStealSelectorOpen(true);
+ 6731:                             }
+ 6732:                           } else if (slot.effect === 'path-of-stars') {
+ 6733:                             usePathOfStars();
+ 6734:                           } else if (slot.effect === 'jikan') {
+ 6735:                             useJikan();
+ 6736:                           } else if (slot.effect === 'tap-out') {
+ 6737:                             useHandSlot('right');
+ 6738:                           } else if (slot.effect === 'scrap-plating') {
+ 6739:                             useHandSlot('jet-right-2');
+ 6740:                           } else if (slot.effect === 'rigged-construct') {
+ 6741:                             useHandSlot('jet-right-3');
+ 6742:                           }
+ 6743:                         }}
+ 6744:                         onPointerDown={(event) => {
+ 6745:                           handleAbilityDevPointerDown(event, slot);
+ 6746:                           if (slot.effect === 'sticky-paws') {
+ 6747:                             handleStickyPointerDown(event);
+ 6748:                           }
+ 6749:                         }}
+ 6750:                         onPointerUp={(event) => {
+ 6751:                           handleAbilityDevPointerEnd();
+ 6752:                           if (slot.effect === 'sticky-paws') {
+ 6753:                             handleStickyPointerEnd(event);
+ 6754:                           }
+ 6755:                         }}
+ 6756:                         onPointerCancel={(event) => {
+ 6757:                           handleAbilityDevPointerEnd();
+ 6758:                           if (slot.effect === 'sticky-paws') {
+ 6759:                             handleStickyPointerEnd(event);
+ 6760:                           }
+ 6761:                         }}
+ 6762:                         onClickCapture={(event) => {
+ 6763:                           if (suppressAbilityClickRef.current) {
+ 6764:                             suppressAbilityClickRef.current = false;
+ 6765:                             event.stopPropagation();
+ 6766:                             event.preventDefault();
+ 6767:                             return;
+ 6768:                           }
+ 6769:                           if (slot.effect === 'sticky-paws' && suppressStickyClickRef.current) {
+ 6770:                             suppressStickyClickRef.current = false;
+ 6771:                             event.stopPropagation();
+ 6772:                             event.preventDefault();
+ 6773:                           }
+ 6774:                         }}
+ 6775:                         holdProgress={
+ 6776:                           devAbilityHoldSlotId === slot.slotId
+ 6777:                             ? devAbilityHoldProgress
+ 6778:                             : slot.effect === 'sticky-paws'
+ 6779:                               ? stickyHoldProgress
+ 6780:                               : 0
+ 6781:                         }
+ 6782:                         cooldownRemaining={getAbilityCooldown(game, slot.effect)}
+ 6783:                         taxonomyLabel={getAbilityTaxonomyBadge(slot.effect)}
+ 6784:                         cardSize={handCardSize}
+ 6785:                         slotRef={(node) => {
+ 6786:                           playerHandRefs.current.right = node;
+ 6787:                         }}
+ 6788:                       />
+ 6789:                     </Tooltip>
+ 6790:                   ) : (
+ 6791:                     <HandSlotCard
+ 6792:                       key={slot.slotId}
+ 6793:                       slot={slot}
+ 6794:                       canUse={
+ 6795:                         currentTurn === 'player' &&
+ 6796:                         (slot.kind === 'captured' || slot.kind === 'generated') &&
+ 6797:                         !!slot.card &&
+ 6798:                         getEligiblePlayerTargetsForCard(game, slot.card).length > 0
+ 6799:                       }
+ 6800:                       interactive={currentTurn === 'player'}
+ 6801:                       onClick={() => useHandSlot('right')}
+ 6802:                       cardSize={handCardSize}
+ 6803:                       slotRef={(node) => {
+ 6804:                         playerCaptureRefs.current.right = node;
+ 6805:                       }}
+ 6806:                     />
+ 6807:                   )
+ 6808:                 )}
+ 6809:               </div>
+ 6810:             </div>
+ 6811:             <div ref={benchInspectorRef} className="flex flex-col items-center gap-3">
+ 6812:               {effectiveOracleMode !== 'off' && nextGuideStep ? (
+ 6813:                 <div className="text-[9px] font-mono uppercase tracking-[0.14em] text-game-gold/80">
+ 6814:                   Follow Navi
+ 6815:                 </div>
+ 6816:               ) : null}
+ 6817:               <div className="flex items-start justify-center" style={{ gap: benchKinGap }}>
+ 6818:                 {assistBenchIndices.slice(0, 1).map((benchIndex) => {
+ 6819:                   const card = game.playerBench[benchIndex];
+ 6820:                   if (!card) return null;
+ 6821:                   return (
+ 6822:                     <div key={card.id} className="flex justify-center" style={{ width: benchActorZoneWidth }}>
+ 6823:                       <KinBenchCard
+ 6824:                         card={card}
+ 6825:                         vitals={getCombatVitals(game, card)}
+ 6826:                         combatant={getCombatantForCard(game, card)}
+ 6827:                         cardRef={(node) => {
+ 6828:                           playerBenchRefs.current[benchIndex] = node;
+ 6829:                         }}
+ 6830:                         actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
+ 6831:                         apSegments={normalizeApSegments([], game.playerBenchActionPoints[benchIndex] ?? 0, card.element)}
+ 6832:                         cardSize={boardCardSize}
+ 6833:                         heuristicLabel={null}
+ 6834:                         highlighted={false}
+ 6835:                         breathing={highlightPanForBadLuck && card.name === 'Pan'}
+ 6836:                         discardCount={game.playerDiscardPile.length}
+ 6837:                         canInteract={currentTurn === 'player' && canUseBenchAbilityUi(benchIndex)}
+ 6838:                         roleDescription={getAssistPassiveSummary(card)}
+ 6839:                         onPointerDown={() => handleKinInspectPointerDown(benchIndex, true)}
+ 6840:                         onPointerUp={handleKinInspectPointerEnd}
+ 6841:                         onPointerCancel={handleKinInspectPointerEnd}
+ 6842:                         onClickCapture={(event) => {
+ 6843:                           if (suppressKinInspectClickRef.current) {
+ 6844:                             suppressKinInspectClickRef.current = false;
+ 6845:                             event.stopPropagation();
+ 6846:                             event.preventDefault();
+ 6847:                           }
+ 6848:                         }}
+ 6849:                         holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
+ 6850:                         onClick={() => {
+ 6851:                           if (confirmPendingPlayerPlay(card.id)) {
+ 6852:                             return;
+ 6853:                           }
+ 6854:                         }}
+ 6855:                       />
+ 6856:                     </div>
+ 6857:                   );
+ 6858:                 })}
+ 6859:                 {supportBenchCard ? (
+ 6860:                   <div className="flex justify-center" style={{ width: benchActorZoneWidth }}>
+ 6861:                     <KinBenchCard
+ 6862:                       key={supportBenchCard.id}
+ 6863:                       card={supportBenchCard}
+ 6864:                       vitals={getCombatVitals(game, supportBenchCard)}
+ 6865:                       combatant={getCombatantForCard(game, supportBenchCard)}
+ 6866:                       cardRef={(node) => {
+ 6867:                         playerBenchRefs.current[supportBenchIndex] = node;
+ 6868:                       }}
+ 6869:                       actionPoints={game.playerBenchActionPoints[supportBenchIndex] ?? 0}
+ 6870:                       apSegments={normalizeApSegments([], game.playerBenchActionPoints[supportBenchIndex] ?? 0, supportBenchCard.element)}
+ 6871:                       cardSize={boardCardSize}
+ 6872:                       heuristicLabel={null}
+ 6873:                       highlighted={false}
+ 6874:                       breathing={highlightPanForBadLuck && supportBenchCard.name === 'Pan'}
+ 6875:                       discardCount={game.playerDiscardPile.length}
+ 6876:                       canInteract={currentTurn === 'player' && canUseBenchAbilityUi(supportBenchIndex)}
+ 6877:                       roleDescription={getSupportPassiveSummary(supportBenchCard)}
+ 6878:                       onPointerDown={() => handleKinInspectPointerDown(supportBenchIndex, true)}
+ 6879:                       onPointerUp={handleKinInspectPointerEnd}
+ 6880:                       onPointerCancel={handleKinInspectPointerEnd}
+ 6881:                       onClickCapture={(event) => {
+ 6882:                         if (suppressKinInspectClickRef.current) {
+ 6883:                           suppressKinInspectClickRef.current = false;
+ 6884:                           event.stopPropagation();
+ 6885:                           event.preventDefault();
+ 6886:                         }
+ 6887:                       }}
+ 6888:                       holdProgress={kinInspectHoldIndexRef.current === supportBenchIndex ? kinInspectHoldProgress : 0}
+ 6889:                       onClick={() => {
+ 6890:                         if (confirmPendingPlayerPlay(supportBenchCard.id)) {
+ 6891:                           return;
+ 6892:                         }
+ 6893:                       }}
+ 6894:                     />
+ 6895:                   </div>
+ 6896:                 ) : null}
+ 6897:                 {assistBenchIndices.slice(1).map((benchIndex) => {
+ 6898:                   const card = game.playerBench[benchIndex];
+ 6899:                   if (!card) return null;
+ 6900:                   return (
+ 6901:                     <div key={card.id} className="flex justify-center" style={{ width: benchActorZoneWidth }}>
+ 6902:                       <KinBenchCard
+ 6903:                         card={card}
+ 6904:                         vitals={getCombatVitals(game, card)}
+ 6905:                         combatant={getCombatantForCard(game, card)}
+ 6906:                         cardRef={(node) => {
+ 6907:                           playerBenchRefs.current[benchIndex] = node;
+ 6908:                         }}
+ 6909:                         actionPoints={game.playerBenchActionPoints[benchIndex] ?? 0}
+ 6910:                         apSegments={normalizeApSegments([], game.playerBenchActionPoints[benchIndex] ?? 0, card.element)}
+ 6911:                         cardSize={boardCardSize}
+ 6912:                         heuristicLabel={null}
+ 6913:                         highlighted={false}
+ 6914:                         breathing={highlightPanForBadLuck && card.name === 'Pan'}
+ 6915:                         discardCount={game.playerDiscardPile.length}
+ 6916:                         canInteract={currentTurn === 'player' && canUseBenchAbilityUi(benchIndex)}
+ 6917:                         roleDescription={getAssistPassiveSummary(card)}
+ 6918:                         onPointerDown={() => handleKinInspectPointerDown(benchIndex, true)}
+ 6919:                         onPointerUp={handleKinInspectPointerEnd}
+ 6920:                         onPointerCancel={handleKinInspectPointerEnd}
+ 6921:                         onClickCapture={(event) => {
+ 6922:                           if (suppressKinInspectClickRef.current) {
+ 6923:                             suppressKinInspectClickRef.current = false;
+ 6924:                             event.stopPropagation();
+ 6925:                             event.preventDefault();
+ 6926:                           }
+ 6927:                         }}
+ 6928:                         holdProgress={kinInspectHoldIndexRef.current === benchIndex ? kinInspectHoldProgress : 0}
+ 6929:                         onClick={() => {
+ 6930:                           if (confirmPendingPlayerPlay(card.id)) {
+ 6931:                             return;
+ 6932:                           }
+ 6933:                         }}
+ 6934:                       />
+ 6935:                     </div>
+ 6936:                   );
+ 6937:                 })}
+ 6938:               </div>
+ 6939:             </div>
+ 6940:             {showHeuristicValues && currentTurn === 'player' && effectiveOracleMode !== 'ancestors' ? (
+ 6941:               <HeuristicPill label={effectiveOracleMode === 'ancestors' ? 'hidden best path' : 'visible best path'} />
+ 6942:             ) : null}
+ 6943:             </div>
+ 6944:           )}
+ 6945:           </div>
+ 6946:       </div>

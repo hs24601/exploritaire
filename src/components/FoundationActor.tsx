@@ -144,6 +144,7 @@ interface FoundationActorProps {
   splashDirectionToken?: number;
   onActorLongPress?: (payload: { actor: Actor }) => void;
   statusBadges?: StatusBadgeData[];
+  showFoundationActorSecretHolo?: boolean;
 }
 
 export const FoundationActor = memo(function FoundationActor({
@@ -178,6 +179,7 @@ export const FoundationActor = memo(function FoundationActor({
   splashDirectionToken,
   onActorLongPress,
   statusBadges = [],
+  showFoundationActorSecretHolo = false,
 }: FoundationActorProps) {
   const effectiveScale = cardScale;
   const neonMode = FORCE_NEON_CARD_STYLE;
@@ -462,9 +464,9 @@ export const FoundationActor = memo(function FoundationActor({
                   suitDisplayOverride={isTop ? neutralDisplay : undefined}
                   suitFontSizeOverride={isTop && neutralDisplay ? suitFontSize : undefined}
                   frameClassName={`relative ${isTop ? 'z-[2]' : 'z-[1]'}`}
-                  maskValue
+                  maskValue={maskValue}
                   hideElements={hideElements}
-                  showFoundationActorSecretHolo={false}
+                  showFoundationActorSecretHolo={showFoundationActorSecretHolo}
                   disableTilt={foundationLocked}
                   disableHoverLift={foundationLocked}
                   disableHoverGlow={foundationLocked}

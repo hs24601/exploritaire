@@ -1,0 +1,17 @@
+.hero-fur { min-height: 100dvh; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: #101c20; color: #e1efea; }
+.hero-fur__header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font: 15px/1.2 monospace; }
+.hero-fur__header h1 { font: inherit; margin: 0; margin-right: auto; }
+.hero-fur__header button, .hero-fur__header a, .hero-fur__header select { padding: 5px 8px; border: 1px solid #7b9583; border-radius: 4px; background: #142720; color: inherit; }
+.hero-fur__header label { display: flex; align-items: center; gap: 6px; }
+.hero-fur__header output { width: 3ch; }
+.hero-fur__note { margin: 0; color: #8fa89e; font-size: 13px; }
+.hero-fur__body { display: flex; flex-direction: column; gap: 24px; overflow: auto; padding: 16px; }
+.hero-fur__pair, .hero-fur__strip { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.hero-fur figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.hero-fur figcaption { font: 12px/1.2 monospace; color: #a9c4b8; }
+/* Both sides share one square frame over the night backdrop the Node fixture uses. */
+.hero-fur__frame { position: relative; width: var(--hero-fur-w, 320px); aspect-ratio: 1; background: linear-gradient(#28394b, #1b2532 86%, #3e3c2e 86%, #2a2a20); border-radius: 4px; overflow: hidden; }
+.hero-fur__frame > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-fur__frame > .hero-fur__reference { left: 4%; top: 17%; width: 92%; height: auto; inset: auto; }
+.hero-fur__small { --hero-fur-w: 160px; }
+.hero-fur__status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font: 12px monospace; color: #8fa89e; }

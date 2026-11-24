@@ -1,0 +1,797 @@
+{
+  "framesPerView": 4,
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+  ],
+  "generator": "image_gen.imagegen",
+  "version": 2,
+  "cell": 256,
+  "columns": 8,
+  "clips": [
+    {
+      "registration": [
+        {
+          "sourceBounds": [
+            {
+              "y": 9,
+              "x": 98,
+              "sourceRect": [
+                0,
+                0,
+                362,
+                362
+              ],
+              "width": 173,
+              "opaquePixels": 44601,
+              "height": 331
+            },
+            {
+              "y": 15,
+              "x": 106,
+              "sourceRect": [
+                0,
+                0,
+                362,
+                362
+              ],
+              "width": 161,
+              "opaquePixels": 41862,
+              "height": 321
+            },
+            {
+              "y": 7,
+              "x": 96,
+              "sourceRect": [
+                0,
+                0,
+                362,
+                362
+              ],
+              "width": 176,
+              "opaquePixels": 45919,
+              "height": 333
+            },
+            {
+              "y": 11,
+              "x": 105,
+              "sourceRect": [
+                0,
+                0,
+                362,
+                362
+              ],
+              "width": 169,
+              "opaquePixels": 42988,
+              "height": 328
+            }
+          ],
+          "translate": [
+            -7.555555555555571,
+            2.870870870870874
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7327327327327328,
+          "groundPixel": 252,
+          "view": "low-0"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 9,
+              "x": 53,
+              "sourceRect": [
+                362,
+                0,
+                362,
+                362
+              ],
+              "width": 249,
+              "opaquePixels": 53540,
+              "height": 331
+            },
+            {
+              "y": 14,
+              "x": 66,
+              "sourceRect": [
+                362,
+                0,
+                362,
+                362
+              ],
+              "width": 238,
+              "opaquePixels": 51244,
+              "height": 323
+            },
+            {
+              "y": 7,
+              "x": 33,
+              "sourceRect": [
+                362,
+                0,
+                362,
+                362
+              ],
+              "width": 329,
+              "opaquePixels": 57169,
+              "height": 331
+            },
+            {
+              "y": 12,
+              "x": 61,
+              "sourceRect": [
+                362,
+                0,
+                362,
+                362
+              ],
+              "width": 240,
+              "opaquePixels": 51382,
+              "height": 326
+            }
+          ],
+          "translate": [
+            -16.714714714714717,
+            2.870870870870874
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7327327327327328,
+          "groundPixel": 252,
+          "view": "low-1"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 12,
+              "x": 6,
+              "sourceRect": [
+                724,
+                0,
+                362,
+                362
+              ],
+              "width": 324,
+              "opaquePixels": 54808,
+              "height": 326
+            },
+            {
+              "y": 18,
+              "x": 23,
+              "sourceRect": [
+                724,
+                0,
+                362,
+                362
+              ],
+              "width": 315,
+              "opaquePixels": 53154,
+              "height": 318
+            },
+            {
+              "y": 11,
+              "x": 0,
+              "sourceRect": [
+                724,
+                0,
+                362,
+                362
+              ],
+              "width": 332,
+              "opaquePixels": 58123,
+              "height": 328
+            },
+            {
+              "y": 13,
+              "x": 24,
+              "sourceRect": [
+                724,
+                0,
+                362,
+                362
+              ],
+              "width": 316,
+              "opaquePixels": 53733,
+              "height": 324
+            }
+          ],
+          "translate": [
+            6.0,
+            8.71764705882353
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7176470588235294,
+          "groundPixel": 252,
+          "view": "low-2"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 9,
+              "x": 43,
+              "sourceRect": [
+                1086,
+                0,
+                362,
+                362
+              ],
+              "width": 268,
+              "opaquePixels": 52366,
+              "height": 332
+            },
+            {
+              "y": 14,
+              "x": 41,
+              "sourceRect": [
+                1086,
+                0,
+                362,
+                362
+              ],
+              "width": 265,
+              "opaquePixels": 50493,
+              "height": 322
+            },
+            {
+              "y": 10,
+              "x": 23,
+              "sourceRect": [
+                1086,
+                0,
+                362,
+                362
+              ],
+              "width": 286,
+              "opaquePixels": 55787,
+              "height": 331
+            },
+            {
+              "y": 12,
+              "x": 41,
+              "sourceRect": [
+                1086,
+                0,
+                362,
+                362
+              ],
+              "width": 269,
+              "opaquePixels": 51045,
+              "height": 329
+            }
+          ],
+          "translate": [
+            5.265060240963848,
+            1.3855421686746752
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7349397590361446,
+          "groundPixel": 252,
+          "view": "low-3"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 5,
+              "x": 106,
+              "sourceRect": [
+                0,
+                362,
+                362,
+                362
+              ],
+              "width": 168,
+              "opaquePixels": 39195,
+              "height": 357
+            },
+            {
+              "y": 8,
+              "x": 109,
+              "sourceRect": [
+                0,
+                362,
+                362,
+                362
+              ],
+              "width": 164,
+              "opaquePixels": 39301,
+              "height": 354
+            },
+            {
+              "y": 6,
+              "x": 94,
+              "sourceRect": [
+                0,
+                362,
+                362,
+                362
+              ],
+              "width": 181,
+              "opaquePixels": 42319,
+              "height": 356
+            },
+            {
+              "y": 6,
+              "x": 108,
+              "sourceRect": [
+                0,
+                362,
+                362,
+                362
+              ],
+              "width": 170,
+              "opaquePixels": 39557,
+              "height": 356
+            }
+          ],
+          "translate": [
+            0.8739495798319297,
+            4.5826330532212864
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.6834733893557423,
+          "groundPixel": 252,
+          "view": "low-4"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 2,
+              "x": 83,
+              "sourceRect": [
+                362,
+                362,
+                362,
+                362
+              ],
+              "width": 176,
+              "opaquePixels": 41340,
+              "height": 360
+            },
+            {
+              "y": 1,
+              "x": 82,
+              "sourceRect": [
+                362,
+                362,
+                362,
+                362
+              ],
+              "width": 177,
+              "opaquePixels": 42097,
+              "height": 361
+            },
+            {
+              "y": 5,
+              "x": 68,
+              "sourceRect": [
+                362,
+                362,
+                362,
+                362
+              ],
+              "width": 186,
+              "opaquePixels": 44327,
+              "height": 357
+            },
+            {
+              "y": 2,
+              "x": 83,
+              "sourceRect": [
+                362,
+                362,
+                362,
+                362
+              ],
+              "width": 178,
+              "opaquePixels": 41347,
+              "height": 360
+            }
+          ],
+          "translate": [
+            16.81440443213296,
+            7.32409972299169
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.6759002770083102,
+          "groundPixel": 252,
+          "view": "high-0"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 19,
+              "x": 34,
+              "sourceRect": [
+                724,
+                362,
+                362,
+                362
+              ],
+              "width": 270,
+              "opaquePixels": 52356,
+              "height": 343
+            },
+            {
+              "y": 19,
+              "x": 38,
+              "sourceRect": [
+                724,
+                362,
+                362,
+                362
+              ],
+              "width": 268,
+              "opaquePixels": 51540,
+              "height": 343
+            },
+            {
+              "y": 18,
+              "x": 15,
+              "sourceRect": [
+                724,
+                362,
+                362,
+                362
+              ],
+              "width": 292,
+              "opaquePixels": 56888,
+              "height": 344
+            },
+            {
+              "y": 19,
+              "x": 49,
+              "sourceRect": [
+                724,
+                362,
+                362,
+                362
+              ],
+              "width": 268,
+              "opaquePixels": 52194,
+              "height": 343
+            }
+          ],
+          "translate": [
+            10.25581395348837,
+            -4.767441860465112
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7093023255813954,
+          "groundPixel": 252,
+          "view": "high-1"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 25,
+              "x": 11,
+              "sourceRect": [
+                1086,
+                362,
+                362,
+                362
+              ],
+              "width": 320,
+              "opaquePixels": 53054,
+              "height": 304
+            },
+            {
+              "y": 29,
+              "x": 25,
+              "sourceRect": [
+                1086,
+                362,
+                362,
+                362
+              ],
+              "width": 317,
+              "opaquePixels": 52818,
+              "height": 295
+            },
+            {
+              "y": 27,
+              "x": 0,
+              "sourceRect": [
+                1086,
+                362,
+                362,
+                362
+              ],
+              "width": 338,
+              "opaquePixels": 56127,
+              "height": 299
+            },
+            {
+              "y": 29,
+              "x": 27,
+              "sourceRect": [
+                1086,
+                362,
+                362,
+                362
+              ],
+              "width": 321,
+              "opaquePixels": 53792,
+              "height": 299
+            }
+          ],
+          "translate": [
+            6.0,
+            21.321839080459768
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7011494252873564,
+          "groundPixel": 252,
+          "view": "high-2"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 0,
+              "x": 56,
+              "sourceRect": [
+                0,
+                724,
+                362,
+                362
+              ],
+              "width": 269,
+              "opaquePixels": 48610,
+              "height": 339
+            },
+            {
+              "y": 0,
+              "x": 58,
+              "sourceRect": [
+                0,
+                724,
+                362,
+                362
+              ],
+              "width": 271,
+              "opaquePixels": 49372,
+              "height": 338
+            },
+            {
+              "y": 0,
+              "x": 45,
+              "sourceRect": [
+                0,
+                724,
+                362,
+                362
+              ],
+              "width": 289,
+              "opaquePixels": 52386,
+              "height": 344
+            },
+            {
+              "y": 0,
+              "x": 50,
+              "sourceRect": [
+                0,
+                724,
+                362,
+                362
+              ],
+              "width": 281,
+              "opaquePixels": 50282,
+              "height": 339
+            }
+          ],
+          "translate": [
+            -6.412790697674438,
+            8.0
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7093023255813954,
+          "groundPixel": 252,
+          "view": "high-3"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 0,
+              "x": 90,
+              "sourceRect": [
+                362,
+                724,
+                362,
+                362
+              ],
+              "width": 167,
+              "opaquePixels": 42404,
+              "height": 327
+            },
+            {
+              "y": 0,
+              "x": 91,
+              "sourceRect": [
+                362,
+                724,
+                362,
+                362
+              ],
+              "width": 164,
+              "opaquePixels": 43062,
+              "height": 327
+            },
+            {
+              "y": 0,
+              "x": 78,
+              "sourceRect": [
+                362,
+                724,
+                362,
+                362
+              ],
+              "width": 179,
+              "opaquePixels": 46021,
+              "height": 334
+            },
+            {
+              "y": 0,
+              "x": 90,
+              "sourceRect": [
+                362,
+                724,
+                362,
+                362
+              ],
+              "width": 170,
+              "opaquePixels": 43222,
+              "height": 328
+            }
+          ],
+          "translate": [
+            4.538922155688624,
+            8.0
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7305389221556886,
+          "groundPixel": 252,
+          "view": "high-4"
+        },
+        {
+          "sourceBounds": [
+            {
+              "y": 0,
+              "x": 71,
+              "sourceRect": [
+                724,
+                724,
+                362,
+                362
+              ],
+              "width": 177,
+              "opaquePixels": 41812,
+              "height": 339
+            },
+            {
+              "y": 0,
+              "x": 87,
+              "sourceRect": [
+                724,
+                724,
+                362,
+                362
+              ],
+              "width": 178,
+              "opaquePixels": 43617,
+              "height": 341
+            },
+            {
+              "y": 0,
+              "x": 70,
+              "sourceRect": [
+                724,
+                724,
+                362,
+                362
+              ],
+              "width": 179,
+              "opaquePixels": 44532,
+              "height": 348
+            },
+            {
+              "y": 0,
+              "x": 82,
+              "sourceRect": [
+                724,
+                724,
+                362,
+                362
+              ],
+              "width": 181,
+              "opaquePixels": 43201,
+              "height": 340
+            }
+          ],
+          "translate": [
+            10.557471264367805,
+            8.0
+          ],
+          "calibrationPose": "standing exposure zero",
+          "scale": 0.7011494252873564,
+          "groundPixel": 252,
+          "view": "top-0"
+        }
+      ],
+      "readyHold": false,
+      "id": "yawn",
+      "frames": 44,
+      "sources": [
+        {
+          "sha256": "5c74427b1ef06e34403cbe8af75144cd4f9c3ba7e5c44e3f67e9d8602659fbca",
+          "file": "yawn-phase-0.png",
+          "references": [
+            "C:/Users/ericm/.codex/generated_images/01a1c826-1583-7fd3-a171-555bb38a5365/exec-2f96f99b-af37-4d48-a11c-d5ce69eeb77f.png",
+            "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+            "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png"
+          ],
+          "dimensions": [
+            1448,
+            1086
+          ],
+          "prompt": "Production transparent watercolor game sprites, Hero. Image1 is selected large READY identity atlas: keep EXACT skull width, short muzzle, ears, eye spacing, coat, adult proportions and organic bobtail. Image2 is actual approved Hero berry painting for broad handmade watercolor washes with selectively CLEAR features. Generate just ELEVEN large full-body cutouts, 4 columns x3 rows of equal square cells, final bottom-right cell empty, generous 10% transparent gutters, no text/grid/scenery/ground/shadow. Row-major views: front eye-level, front-left45 eye-level, leftprofile90 eye-level, rear-left135 eye-level; rear180 eye-level, front elevated35degrees, front-left45 elevated35, leftprofile elevated35; rear-left135 elevated35, rear180 elevated35, straight overhead. Mirror not needed. FACE INVARIANT: original navigation's bright alert round fully OPEN amber eyes with upper eyelids CLEAR of pupil, ears pricked, engaged intelligent attentive gaze, natural mouth ONLY as explicitly specified by yawn phase. No smile/pant, sleepy drooping lids outside deliberate yawn, squint, scowl, dark eyeliner or tired/drugged expression. No longer muzzle or changed skull shape. Preserve opaque cream fur and true zero-alpha surroundings. Watercolor has varied broad brush masses, a few clear eye/nose accents, no gaussian blur or hazy airbrush. Same anatomical body/head size in every cutout despite view changes. Whole paws/ears inside each cell. Image3 is original navigation identity. MATCH image1 EXACT 4x3 views, body dimensions and planted paws in ALL phases. This is exploration YAWN, not combat. Specific phase overrides open-eye/closed-mouth defaults only while yawning. ACTION PHASE 0: Normal standing relaxed exploration exposure, jaw closed, original navigation's awake gentle eyes. This is the neutral anatomical registration frame. Change only lower jaw and eyelids. Never reshape the face/head, grow body or lift all limbs; all paws remain planted, ears and nose anchors steady."
+        },
+        {
+          "sha256": "f8ba2af83eaef09fe6e3a4b77fd37c99791d72eff4901bd85d829b7f5cb756d7",
+          "file": "yawn-phase-1.png",
+          "references": [
+            "C:/Users/ericm/.codex/generated_images/01a1c826-1583-7fd3-a171-555bb38a5365/exec-2f96f99b-af37-4d48-a11c-d5ce69eeb77f.png",
+            "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+            "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png"
+          ],
+          "dimensions": [
+            1448,
+            1086
+          ],
+          "prompt": "Production transparent watercolor game sprites, Hero. Image1 is selected large READY identity atlas: keep EXACT skull width, short muzzle, ears, eye spacing, coat, adult proportions and organic bobtail. Image2 is actual approved Hero berry painting for broad handmade watercolor washes with selectively CLEAR features. Generate just ELEVEN large full-body cutouts, 4 columns x3 rows of equal square cells, final bottom-right cell empty, generous 10% transparent gutters, no text/grid/scenery/ground/shadow. Row-major views: front eye-level, front-left45 eye-level, leftprofile90 eye-level, rear-left135 eye-level; rear180 eye-level, front elevated35degrees, front-left45 elevated35, leftprofile elevated35; rear-left135 elevated35, rear180 elevated35, straight overhead. Mirror not needed. FACE INVARIANT: original navigation's bright alert round fully OPEN amber eyes with upper eyelids CLEAR of pupil, ears pricked, engaged intelligent attentive gaze, natural mouth ONLY as explicitly specified by yawn phase. No smile/pant, sleepy drooping lids outside deliberate yawn, squint, scowl, dark eyeliner or tired/drugged expression. No longer muzzle or changed skull shape. Preserve opaque cream fur and true zero-alpha surroundings. Watercolor has varied broad brush masses, a few clear eye/nose accents, no gaussian blur or hazy airbrush. Same anatomical body/head size in every cutout despite view changes. Whole paws/ears inside each cell. Image3 is original navigation identity. MATCH image1 EXACT 4x3 views, body dimensions and planted paws in ALL phases. This is exploration YAWN, not combat. Specific phase overrides open-eye/closed-mouth defaults only while yawning. ACTION PHASE 1: Start a small natural dog yawn: lower jaw hinges down only slightly, eyes softly start closing, upper muzzle, nose bridge, skull and cheek width remain completely unchanged. Change only lower jaw and eyelids. Never reshape the face/head, grow body or lift all limbs; all paws remain planted, ears and nose anchors steady."
+        },
+        {
+          "sha256": "053f1cebc200654a287ce429fbba8788223128dbbee12a08fd8ecf4c9a5b2507",
+          "file": "yawn-phase-2.png",
+          "references": [
+            "C:/Users/ericm/.codex/generated_images/01a1c826-1583-7fd3-a171-555bb38a5365/exec-2f96f99b-af37-4d48-a11c-d5ce69eeb77f.png",
+            "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+            "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png"
+          ],
+          "dimensions": [
+            1448,
+            1086
+          ],
+          "prompt": "Production transparent watercolor game sprites, Hero. Image1 is selected large READY identity atlas: keep EXACT skull width, short muzzle, ears, eye spacing, coat, adult proportions and organic bobtail. Image2 is actual approved Hero berry painting for broad handmade watercolor washes with selectively CLEAR features. Generate just ELEVEN large full-body cutouts, 4 columns x3 rows of equal square cells, final bottom-right cell empty, generous 10% transparent gutters, no text/grid/scenery/ground/shadow. Row-major views: front eye-level, front-left45 eye-level, leftprofile90 eye-level, rear-left135 eye-level; rear180 eye-level, front elevated35degrees, front-left45 elevated35, leftprofile elevated35; rear-left135 elevated35, rear180 elevated35, straight overhead. Mirror not needed. FACE INVARIANT: original navigation's bright alert round fully OPEN amber eyes with upper eyelids CLEAR of pupil, ears pricked, engaged intelligent attentive gaze, natural mouth ONLY as explicitly specified by yawn phase. No smile/pant, sleepy drooping lids outside deliberate yawn, squint, scowl, dark eyeliner or tired/drugged expression. No longer muzzle or changed skull shape. Preserve opaque cream fur and true zero-alpha surroundings. Watercolor has varied broad brush masses, a few clear eye/nose accents, no gaussian blur or hazy airbrush. Same anatomical body/head size in every cutout despite view changes. Whole paws/ears inside each cell. Image3 is original navigation identity. MATCH image1 EXACT 4x3 views, body dimensions and planted paws in ALL phases. This is exploration YAWN, not combat. Specific phase overrides open-eye/closed-mouth defaults only while yawning. ACTION PHASE 2: Peak natural dog yawn: lower jaw rotates down at its real hinge, small curved tongue inside mouth, eyelids naturally shut. Nose and upper muzzle stay in same place; skull width, muzzle LENGTH, eye spacing and ears remain unchanged. A dog yawning, not a huge screaming emoji, no swollen cheek pouches, no stretched skull, no human mouth, no longer snout. Change only lower jaw and eyelids. Never reshape the face/head, grow body or lift all limbs; all paws remain planted, ears and nose anchors steady."
+        },
+        {
+          "sha256": "e330f822f2379a9c35891276ba010d1069e91f0a4e83e29c272bb041144b30c6",
+          "file": "yawn-phase-3.png",
+          "references": [
+            "C:/Users/ericm/.codex/generated_images/01a1c826-1583-7fd3-a171-555bb38a5365/exec-2f96f99b-af37-4d48-a11c-d5ce69eeb77f.png",
+            "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+            "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png"
+          ],
+          "dimensions": [
+            1448,
+            1086
+          ],
+          "prompt": "Production transparent watercolor game sprites, Hero. Image1 is selected large READY identity atlas: keep EXACT skull width, short muzzle, ears, eye spacing, coat, adult proportions and organic bobtail. Image2 is actual approved Hero berry painting for broad handmade watercolor washes with selectively CLEAR features. Generate just ELEVEN large full-body cutouts, 4 columns x3 rows of equal square cells, final bottom-right cell empty, generous 10% transparent gutters, no text/grid/scenery/ground/shadow. Row-major views: front eye-level, front-left45 eye-level, leftprofile90 eye-level, rear-left135 eye-level; rear180 eye-level, front elevated35degrees, front-left45 elevated35, leftprofile elevated35; rear-left135 elevated35, rear180 elevated35, straight overhead. Mirror not needed. FACE INVARIANT: original navigation's bright alert round fully OPEN amber eyes with upper eyelids CLEAR of pupil, ears pricked, engaged intelligent attentive gaze, natural mouth ONLY as explicitly specified by yawn phase. No smile/pant, sleepy drooping lids outside deliberate yawn, squint, scowl, dark eyeliner or tired/drugged expression. No longer muzzle or changed skull shape. Preserve opaque cream fur and true zero-alpha surroundings. Watercolor has varied broad brush masses, a few clear eye/nose accents, no gaussian blur or hazy airbrush. Same anatomical body/head size in every cutout despite view changes. Whole paws/ears inside each cell. Image3 is original navigation identity. MATCH image1 EXACT 4x3 views, body dimensions and planted paws in ALL phases. This is exploration YAWN, not combat. Specific phase overrides open-eye/closed-mouth defaults only while yawning. ACTION PHASE 3: Finish yawn: jaw closes back to same original short muzzle, eyes reopen fully to natural bright exploration attention. Same face as neutral exposure. Change only lower jaw and eyelids. Never reshape the face/head, grow body or lift all limbs; all paws remain planted, ears and nose anchors steady."
+        }
+      ],
+      "runtime": "yawn.png"
+    }
+  ],
+  "rows": 6,
+  "views": [
+    "low-0",
+    "low-1",
+    "low-2",
+    "low-3",
+    "low-4",
+    "high-0",
+    "high-1",
+    "high-2",
+    "high-3",
+    "high-4",
+    "top-0"
+  ]
+}

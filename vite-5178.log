@@ -1,0 +1,343 @@
+
+  VITE v5.4.21  ready in 618 ms
+
+  ➜  Local:   http://localhost:5178/
+  ➜  Network: http://100.82.227.20:5178/
+  ➜  Network: http://192.168.68.54:5178/
+  ➜  press h + enter to show help
+8:08:29 PM [vite] page reload src/proto/actorOrientation.test.ts
+8:08:29 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/CombatDemo.tsx
+8:08:30 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:08:30 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ActorHoloCard.tsx
+8:08:30 PM [vite] hmr update /src/proto/components/AbilityDetailPopup.tsx, /src/index.css
+8:08:30 PM [vite] page reload src/proto/rules/battle.test.ts
+8:08:31 PM [vite] hmr update /src/index.css, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+8:08:31 PM [vite] page reload src/proto/actorSpriteRig.ts
+8:08:31 PM [vite] page reload src/proto/atmosphere.test.ts
+8:08:32 PM [vite] hmr update /src/index.css, /src/proto/components/TableauScene.tsx, /src/proto/components/CombatDemo.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/DustMotes.tsx, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/VolumetricAtmosphere.tsx
+8:08:32 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx
+8:08:32 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:33 PM [vite] page reload src/proto/biomeArrival.test.ts
+8:08:33 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/TableActorSprite.tsx
+8:08:33 PM [vite] page reload src/proto/biomeEdgeScenery.test.ts
+8:08:34 PM [vite] page reload src/proto/biomeFlags.test.ts
+8:08:34 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/ProtoMap.tsx
+8:08:34 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+8:08:35 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:35 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableAtmosphere.tsx
+8:08:35 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+8:08:35 PM [vite] page reload src/proto/combatOpening.test.ts
+8:08:36 PM [vite] hmr update /src/proto/DevContextMenu.tsx, /src/index.css
+8:08:36 PM [vite] hmr update /src/index.css, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+8:08:36 PM [vite] page reload src/proto/directionalSprites.test.ts
+8:08:37 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+8:08:37 PM [vite] page reload src/proto/dirtTiles.test.ts
+8:08:37 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:08:37 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/RoadTileArt.tsx, /src/proto/components/ConnectedTerrainArt.tsx, /src/proto/components/TileTitle.tsx
+8:08:38 PM [vite] page reload src/proto/gridCoordinates.test.ts
+8:08:38 PM [vite] page reload src/proto/gridPathfinding.test.ts
+8:08:38 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:08:39 PM [vite] page reload src/proto/heroCombatSprites.test.ts
+8:08:39 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+8:08:39 PM [vite] page reload src/proto/heroSittingSprite.test.ts
+8:08:39 PM [vite] hmr update /src/index.css, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+8:08:40 PM [vite] hmr update /src/proto/components/GyroDiagnostics.tsx, /src/index.css, /src/proto/components/TradingCard.tsx
+8:08:40 PM [vite] page reload src/proto/holoTilt.test.ts
+8:08:40 PM [vite] page reload src/proto/holdLog.ts
+8:08:41 PM [vite] hmr update /src/proto/components/GyroDiagnostics.tsx, /src/index.css, /src/proto/components/TradingCard.tsx
+8:08:41 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ProtoMap.tsx
+8:08:41 PM [vite] page reload src/proto/inspirationTesting.test.ts
+8:08:41 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/CombatDemo.tsx
+8:08:42 PM [vite] page reload src/proto/main.tsx
+8:08:42 PM [vite] page reload src/proto/mountainTiles.test.ts
+8:08:42 PM [vite] hmr update /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:08:43 PM [vite] page reload src/proto/propVolume.test.ts
+8:08:43 PM [vite] hmr update /src/index.css, /src/proto/components/PropVolume.tsx
+8:08:43 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/PropVolume.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+8:08:43 PM [vite] page reload src/proto/protoCrafting.test.ts
+8:08:44 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ProtoMap.tsx
+8:08:44 PM [vite] page reload src/proto/protoData.test.ts
+8:08:44 PM [vite] page reload src/proto/protoLighting.test.ts
+8:08:45 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/DetailsCardViewer.tsx, /src/proto/components/TableauScene.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/PropVolume.tsx, /src/proto/components/CombatDemo.tsx, /src/proto/components/DustMotes.tsx, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/VolumetricAtmosphere.tsx, /src/proto/components/TableQuestCard.tsx, /src/proto/components/BiomeEdgeScenery.tsx, /src/proto/components/SpriteStandee.tsx, /src/proto/components/SilhouetteRelief.tsx
+8:08:45 PM [vite] page reload src/proto/protoQuestDeals.test.ts
+8:08:45 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ActorPlaytestEditor.tsx, /src/proto/components/ProtoCard.tsx, /src/proto/components/PondField.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/FoundationBoards.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/BattleUnits.tsx, /src/proto/components/TableauScene.tsx, /src/proto/components/ProtoMap.tsx
+8:08:45 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/RoadTileArt.tsx
+8:08:46 PM [vite] page reload src/proto/protoTransport.test.ts
+8:08:46 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ActorPlaytestEditor.tsx, /src/proto/components/ProtoCard.tsx, /src/proto/components/PondField.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/FoundationBoards.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/BattleUnits.tsx
+8:08:46 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:08:46 PM [vite] page reload src/proto/protoTypes.ts
+8:08:47 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:47 PM [vite] page reload src/proto/quadrupedSprite.test.ts
+8:08:47 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+8:08:48 PM [vite] page reload src/proto/questProgress.test.ts
+8:08:48 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:48 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:48 PM [vite] page reload src/proto/restQuest.test.ts
+8:08:49 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/RoadTileArt.tsx
+8:08:49 PM [vite] page reload src/proto/roadTiles.test.ts
+8:08:49 PM [vite] page reload src/proto/sceneryFootprint.test.ts
+8:08:50 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BiomeEdgeScenery.tsx
+8:08:50 PM [vite] page reload src/proto/silhouetteRelief.test.ts
+8:08:50 PM [vite] hmr update /src/index.css, /src/proto/components/SilhouetteRelief.tsx
+8:08:50 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:51 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/TableauSolveControls.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/ProtoMap.tsx
+8:08:51 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:08:51 PM [vite] page reload src/proto/tableauLighting.test.ts
+8:08:51 PM [vite] page reload src/proto/tableauDepartures.test.ts
+8:08:52 PM [vite] page reload src/proto/tableauSolver.test.ts
+8:08:52 PM [vite] page reload src/proto/tableCardPlacement.test.ts
+8:08:52 PM [vite] hmr update /src/index.css, /src/proto/components/DetailsCardViewer.tsx, /src/proto/components/TableStoryCard.tsx, /src/proto/components/TableQuestCard.tsx
+8:08:53 PM [vite] page reload src/proto/tableTilt.test.ts
+8:08:53 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:08:53 PM [vite] page reload src/proto/terrainAutotile.test.ts
+8:08:53 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableauScene.tsx, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/DustMotes.tsx, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/VolumetricAtmosphere.tsx
+8:08:54 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:08:54 PM [vite] page reload src/proto/tileDiscovery.test.ts
+8:08:54 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:08:54 PM [vite] page reload src/proto/tileLabels.test.ts
+8:08:55 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TileTitle.tsx
+8:08:55 PM [vite] page reload src/proto/tileSpill.test.ts
+8:08:55 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:08:55 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/TradingCard.tsx
+8:08:56 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/DustMotes.tsx, /src/proto/components/VolumetricAtmosphere.tsx, /src/proto/components/TableAtmosphere.tsx
+8:08:56 PM [vite] hmr update /src/index.css, /src/proto/components/TableQuestCard.tsx, /src/proto/components/QuestCard.tsx
+8:08:56 PM [vite] page reload src/proto/volumetricAtmosphere.test.ts
+8:08:56 PM [vite] page reload src/proto/worldBounds.test.ts
+8:08:57 PM [vite] hmr update /src/index.css, /src/proto/components/TableauScene.tsx, /src/proto/components/CombatDemo.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/DustMotes.tsx, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/VolumetricAtmosphere.tsx
+8:08:57 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/RoadTileArt.tsx
+8:08:57 PM [vite] page reload src/proto/worldPathfinding.test.ts
+8:08:57 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/DetailsCardViewer.tsx, /src/proto/components/TableauScene.tsx, /src/proto/components/ProtoMap.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/PropVolume.tsx, /src/proto/components/CombatDemo.tsx, /src/proto/components/DustMotes.tsx, /src/proto/components/TableAtmosphere.tsx, /src/proto/components/VolumetricAtmosphere.tsx, /src/proto/components/TableQuestCard.tsx, /src/proto/components/BiomeEdgeScenery.tsx, /src/proto/components/SpriteStandee.tsx, /src/proto/components/SilhouetteRelief.tsx
+8:08:58 PM [vite] hmr update /src/proto/components/ActorBaseName.tsx, /src/index.css
+8:08:58 PM [vite] hmr update /src/proto/components/ActorHoloCard.tsx, /src/index.css
+8:08:58 PM [vite] hmr update /src/proto/components/ActorPlaytestEditor.tsx, /src/index.css
+8:08:59 PM [vite] hmr update /src/index.css, /src/proto/components/VolumetricAtmosphere.tsx
+8:08:59 PM [vite] page reload src/proto/components/AutoPlayControl.tsx
+8:08:59 PM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+8:08:59 PM [vite] hmr update /src/proto/components/BattleUnits.tsx, /src/index.css
+8:09:00 PM [vite] hmr update /src/proto/components/BiomeEdgeScenery.tsx, /src/index.css
+8:09:00 PM [vite] hmr update /src/proto/components/BoardObjectLabel.tsx, /src/index.css
+8:09:00 PM [vite] hmr update /src/proto/components/BiomeTopDownArt.tsx, /src/index.css
+8:09:01 PM [vite] hmr update /src/proto/components/CardJumbo.tsx, /src/index.css
+8:09:01 PM [vite] page reload src/proto/components/CombatField.tsx
+8:09:01 PM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+8:09:01 PM [vite] hmr update /src/proto/components/ConnectedTerrainArt.tsx, /src/index.css
+8:09:02 PM [vite] hmr update /src/proto/components/DetailsCardViewer.tsx, /src/index.css
+8:09:02 PM [vite] hmr update /src/proto/components/DustMotes.tsx, /src/index.css
+8:09:02 PM [vite] hmr update /src/proto/components/FishFight.tsx, /src/index.css
+8:09:02 PM [vite] hmr update /src/proto/components/FoundationBoards.tsx, /src/index.css
+8:09:03 PM [vite] hmr update /src/proto/components/FpsCounter.tsx, /src/index.css
+8:09:03 PM [vite] hmr update /src/proto/components/FoundationExitButton.tsx, /src/index.css
+8:09:03 PM [vite] hmr update /src/proto/components/GyroDiagnostics.tsx, /src/index.css
+8:09:03 PM [vite] hmr update /src/proto/components/GameTooltip.tsx, /src/index.css
+8:09:04 PM [vite] hmr update /src/proto/components/HoldLogOverlay.tsx, /src/index.css
+8:09:04 PM [vite] hmr update /src/proto/components/HeroDenRoof.tsx, /src/index.css
+8:09:04 PM [vite] page reload src/proto/components/PinnedToast.tsx
+8:09:05 PM [vite] page reload src/proto/components/PlayingCardStack.test.ts
+8:09:05 PM [vite] hmr update /src/proto/components/PlayingCardStack.tsx, /src/index.css
+8:09:05 PM [vite] hmr update /src/proto/components/PondField.tsx, /src/index.css
+8:09:05 PM [vite] hmr update /src/proto/components/PropVolume.tsx, /src/index.css
+8:09:06 PM [vite] hmr update /src/proto/components/ProtoCard.tsx, /src/index.css
+8:09:06 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+8:09:06 PM [vite] hmr update /src/proto/components/QuestArtwork.tsx, /src/index.css
+8:09:06 PM [vite] hmr update /src/proto/components/QuestCard.tsx, /src/index.css
+8:09:07 PM [vite] page reload src/proto/components/QuestField.test.ts
+8:09:07 PM [vite] hmr update /src/proto/components/Reveal.tsx, /src/index.css
+8:09:07 PM [vite] hmr update /src/proto/components/RoadTileArt.tsx, /src/index.css
+8:09:07 PM [vite] hmr update /src/proto/components/RouteLine.tsx, /src/index.css
+8:09:08 PM [vite] page reload src/proto/components/SettlementSupplyTray.tsx
+8:09:08 PM [vite] page reload src/proto/components/QuestField.tsx
+8:09:08 PM [vite] hmr update /src/proto/components/SceneButton.tsx, /src/index.css
+8:09:08 PM [vite] hmr update /src/proto/components/SilhouetteRelief.tsx, /src/index.css
+8:09:09 PM [vite] hmr update /src/proto/components/SpriteStandee.tsx, /src/index.css
+8:09:09 PM [vite] page reload src/proto/components/TableActorSprite.test.ts
+8:09:09 PM [vite] hmr update /src/index.css, /src/proto/components/SilhouetteRelief.tsx, /src/proto/components/SpriteStandee.tsx
+8:09:10 PM [vite] hmr update /src/proto/components/TableActorSprite.tsx, /src/index.css
+8:09:10 PM [vite] hmr update /src/proto/components/TableAtmosphere.tsx, /src/index.css
+8:09:10 PM [vite] hmr update /src/proto/components/TableauCardArea.tsx, /src/index.css
+8:09:10 PM [vite] hmr update /src/proto/components/TableauSolveControls.tsx, /src/index.css
+8:09:11 PM [vite] hmr update /src/proto/components/TableauScene.tsx, /src/index.css
+8:09:11 PM [vite] hmr update /src/proto/components/TableStoryCard.tsx, /src/index.css
+8:09:11 PM [vite] hmr update /src/proto/components/TableQuestCard.tsx, /src/index.css
+8:09:11 PM [vite] page reload src/proto/components/TableauCardArea.test.ts
+8:09:12 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:09:12 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:09:12 PM [vite] hmr update /src/proto/components/TileSpillArt.tsx, /src/index.css
+8:09:13 PM [vite] hmr update /src/proto/components/TimeOfDaySlider.tsx, /src/index.css
+8:09:13 PM [vite] hmr update /src/proto/components/TileTitle.tsx, /src/index.css
+8:09:13 PM [vite] hmr update /src/proto/components/TradingCard.tsx, /src/index.css
+8:09:13 PM [vite] page reload src/proto/components/TrayRestoreHandle.tsx
+8:09:14 PM [vite] hmr update /src/proto/components/UnexploredGround.tsx, /src/index.css
+8:09:14 PM [vite] hmr update /src/proto/components/UnexploredTile.tsx, /src/index.css
+8:09:14 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:09:14 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:09:15 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:09:15 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:09:15 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TableStoryCard.tsx, /src/proto/components/TableQuestCard.tsx
+8:09:15 PM [vite] hmr update /src/proto/components/VolumetricAtmosphere.tsx, /src/index.css
+8:09:16 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+8:09:16 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:09:16 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/BattleUnits.tsx
+8:09:16 PM [vite] page reload src/proto/rules/battleAmbush.test.ts
+8:09:17 PM [vite] page reload src/proto/rules/battleCues.test.ts
+8:09:17 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx
+8:09:17 PM [vite] page reload src/proto/rules/battleRedraw.test.ts
+8:09:18 PM [vite] page reload src/proto/rules/battleScenarios.test.ts
+8:09:18 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:09:18 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:09:18 PM [vite] page reload src/proto/rules/fishFight.test.ts
+8:09:19 PM [vite] hmr update /src/index.css, /src/proto/components/FishFight.tsx
+8:09:19 PM [vite] page reload src/proto/rules/fishing.test.ts
+8:09:19 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/PondField.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/FishFight.tsx
+8:09:19 PM [vite] page reload src/proto/rules/ordinaryDay.test.ts
+8:09:20 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:09:20 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:09:20 PM [vite] page reload src/proto/rules/playtestOverrides.test.ts
+8:09:20 PM [vite] hmr update /src/index.css, /src/proto/ProtoVariant.tsx, /src/proto/components/PondField.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/FishFight.tsx
+8:09:21 PM [vite] page reload src/proto/rules/redraw.test.ts
+8:09:21 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:09:21 PM [vite] page reload src/proto/rules/rest.test.ts
+8:09:21 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:09:22 PM [vite] page reload src/proto/rules/rules.test.ts
+8:09:22 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:09:22 PM [vite] page reload src/proto/rules/skirmish.test.ts
+8:09:22 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+8:09:52 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:09:52 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:09:52 PM [vite] hmr update /src/proto/components/PondField.tsx, /src/index.css
+8:09:52 PM [vite] page reload src/proto/rules/ordinaryDay.test.ts
+8:09:52 PM [vite] page reload src/proto/protoData.test.ts
+8:09:53 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/ActorPlaytestEditor.tsx, /src/proto/components/ProtoCard.tsx, /src/proto/components/PondField.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/FoundationBoards.tsx, /src/proto/components/FishFight.tsx, /src/proto/components/BattleUnits.tsx, /src/proto/components/TableauScene.tsx, /src/proto/components/ProtoMap.tsx
+8:10:26 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+8:10:26 PM [vite] page reload src/proto/tileSpill.test.ts
+8:12:09 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+8:12:09 PM [vite] hmr update /src/proto/components/PondField.tsx, /src/index.css
+9:34:11 AM [vite] hmr update /src/index.css, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+9:34:11 AM [vite] hmr update /src/index.css
+9:34:11 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+9:41:32 AM [vite] hmr update /src/index.css, /src/proto/components/TableActorSprite.tsx, /src/proto/components/CombatDemo.tsx
+9:45:12 AM [vite] page reload src/proto/travelMotion.test.ts
+9:45:17 AM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/CombatDemo.tsx
+9:45:21 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/ProtoMap.tsx
+9:45:51 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/ProtoMap.tsx
+9:45:51 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/ProtoMap.tsx
+9:46:45 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/ProtoMap.tsx
+9:47:53 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/TableActorSprite.tsx
+9:54:49 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+9:54:50 AM [vite] hmr update /src/proto/components/SpriteStandee.tsx, /src/index.css
+9:54:52 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+9:59:16 AM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+10:06:33 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+10:06:36 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+10:23:06 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+10:32:55 AM [vite] hmr update /src/proto/components/TradingCard.tsx, /src/index.css
+10:37:29 AM [vite] hmr update /src/proto/components/BiomeEdgeScenery.tsx, /src/index.css
+10:39:36 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+10:39:36 AM [vite] hmr update /src/proto/components/TableActorSprite.tsx, /src/index.css
+10:39:37 AM [vite] hmr update /src/proto/components/VolumetricAtmosphere.tsx, /src/index.css
+11:33:54 AM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+11:34:22 AM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+11:50:18 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+11:50:18 AM [vite] hmr update /src/proto/components/DetailsCardViewer.tsx, /src/index.css
+12:13:21 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:13:21 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:13:22 PM [vite] hmr update /src/proto/components/TableActorSprite.tsx, /src/index.css
+12:13:23 PM [vite] hmr invalidate /src/proto/components/ProtoMap.tsx Could not Fast Refresh ("getBiomeExitPoint" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:13:23 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+12:27:13 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:27:29 PM [vite] hmr update /src/index.css
+12:27:44 PM [vite] hmr update /src/index.css
+12:30:57 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:31:17 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:31:17 PM [vite] hmr update /src/index.css
+12:31:18 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:40:45 PM [vite] page reload src/proto/actorCloseup.test.ts
+12:44:55 PM [vite] page reload src/proto/paintedPropVolume.ts
+12:45:21 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+12:45:41 PM [vite] hmr update /src/proto/components/TableauScene.tsx, /src/index.css
+12:45:42 PM [vite] hmr update /src/proto/components/BiomeEdgeScenery.tsx, /src/index.css
+12:53:12 PM [vite] page reload src/proto/propVolumeRenderer.ts
+12:53:31 PM [vite] page reload src/proto/propVolumeRenderer.ts
+1:05:45 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:13:52 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+1:13:53 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx
+1:52:04 PM [vite] hmr update /src/proto/components/HeroDenRoof.tsx, /src/index.css
+2:56:09 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+3:02:08 PM [vite] hmr update /src/index.css
+3:19:44 PM [vite] hmr update /src/proto/components/SpriteStandee.tsx, /src/index.css
+3:19:44 PM [vite] hmr update /src/proto/components/QuestArtwork.tsx, /src/index.css
+5:08:13 PM [vite] page reload src/proto/propVolume.ts
+6:19:58 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+6:39:41 PM [vite] page reload src/proto/travelMotion.test.ts
+7:22:29 PM [vite] page reload src/proto/components/TableauCardArea.test.ts
+7:42:06 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+7:45:17 PM [vite] hmr update /src/proto/components/TableauLandscape.tsx, /src/index.css
+7:45:17 PM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+8:02:51 PM [vite] hmr update /src/index.css, /src/proto/components/VolumetricAtmosphere.tsx
+8:43:29 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+9:00:52 PM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+9:00:52 PM [vite] page reload src/proto/rules/rules.test.ts
+9:10:09 PM [vite] hmr update /src/index.css
+9:12:35 AM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+9:13:09 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+9:13:09 AM [vite] hmr update /src/proto/components/BattleTableauField.css
+9:14:02 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/BattleUnits.tsx
+9:15:19 AM [vite] page reload src/proto/rules/battleCues.test.ts
+9:15:20 AM [vite] page reload src/proto/rules/battleScenarios.test.ts
+9:16:19 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+9:16:19 AM [vite] page reload src/proto/rules/battleCues.test.ts
+9:16:19 AM [vite] page reload src/proto/rules/battle.test.ts
+9:18:57 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+9:20:45 AM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+9:20:46 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+9:20:46 AM [vite] hmr update /src/proto/components/BattleTableauField.css
+9:23:36 AM [vite] hmr update /src/proto/components/BattleTableauField.css
+9:24:36 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx, /src/proto/components/BattleUnits.tsx
+9:41:01 AM [vite] hmr update /src/proto/components/BattleUnits.tsx, /src/index.css
+9:41:01 AM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+9:42:30 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+9:42:31 AM [vite] hmr update /src/proto/components/BattleTableauField.css
+9:44:20 AM [vite] page reload src/proto/rules/battle.test.ts
+9:45:20 AM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+9:47:50 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+10:02:15 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+10:02:15 AM [vite] hmr update /src/proto/components/BattleTableauField.css
+10:20:24 AM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+10:20:24 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+10:20:24 AM [vite] page reload src/proto/rules/battleCues.test.ts
+10:20:25 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+10:21:32 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+10:23:06 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+10:23:07 AM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+10:30:56 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+10:30:57 AM [vite] hmr update /src/proto/components/BattleTableauField.css
+10:38:50 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+10:46:34 AM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css
+10:46:35 AM [vite] hmr update /src/proto/components/TileDetailsCard.tsx, /src/index.css
+10:46:35 AM [vite] hmr update /src/proto/ProtoVariant.tsx, /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/PondField.tsx, /src/proto/components/FishFight.tsx
+10:46:36 AM [vite] page reload src/proto/dirtTiles.test.ts
+10:55:26 AM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+10:55:26 AM [vite] hmr update /src/index.css
+11:01:10 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+11:02:53 AM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+11:15:11 AM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+11:15:12 AM [vite] hmr update /src/proto/components/CombatDemo.tsx, /src/index.css
+11:15:12 AM [vite] hmr update /src/proto/components/CombatDemo.css
+11:15:12 AM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+11:26:17 AM [vite] hmr update /src/proto/components/ArtSettings.css
+11:45:45 AM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx, /src/proto/components/CombatDemo.tsx
+12:10:59 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx, /src/proto/components/BattleTableauField.tsx
+12:11:00 PM [vite] hmr update /src/index.css, /src/proto/components/CombatDemo.tsx
+12:11:00 PM [vite] hmr update /src/proto/components/BattleTableauField.tsx, /src/index.css
+12:11:00 PM [vite] hmr update /src/proto/components/BattleUnits.tsx, /src/index.css
+12:11:01 PM [vite] hmr update /src/proto/components/AbilityCard.tsx, /src/index.css
+12:11:01 PM [vite] hmr update /src/proto/components/BattleTableauField.css
+12:13:01 PM [vite] hmr update /src/index.css, /src/proto/components/BattleTableauField.tsx
+12:19:23 PM [vite] hmr update /src/proto/components/TableStoryCard.tsx, /src/index.css
+12:19:24 PM [vite] hmr update /src/index.css
+12:19:24 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:23:07 PM [vite] hmr update /src/proto/components/TileSpillArt.tsx, /src/index.css
+12:23:07 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:31:20 PM [vite] page reload src/proto/rules/ordinaryDay.test.ts
+12:34:58 PM [vite] hmr update /src/proto/components/ProtoMap.tsx, /src/index.css
+12:36:55 PM [vite] hmr update /src/index.css, /src/proto/components/ProtoMap.tsx, /src/proto/components/TileSpillArt.tsx
+1:04:41 PM [vite] page reload src/proto/rules/ordinaryDay.test.ts

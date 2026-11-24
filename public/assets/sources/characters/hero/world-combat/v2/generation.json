@@ -1,0 +1,53 @@
+{
+  "tool": "image_gen.imagegen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatReady-source.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+  ],
+  "records": [
+    {
+      "id": "combatReady",
+      "references": [
+        "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatReady-source.png",
+        "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+      ],
+      "prompt": "Edit image ONE, Hero's existing combatReady 44-pose game spritesheet. Image TWO is the actual approved Hero berry painting: use its NATURAL SOFT AMBER EYES and broad gentle watercolor face treatment. Targeted facial correction only: the current black rings, heavily inked eye sockets and sharply slanted scowling brows make her look menacing. REMOVE those added DARK EYE OUTLINES and ANGRY EYEBROWS in EVERY visible face. Give her open, softly shaped natural amber eyes with small ordinary pupils and tiny catchlights; light, thin, soft brown upper eyelids only, NO thick contour around the eyes, NO eyeliner, raccoon circles, black orbital rings, shadowed sockets, V-shaped brows, glare, squint, or menacing darkness. Preserve her natural tricolor coat markings, but do not turn their edges into black eye makeup. Forehead/eye surroundings use the original warm apricot and softly merged smoky merle washes from image TWO. Expression: calmly ATTENTIVE, awake and interested, with relaxed brows and ears directed ahead. Focus comes from gaze direction and body readiness, NOT anger or a frown. Keep a neutral CLOSED mouth: no smile, tongue, teeth or panting, and no exaggerated downturned scowl. Do not darken the overall character or apply a global filter. Preserve EVERY exact body pose, feet, head angle, fur markings away from the eyes, anatomy, short organic bobtail, view, frame size, registration, silhouette and brushwork. Do not rotate rear faces toward camera. The 8 columns x6 rows, 1448x1086 canvas and 44 active cells stay EXACTLY unchanged. Four phases per eleven camera views; final four cells blank. Preserve genuine alpha ZERO in all background/gutters/blank cells and opaque pale fur; no paper veil, shadows, labels, grid or added strokes. The existing pre-lunge poses must keep chest down and rump high, never become seated.",
+      "path": "C:\\Users\\ericm\\.codex\\generated_images\\01a1c826-1583-7fd3-a171-555bb38a5365\\exec-93b13a11-a97b-4b10-8233-c572f27d8657.png",
+      "initialPath": "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatReady-source.png",
+      "correction": null
+    },
+    {
+      "id": "combatStalk",
+      "references": [
+        "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatStalk-source.png",
+        "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+      ],
+      "prompt": "Edit image ONE, Hero's existing combatStalk 44-pose game spritesheet. Image TWO is the actual approved Hero berry painting: use its NATURAL SOFT AMBER EYES and broad gentle watercolor face treatment. Targeted facial correction only: the current black rings, heavily inked eye sockets and sharply slanted scowling brows make her look menacing. REMOVE those added DARK EYE OUTLINES and ANGRY EYEBROWS in EVERY visible face. Give her open, softly shaped natural amber eyes with small ordinary pupils and tiny catchlights; light, thin, soft brown upper eyelids only, NO thick contour around the eyes, NO eyeliner, raccoon circles, black orbital rings, shadowed sockets, V-shaped brows, glare, squint, or menacing darkness. Preserve her natural tricolor coat markings, but do not turn their edges into black eye makeup. Forehead/eye surroundings use the original warm apricot and softly merged smoky merle washes from image TWO. Expression: calmly ATTENTIVE, awake and interested, with relaxed brows and ears directed ahead. Focus comes from gaze direction and body readiness, NOT anger or a frown. Keep a neutral CLOSED mouth: no smile, tongue, teeth or panting, and no exaggerated downturned scowl. Do not darken the overall character or apply a global filter. Preserve EVERY exact body pose, feet, head angle, fur markings away from the eyes, anatomy, short organic bobtail, view, frame size, registration, silhouette and brushwork. Do not rotate rear faces toward camera. The 8 columns x6 rows, 1448x1086 canvas and 44 active cells stay EXACTLY unchanged. Four phases per eleven camera views; final four cells blank. Preserve genuine alpha ZERO in all background/gutters/blank cells and opaque pale fur; no paper veil, shadows, labels, grid or added strokes. The existing pre-lunge poses must keep chest down and rump high, never become seated.",
+      "path": "C:\\Users\\ericm\\.codex\\generated_images\\01a1c826-1583-7fd3-a171-555bb38a5365\\exec-5a48422d-81ef-4168-a17a-65eed9fd7e9c.png",
+      "initialPath": "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatStalk-source.png",
+      "correction": null
+    },
+    {
+      "id": "combatBow",
+      "references": [
+        "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatBow-source.png",
+        "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+      ],
+      "prompt": "Edit image ONE, Hero's existing combatBow 44-pose game spritesheet. Image TWO is the actual approved Hero berry painting: use its NATURAL SOFT AMBER EYES and broad gentle watercolor face treatment. Targeted facial correction only: the current black rings, heavily inked eye sockets and sharply slanted scowling brows make her look menacing. REMOVE those added DARK EYE OUTLINES and ANGRY EYEBROWS in EVERY visible face. Give her open, softly shaped natural amber eyes with small ordinary pupils and tiny catchlights; light, thin, soft brown upper eyelids only, NO thick contour around the eyes, NO eyeliner, raccoon circles, black orbital rings, shadowed sockets, V-shaped brows, glare, squint, or menacing darkness. Preserve her natural tricolor coat markings, but do not turn their edges into black eye makeup. Forehead/eye surroundings use the original warm apricot and softly merged smoky merle washes from image TWO. Expression: calmly ATTENTIVE, awake and interested, with relaxed brows and ears directed ahead. Focus comes from gaze direction and body readiness, NOT anger or a frown. Keep a neutral CLOSED mouth: no smile, tongue, teeth or panting, and no exaggerated downturned scowl. Do not darken the overall character or apply a global filter. Preserve EVERY exact body pose, feet, head angle, fur markings away from the eyes, anatomy, short organic bobtail, view, frame size, registration, silhouette and brushwork. Do not rotate rear faces toward camera. The 8 columns x6 rows, 1448x1086 canvas and 44 active cells stay EXACTLY unchanged. Four phases per eleven camera views; final four cells blank. Preserve genuine alpha ZERO in all background/gutters/blank cells and opaque pale fur; no paper veil, shadows, labels, grid or added strokes. The existing pre-lunge poses must keep chest down and rump high, never become seated.",
+      "path": "C:\\Users\\ericm\\.codex\\generated_images\\01a1c826-1583-7fd3-a171-555bb38a5365\\exec-e58ac39f-4bf0-4c2d-92b0-4dc076ee379c.png",
+      "initialPath": "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatBow-source.png",
+      "correction": null
+    },
+    {
+      "id": "combatLeap",
+      "references": [
+        "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatLeap-source.png",
+        "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+      ],
+      "prompt": "Edit image ONE, Hero's existing combatLeap 44-pose game spritesheet. Image TWO is the actual approved Hero berry painting: use its NATURAL SOFT AMBER EYES and broad gentle watercolor face treatment. Targeted facial correction only: the current black rings, heavily inked eye sockets and sharply slanted scowling brows make her look menacing. REMOVE those added DARK EYE OUTLINES and ANGRY EYEBROWS in EVERY visible face. Give her open, softly shaped natural amber eyes with small ordinary pupils and tiny catchlights; light, thin, soft brown upper eyelids only, NO thick contour around the eyes, NO eyeliner, raccoon circles, black orbital rings, shadowed sockets, V-shaped brows, glare, squint, or menacing darkness. Preserve her natural tricolor coat markings, but do not turn their edges into black eye makeup. Forehead/eye surroundings use the original warm apricot and softly merged smoky merle washes from image TWO. Expression: calmly ATTENTIVE, awake and interested, with relaxed brows and ears directed ahead. Focus comes from gaze direction and body readiness, NOT anger or a frown. Keep a neutral CLOSED mouth: no smile, tongue, teeth or panting, and no exaggerated downturned scowl. Do not darken the overall character or apply a global filter. Preserve EVERY exact body pose, feet, head angle, fur markings away from the eyes, anatomy, short organic bobtail, view, frame size, registration, silhouette and brushwork. Do not rotate rear faces toward camera. The 8 columns x6 rows, 1448x1086 canvas and 44 active cells stay EXACTLY unchanged. Four phases per eleven camera views; final four cells blank. Preserve genuine alpha ZERO in all background/gutters/blank cells and opaque pale fur; no paper veil, shadows, labels, grid or added strokes. The existing pre-lunge poses must keep chest down and rump high, never become seated.",
+      "path": "C:\\Users\\ericm\\.codex\\generated_images\\01a1c826-1583-7fd3-a171-555bb38a5365\\exec-c6a52a4c-713a-42bc-899b-0bf91c9c8a56.png",
+      "initialPath": "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-combat/v1/combatLeap-source.png",
+      "correction": null
+    }
+  ]
+}

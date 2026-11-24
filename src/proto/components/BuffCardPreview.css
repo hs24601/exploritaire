@@ -1,0 +1,8 @@
+.buff-card-preview{position:fixed;z-index:110000;width:min(210px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;background:#14231ff5;border:1px solid #bcad86;border-radius:6px;color:#fff1d2;padding:8px;box-sizing:border-box;}
+.buff-card-preview__card{display:block;width:100%;aspect-ratio:63/88;padding:0;border:0;background:none;cursor:zoom-in;--classic-card-w:192px;}
+.buff-card-preview .trading-card{width:100%;height:100%;}
+.buff-card-preview>p,.buff-card-preview__rules{font:16px/1.35 Georgia,serif;margin:8px 0 0;color:#fff1d2;}
+.buff-card-preview__rules{padding:10px;background:#14231f;}
+.buff-card-preview__close{position:relative;display:block;margin:0 0 4px auto;width:44px;height:44px;border:1px solid #bcad86;background:#14231f;color:#fff1d2;font:24px/1 Georgia;}
+.buff-card-preview__glyph{display:grid;place-items:center;width:100%;height:100%;font:64px/1 Georgia;background:#24352e;}
+.battle-field .battle-buff-icon{touch-action:none;user-select:none;-webkit-touch-callout:none;}

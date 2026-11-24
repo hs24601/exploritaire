@@ -1,0 +1,9 @@
+.holo-lens-defs{position:absolute;width:0;height:0;pointer-events:none;overflow:hidden}
+.trading-card[data-lenticular='true'][data-lens-renderer='shared']>.trading-card__art{filter:var(--holo-lens-filter)}
+.holo-lens-coating{position:absolute;inset:3px;z-index:-2;pointer-events:none;border-radius:5px;opacity:var(--holo-lens-strength,.55);mix-blend-mode:soft-light;background-image:repeating-linear-gradient(90deg,#fff9 0,transparent calc(var(--holo-lens-pitch)*.32),#07151f50 calc(var(--holo-lens-pitch)*.65),#fff9 var(--holo-lens-pitch)),linear-gradient(110deg,#87d9ef55,#f3dfad55,#baace655,#9dd5c355);background-size:auto,240% 100%;background-position:calc(var(--art-shift-x,0)*7px) 0,calc(50% + var(--art-shift-x,0)*40%) 50%}
+@media(prefers-reduced-motion:reduce){.trading-card[data-lens-renderer='shared']>.trading-card__art{filter:none!important}.holo-lens-coating{display:none}}
+[data-fx='low'] .trading-card[data-lens-renderer='shared']>.trading-card__art,[data-fx='off'] .trading-card[data-lens-renderer='shared']>.trading-card__art{filter:none!important}
+[data-fx='low'] .holo-lens-coating,[data-fx='off'] .holo-lens-coating{display:none}
+/* The root flag also reaches frozen presentation clones outside React ownership. */
+html[data-holographic-lenticular='false'] .holo-lens-coating{display:none}
+html[data-holographic-lenticular='false'] .trading-card[data-lens-renderer='shared']>.trading-card__art{filter:none!important}

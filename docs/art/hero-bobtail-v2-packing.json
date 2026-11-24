@@ -1,0 +1,152 @@
+[
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-directions-low-bobtail-v2.png",
+    "originalSize": [
+      1122,
+      1402
+    ],
+    "generatedSize": [
+      1122,
+      1402
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-directions-high-bobtail-v2.png",
+    "originalSize": [
+      1024,
+      1536
+    ],
+    "generatedSize": [
+      1024,
+      1536
+    ],
+    "alpha": [
+      0,
+      254
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-sitting-low-bobtail-v2.png",
+    "originalSize": [
+      1338,
+      1383
+    ],
+    "generatedSize": [
+      1233,
+      1275
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-sitting-high-bobtail-v2.png",
+    "originalSize": [
+      1353,
+      1446
+    ],
+    "generatedSize": [
+      1213,
+      1296
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-walking-low-bobtail-v2.png",
+    "originalSize": [
+      1512,
+      1460
+    ],
+    "generatedSize": [
+      1277,
+      1232
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-walking-high-bobtail-v2.png",
+    "originalSize": [
+      1224,
+      2190
+    ],
+    "generatedSize": [
+      938,
+      1677
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-flinch-atlas-bobtail-v2.png",
+    "originalSize": [
+      1275,
+      1233
+    ],
+    "generatedSize": [
+      1276,
+      1233
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\battle\\bobtail-v2\\hero-down-atlas-bobtail-v2.png",
+    "originalSize": [
+      1312,
+      1199
+    ],
+    "generatedSize": [
+      1312,
+      1199
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\watercolor-v1\\hero-sleeping-bobtail-v2.png",
+    "originalSize": [
+      1023,
+      727
+    ],
+    "generatedSize": [
+      1488,
+      1057
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public\\assets\\actors\\watercolor-v1\\hero-sleeping-topdown-bobtail-v2.png",
+    "originalSize": [
+      1029,
+      749
+    ],
+    "generatedSize": [
+      1470,
+      1070
+    ],
+    "alpha": [
+      0,
+      255
+    ]
+  }
+]

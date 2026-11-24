@@ -1,0 +1,8 @@
+.map-lighting-controls { position: relative; display: flex; }
+.map-lighting-controls > button { font-size: 16px; }
+.map-lighting-flyout { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 100; width: 260px; padding: 12px; border: 1px solid #a08a64; border-radius: 4px; background: #07110efc; color: #ffe2ae; box-shadow: 0 5px 18px #000b; font-size: 16px; }
+.map-lighting-flyout label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.map-lighting-flyout select { min-width: 108px; border: 1px solid #a08a64; border-radius: 3px; padding: 4px; background: #14221b; color: #ffe2ae; font: inherit; }
+.map-lighting-flyout .map-lighting-darkness { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
+.map-lighting-darkness input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: #ffd166; }
+.map-lighting-flyout :focus-visible { outline: 2px solid #8ef2d4; outline-offset: 2px; }

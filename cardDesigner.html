@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exploritaire - Card Designer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-outer: #060b16;
+      --bg-inner: #12213d;
+      --grid: rgba(148, 163, 184, 0.16);
+      --frame: rgba(255, 255, 255, 0.12);
+      --label: rgba(226, 232, 240, 0.78);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, rgba(54, 83, 145, 0.35), transparent 42%),
+        linear-gradient(180deg, var(--bg-inner), var(--bg-outer));
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    #root {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #designer-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .designer-label {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      padding: 8px 12px;
+      border: 1px solid var(--frame);
+      background: rgba(10, 15, 28, 0.56);
+      color: var(--label);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <canvas id="designer-canvas" aria-label="Card designer canvas"></canvas>
+    <div class="designer-label">Card Designer Sandbox</div>
+  </div>
+  <script type="module" src="/src/card-designer/main.ts"></script>
+</body>
+</html>

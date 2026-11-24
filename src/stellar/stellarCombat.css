@@ -1,0 +1,167 @@
+/* Stellar combat: the packed 3x3 grid played to the night sky. Cards are dark star-glass;
+   the sky canvas sits behind everything. Engine class names come from src/book/gridTableau.js. */
+.stellar {
+  --glass-a: rgba(30, 44, 92, 0.8);
+  --glass-b: rgba(8, 13, 34, 0.88);
+  --rim: rgba(170, 196, 255, 0.5);
+  --rim-soft: rgba(170, 196, 255, 0.2);
+  --ink: #eef2ff;
+  --ink-dim: #b6c0e0;
+  --gold: #ffd896;
+  --font: Outfit, "Segoe UI", system-ui, sans-serif;
+  position: fixed; inset: 0; overflow: hidden;
+  background: #03050d; color: var(--ink); font: 400 16px var(--font);
+  user-select: none; -webkit-user-select: none;
+}
+.stellar [hidden] { display: none !important; }
+.stellar-sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stellar-chart { position: absolute; left: 30vw; width: 40vw; top: 3vh; height: 9vh; pointer-events: none; }
+.stellar-chain {
+  position: absolute; left: 30vw; width: 40vw; top: 13.6vh; margin: 0; text-align: center;
+  font: 400 16px var(--font); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim);
+  transition: opacity 400ms ease;
+}
+.stellar-chain b { font-weight: 600; color: var(--ink); letter-spacing: .04em; }
+.stellar[data-phase=pick] .stellar-chain { opacity: 0; }
+
+.stellar-stage { position: absolute; left: 0; right: 0; top: 18vh; bottom: 0; touch-action: none; }
+.stellar-board { position: absolute; left: 0; top: 0; transform-origin: 0 0; transition: transform 700ms cubic-bezier(.3,.7,.2,1); }
+
+/* Foe and Hero */
+.stellar-foe { position: absolute; left: 88vw; top: 34vh; translate: -50% -50%; display: grid; justify-items: center; pointer-events: none; }
+.stellar-foe-orb { width: clamp(96px, 14vh, 160px); aspect-ratio: 1; }
+.stellar-foe-label, .stellar-hero-label { display: grid; justify-items: center; gap: 4px; margin-top: 52px; text-align: center; }
+.stellar-foe-label strong, .stellar-hero-label strong { font: 500 18px var(--font); letter-spacing: .14em; text-transform: uppercase; }
+.stellar-hp { font: 400 17px var(--font); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.stellar-pips { display: flex; gap: 8px; margin-top: 2px; }
+.stellar-pips i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(220,170,230,.6); }
+.stellar-pips i[data-on] { background: #c48ad6; box-shadow: 0 0 10px #c48ad6; }
+
+.stellar-hero { position: absolute; left: 12vw; top: 60vh; translate: -50% -50%; display: grid; justify-items: center; pointer-events: none; }
+.stellar-hero-portrait {
+  width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle, rgba(255,214,150,.32), rgba(255,214,150,0) 68%);
+}
+.stellar-hero-portrait img { width: 88px; height: 88px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,220,170,.35)); }
+.stellar-hero-label { margin-top: 6px; }
+.stellar-hero-bar { width: 150px; height: 6px; border-radius: 3px; background: rgba(200,210,255,.15); overflow: hidden; }
+.stellar-hero-bar span { display: block; height: 100%; background: linear-gradient(90deg, #ffcf8a, #ffe9c4); transition: width 500ms ease; }
+.stellar-hero.is-hit { animation: stellar-hit 420ms ease; }
+@keyframes stellar-hit { 0%,100% { translate: -50% -50%; } 25% { translate: calc(-50% - 7px) -50%; } 60% { translate: calc(-50% + 6px) -50%; } }
+
+/* Controls */
+.stellar-controls { position: absolute; right: 16px; top: 16px; display: flex; flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 32px);gap: 8px; z-index: 6000; }
+.stellar-button {
+  font: 500 16px var(--font); color: var(--ink); min-height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(16, 24, 56, .72); border: 1px solid var(--rim-soft);
+}
+.stellar-button:hover { border-color: var(--rim); }
+.stellar-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.stellar-icon { width: 40px; padding: 0; display: grid; place-items: center; }
+.stellar-icon svg { width: 20px; height: 20px; }
+@media(max-width:700px){.stellar-chart{top:112px;height:64px;left:15vw;width:70vw}.stellar-chain{top:182px}.stellar-stage{top:208px}.stellar-banner{box-sizing:border-box;min-width:0;width:calc(100vw - 32px);padding:22px}}
+
+.stellar-banner {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 7000; min-width: 360px; max-width: 520px;
+  display: grid; justify-items: center; gap: 10px; padding: 26px 34px; text-align: center;
+  background: rgba(10, 15, 38, .88); border: 1px solid var(--rim); border-radius: 18px;
+  box-shadow: 0 0 60px rgba(120, 150, 255, .18);
+}
+.stellar-banner h2 { margin: 0; font: 300 32px var(--font); letter-spacing: .08em; }
+.stellar-banner p { margin: 0 0 6px; color: var(--ink-dim); font-size: 17px; }
+.stellar-banner .stellar-button { background: linear-gradient(180deg, #ffe4b0, #f3c27a); color: #1b1630; border: 0; font-weight: 600; }
+
+/* Grid engine pieces */
+.stellar .slot { position: absolute; border-radius: 10px; border: 1px dashed var(--rim-soft); }
+.stellar .slot.found { border: 1px solid rgba(255,216,150,.45); box-shadow: 0 0 24px rgba(255,216,150,.15); }
+.stellar .stockwell { border-style: solid; border-color: var(--rim-soft); }
+.stellar .stocklabel { position: absolute; font: 400 22px var(--font); color: var(--ink-dim); text-align: center; letter-spacing: .06em; white-space: nowrap; }
+.stellar .card {
+  position: absolute; left: 0; top: 0; width: var(--w); height: var(--h);
+  transition: transform 340ms cubic-bezier(.2,.75,.25,1), opacity 420ms ease;
+  will-change: transform; touch-action: none; cursor: grab;
+}
+.stellar .card.dragging { transition: none; cursor: grabbing; }
+.stellar .card .inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 380ms ease; border-radius: 10px; }
+.stellar .card.down .inner { transform: rotateY(180deg); }
+.stellar .card.dragging .inner { transform: scale(1.06) rotate(-2deg); }
+.stellar .card.fly .inner { animation: stellar-lift 380ms ease; }
+@keyframes stellar-lift { 0% { scale: 1; } 45% { scale: 1.1; } 100% { scale: 1; } }
+.stellar .card.wiggle .inner { animation: stellar-wiggle 300ms ease; }
+@keyframes stellar-wiggle { 0%,100% { translate: 0; } 25% { translate: -6px; } 75% { translate: 6px; } }
+.stellar .found-shake { animation: stellar-shake 320ms ease; }
+@keyframes stellar-shake { 0%,100% { translate: 0; } 30% { translate: -5px; } 70% { translate: 5px; } }
+.stellar .face { position: absolute; inset: 0; border-radius: 10px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.stellar .front {
+  background:
+    radial-gradient(circle at 50% 46%, rgba(150,180,255,.22), rgba(150,180,255,0) 46%),
+    linear-gradient(165deg, var(--glass-a), var(--glass-b));
+  border: 1px solid var(--rim);
+  box-shadow: inset 0 0 0 5px rgba(0,0,0,0), inset 0 0 0 6px var(--rim-soft), 0 6px 18px rgba(0,0,0,.45);
+  color: var(--ink);
+}
+/* A faint compass star behind the rank: every card is a star in the chart. */
+.stellar .front::before {
+  content: ""; position: absolute; left: 50%; top: 46%; width: 70%; aspect-ratio: 1; translate: -50% -50%;
+  background:
+    linear-gradient(90deg, transparent 49.4%, rgba(190,210,255,.22) 49.4% 50.6%, transparent 50.6%),
+    linear-gradient(0deg, transparent 49.4%, rgba(190,210,255,.22) 49.4% 50.6%, transparent 50.6%);
+  -webkit-mask: radial-gradient(circle, #000 0 20%, transparent 62%); mask: radial-gradient(circle, #000 0 20%, transparent 62%);
+}
+.stellar .card.dragging .front { box-shadow: inset 0 0 0 6px var(--rim-soft), 0 0 26px rgba(150,190,255,.4), 0 18px 28px rgba(0,0,0,.5); }
+.stellar .back {
+  transform: rotateY(180deg); border: 1px solid var(--rim-soft);
+  background:
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 20%, #dfe7ff, transparent),
+    radial-gradient(1.4px 1.4px at 40% 70%, #fff, transparent), radial-gradient(1px 1px at 80% 80%, #cbd8ff, transparent),
+    radial-gradient(1px 1px at 55% 45%, #fff, transparent), radial-gradient(1px 1px at 15% 85%, #e8eeff, transparent),
+    radial-gradient(circle at 50% 50%, rgba(120,140,220,.35), transparent 60%),
+    linear-gradient(165deg, #141c46, #070a1c);
+  box-shadow: inset 0 0 0 6px rgba(0,0,0,0), inset 0 0 0 7px var(--rim-soft), 0 4px 12px rgba(0,0,0,.5);
+}
+.stellar .idx { display: none; }
+.stellar .pip { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 6%; }
+.stellar .pip .r { font: 300 58px/1 var(--font); letter-spacing: -.02em; text-shadow: 0 0 18px rgba(170,200,255,.55); }
+.stellar .peek { display: none; position: absolute; align-items: center; justify-content: center; gap: 4px; font: 500 24px/1 var(--font); color: var(--ink); border-radius: 9px; }
+.stellar .peek .chev { display: none; font-size: 16px; }
+.stellar .card[data-peek] .pip, .stellar .card[data-peek] .front::before { display: none; }
+.stellar .card[data-peek] .peek { display: flex; }
+.stellar .card[data-peek=top] .peek { left: 0; right: 0; top: 0; height: var(--p); }
+.stellar .card[data-peek=bottom] .peek { left: 0; right: 0; bottom: 0; height: var(--p); }
+.stellar .card[data-peek=left] .peek { left: 0; top: 0; bottom: 0; width: var(--p); flex-direction: column; justify-content: flex-start; padding-top: 12px; }
+.stellar .card[data-peek=right] .peek { right: 0; top: 0; bottom: 0; width: var(--p); flex-direction: column; justify-content: flex-start; padding-top: 12px; }
+.stellar .card[data-next] .front { border-color: rgba(200,220,255,.85); }
+.stellar .card[data-next] .peek { background: linear-gradient(180deg, rgba(190,210,255,.28), rgba(190,210,255,.1)); }
+.stellar .card[data-next] .peek .chev { display: inline; }
+.stellar .card:not([data-next])[data-peek] .front { filter: brightness(.72); }
+.stellar .card[data-peek] { cursor: default; }
+.stellar .card.gone { opacity: 0; pointer-events: none; }
+.stellar .card.pickable { cursor: pointer; }
+.stellar .card[data-pv=found] .front { border-color: var(--gold); box-shadow: inset 0 0 0 6px var(--rim-soft), 0 0 30px rgba(255,216,150,.55); }
+.stellar .card[data-pv=top] .front { border-color: rgba(220,232,255,.9); box-shadow: inset 0 0 0 6px var(--rim-soft), 0 0 16px rgba(170,200,255,.4); }
+.stellar .card[data-pv=back] .front { outline: 1px dashed rgba(220,232,255,.6); outline-offset: -8px; }
+.stellar .card[data-pv=off] .front { filter: brightness(.45) saturate(.6); }
+.stellar .card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 10px; }
+
+/* The current foundation is an opaque lid over its collected-card stack. */
+.stellar .card[data-foundation=true] .front{background:radial-gradient(circle at 50% 46%,rgba(150,180,255,.22),transparent 46%),linear-gradient(165deg,#1e2c5c,#080d22);opacity:1}
+.stellar .card[data-stellar-hint] .front{border-color:var(--gold);box-shadow:inset 0 0 0 6px var(--rim-soft),0 0 0 2px #ffd89655,0 0 26px #ffd89644}
+.stellar .card[data-stellar-hint] .front::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;border-radius:inherit;background-image:linear-gradient(110deg,transparent 42%,#fff0c65c 50%,transparent 58%),radial-gradient(2px 3px at 12% 15%,#fff8db 65%,transparent),radial-gradient(3px 2px at 85% 28%,#ffe6a6 65%,transparent),radial-gradient(2px 3px at 74% 82%,#fff8db 65%,transparent),radial-gradient(3px 2px at 20% 68%,#ffe6a6 65%,transparent);background-size:250% 100%,100% 100%,100% 100%,100% 100%,100% 100%;animation:stellar-guide-shimmer 2.6s ease-in-out infinite}
+.stellar .pip,.stellar .peek{z-index:2}
+@keyframes stellar-guide-shimmer{0%{background-position:150% 0,0 0,0 0,0 0,0 0;opacity:.35}50%{opacity:.95}100%{background-position:-150% 0,0 0,0 0,0 0,0 0;opacity:.35}}
+.stellar[data-quality=low] .card[data-stellar-hint] .front::after{animation:none;opacity:.65}
+@media(prefers-reduced-motion:reduce){.stellar .card[data-stellar-hint] .front::after{animation:none;background-position:50% 0,0 0,0 0,0 0,0 0;opacity:.7}}
+
+/* Low tier: no glows or shadows on cards; motion stays short. */
+.stellar[data-quality=low] .front, .stellar[data-quality=low] .back { box-shadow: inset 0 0 0 6px var(--rim-soft); }
+.stellar[data-quality=low] .pip .r { text-shadow: none; }
+.stellar[data-quality=low] .stellar-pips i[data-on] { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .stellar .card, .stellar .card .inner, .stellar-board { transition-duration: 1ms; }
+  .stellar .card.fly .inner, .stellar .card.wiggle .inner, .stellar .found-shake, .stellar-hero.is-hit { animation: none; }
+}
+
+/* ?fullgrid: the foundation stays in the field, so it carries a clear gold rim; reach toggle sits bottom-left. */
+.stellar-reach { position: absolute; left: 16px; bottom: 16px; z-index: 6000; }
+.stellar[data-fullgrid] .card[data-foundation=true] .front { border-color: var(--gold); box-shadow: inset 0 0 0 6px rgba(255,216,150,.35), 0 0 0 2px var(--gold), 0 0 30px rgba(255,216,150,.5); }
+.stellar[data-fullgrid][data-quality=low] .card[data-foundation=true] .front { box-shadow: inset 0 0 0 6px rgba(255,216,150,.35), 0 0 0 2px var(--gold); }

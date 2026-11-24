@@ -1,0 +1,24 @@
+* { box-sizing: border-box; }
+html,body { margin: 0; height: 100%; overflow: hidden; font: 16px/1.3 system-ui,sans-serif; background: #a5b7aa; color: #f8eedc; }
+#forest-stage { height: 100%; position: relative; }
+canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+canvas:active { cursor: grabbing; }
+#forest-controls { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 24px); width: max-content; display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 10px; border-radius: 7px; background: #17211de8; border: 1px solid #a7a28877; }
+label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+button,summary { color: inherit; background: #2b3730; border: 1px solid #a7a28888; border-radius: 4px; padding: 6px 9px; font: inherit; cursor: pointer; }
+input[type=range] { width: 80px; accent-color: #dfba76; }
+input[type=checkbox] { width: 18px; height: 18px; }
+#forest-readout { position: absolute; right: 16px; top: 14px; background: #17211dcc; padding: 6px 10px; border-radius: 5px; font-variant-numeric: tabular-nums; pointer-events: none; }
+details { position: absolute; left: 14px; top: 14px; max-width: min(350px, calc(100% - 28px)); background: #17211de8; border-radius: 5px; }
+details p { margin: 10px; }
+#fog-controls { left: auto; right: 16px; top: 58px; width: auto; max-width: calc(100% - 32px); }
+#fog-controls[open] { width: 280px; }
+#fog-settings { display: grid; gap: 12px; padding: 12px; }
+#fog-settings label { justify-content: space-between; }
+#fog-settings input[type=range] { width: 90px; }
+#forest-pad { position: absolute; bottom: 90px; left: 16px; display: grid; grid-template-columns: repeat(3, 36px); gap: 4px; }
+#forest-pad button { padding: 5px; min-height: 36px; touch-action: none; }
+#forest-pad button[data-key=w] { grid-column: 2; }
+#forest-pad button[data-key=a] { grid-column: 1; }
+#forest-error { position: absolute; top: 35%; left: 10%; right: 10%; padding: 16px; background: #492c26; }
+:focus-visible { outline: 2px solid #ffe5ac; outline-offset: 3px; }

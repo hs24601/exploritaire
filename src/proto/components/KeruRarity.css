@@ -1,0 +1,174 @@
+/* In-battle Keru rarity (1006–1010). Common grey, Rare blue, Epic purple, Legendary orange-gold.
+   Effects are CSS only; [data-fx="low"] and reduced motion keep the colours and drop the animation. */
+[data-rarity="common"] { --rarity: #b9bec6; --rarity-deep: #5d636c; }
+[data-rarity="rare"] { --rarity: #4fa3ff; --rarity-deep: #1d4f99; }
+[data-rarity="epic"] { --rarity: #b56cff; --rarity-deep: #5a2596; }
+[data-rarity="legendary"] { --rarity: #ffb43a; --rarity-deep: #a4521a; }
+
+/* Card frame: the hand card, its drag clone and the enlarged view. */
+.keru-rarity-card[data-rarity] .details-card.trading-card { border-color: var(--rarity); box-shadow: 0 0 0 2px var(--rarity-deep), 0 0 14px color-mix(in srgb, var(--rarity) 45%, transparent); }
+.keru-rarity-card[data-rarity="common"] .details-card.trading-card { box-shadow: 0 0 0 2px var(--rarity-deep); }
+
+.keru-rarity-art { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; }
+.keru-rarity-art__shimmer, .keru-rarity-art__foil { position: absolute; inset: 0; pointer-events: none; }
+.keru-rarity-art__shimmer { background: linear-gradient(105deg, transparent 35%, #ffffff8c 48%, transparent 60%); background-size: 260% 100%; background-position: 120% 0; mix-blend-mode: screen; animation: keru-shimmer 2.8s ease-in-out infinite; }
+[data-rarity="rare"] > .keru-rarity-art__shimmer { opacity: .6; }
+.keru-rarity-art__foil {
+  background: linear-gradient(125deg, #ff5f6d 0%, #ffc371 18%, #f9f871 32%, #5bf4a6 48%, #4fa3ff 64%, #b56cff 80%, #ff5f6d 100%);
+  background-size: 240% 240%; background-position: var(--foil-x, 50%) var(--foil-y, 50%);
+  mix-blend-mode: color-dodge; opacity: .32;
+}
+[data-rarity="legendary"] > .keru-rarity-art__foil { opacity: .45; animation: keru-foil 6s linear infinite; }
+@keyframes keru-shimmer { 0% { background-position: 120% 0; } 55%, 100% { background-position: -40% 0; } }
+@keyframes keru-foil { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+
+/* Tier name and progress pips in the card footer. */
+.keru-rarity-progress { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; line-height: 1.1; }
+.keru-rarity-progress b { color: var(--rarity); text-shadow: 0 1px 2px #000; font-weight: 700; }
+.keru-rarity-progress__pips { display: inline-flex; gap: 3px; }
+.keru-rarity-progress__pips i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--rarity); background: #0008; }
+.keru-rarity-progress__pips i[data-on] { background: var(--rarity); }
+
+/* Evolve flourish on tier-up (under 1s): a flash, then the new frame colour. */
+.keru-rarity-card[data-evolving] .details-card.trading-card { animation: keru-evolve 850ms ease-out; }
+.keru-rarity-card[data-evolving]::after { content: ''; position: absolute; inset: -6px; border-radius: 14px; pointer-events: none; background: radial-gradient(circle, #fff 0%, var(--rarity) 40%, transparent 70%); animation: keru-flash 850ms ease-out forwards; z-index: 5; }
+@keyframes keru-evolve { 0% { transform: scale(1); filter: brightness(2.2); } 35% { transform: scale(1.06); } 100% { transform: scale(1); filter: none; } }
+@keyframes keru-flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+
+/* Pour ghost: the AP coin that follows the pointer while pouring from Hero's AP meter (KeruPourCast). */
+.keru-feed-coin { position: fixed; z-index: 30; display: grid; place-items: center; min-width: 44px; min-height: 28px; box-sizing: border-box; padding: 0 6px; border: 2px solid #ffd76a; border-radius: 999px; background: radial-gradient(circle at 35% 30%, #fff1b0, #d79a22 70%); color: #2a1a04; font: 700 16px/1 system-ui, sans-serif; cursor: grab; touch-action: none; box-shadow: 0 2px 8px #000a; }
+.keru-feed-coin__ghost { position: fixed; z-index: 60; pointer-events: none; translate: -50% -50%; width: 48px; height: 36px; }
+.ability-fan__card[data-feed-over] { outline: 3px solid #ffd76a; outline-offset: 3px; }
+
+/* Hero's invoked Keru badges and 1010's three-slot harness. */
+.keru-harness { display: inline-flex; gap: 4px; align-items: center; }
+.keru-harness__slot[data-rarity] { border-color: var(--rarity) !important; box-shadow: 0 0 0 1px var(--rarity-deep), 0 0 8px color-mix(in srgb, var(--rarity) 55%, transparent); }
+.keru-harness__slot[data-empty] { display: inline-block; width: 30px; height: 30px; border: 2px dashed #8b8f99; border-radius: 50%; box-sizing: border-box; }
+
+/* Vault Warden's seal meter (1010). */
+.keru-seal { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border: 1px solid #b08d4a; border-radius: 8px; background: #1a1610e6; color: #f6e2b0; font-size: 16px; }
+.keru-seal__bar { position: relative; width: 70px; height: 9px; border-radius: 5px; background: #000a; overflow: hidden; }
+.keru-seal__bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #d79a22, #ffe27a); }
+.keru-seal[data-broken] .keru-seal__bar i { background: linear-gradient(90deg, #ff7a3a, #ffd36a); }
+.keru-seal__pour { border: 1px solid #ffd76a; border-radius: 6px; background: #3a2a10; color: #ffe9a8; font-size: 16px; padding: 2px 8px; }
+.keru-seal__pour:disabled { opacity: .5; }
+
+[data-fx="low"] .keru-rarity-art__shimmer, [data-fx="low"] .keru-rarity-art__foil, [data-fx="low"].keru-rarity-card .details-card.trading-card,
+[data-fx="low"].keru-rarity-card::after { animation: none !important; }
+[data-fx="low"] .keru-rarity-art__shimmer { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .keru-rarity-art__shimmer { display: none; }
+  .keru-rarity-art__foil, .keru-rarity-card .details-card.trading-card, .keru-rarity-card::after { animation: none !important; }
+}
+
+/* Keru stacking (1010–1011): badges with synergy links beneath, the load meter and synergy chips. */
+[data-synergy~="feedback"] { --synergy: #6ee7ff; }
+[data-synergy~="fortress"] { --synergy: #9cf59c; }
+[data-synergy~="shatter"] { --synergy: #ff8ad1; }
+.keru-stack { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; max-width: 100%; }
+.keru-stack__badges { position: relative; display: inline-flex; gap: 4px; padding-bottom: 12px; }
+.keru-stack__badges > .keru-harness__slot { position: relative; z-index: 1; }
+.keru-stack__badges > .keru-harness__slot[data-synergy] { box-shadow: 0 0 0 1px var(--rarity-deep), 0 0 10px var(--synergy); }
+.keru-stack__links { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.keru-stack__links path { fill: none; stroke: var(--synergy); stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--synergy)); animation: keru-link-glow 1.8s ease-in-out infinite; }
+@keyframes keru-link-glow { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+.keru-load { display: inline-flex; align-items: center; gap: 5px; padding: 2px 6px; border: 1px solid #6c6f78; border-radius: 8px; background: #11151bd9; color: #e6e9ef; font-size: 16px; line-height: 1.1; cursor: help; }
+.keru-load__pips { display: inline-flex; gap: 3px; }
+.keru-load__pips i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #8b8f99; background: #0008; box-sizing: border-box; }
+.keru-load__pips i[data-rarity] { background: var(--rarity); border-color: var(--rarity-deep); }
+.keru-load b { font-weight: 700; }
+.keru-synergy-chip { padding: 2px 8px; border: 1px solid var(--synergy); border-radius: 999px; background: color-mix(in srgb, var(--synergy) 18%, #10141a); color: #f2f6fa; font: 600 16px/1.2 system-ui, sans-serif; box-shadow: 0 0 8px color-mix(in srgb, var(--synergy) 55%, transparent); cursor: help; }
+.keru-synergy-chip:focus-visible { outline: 2px solid #ffe19a; outline-offset: 2px; }
+/* The hovered invoke drop names what it does, or why it is blocked. */
+.keru-drop-label { position: absolute; left: 50%; bottom: calc(100% + 6px); translate: -50% 0; white-space: nowrap; padding: 3px 8px; border-radius: 6px; background: #142019f0; border: 1px solid #8fe0a6; color: #eafff0; font: 600 16px/1.2 system-ui, sans-serif; pointer-events: none; }
+.keru-drop-label[data-blocked] { background: #2a1214f0; border-color: #ff7a7a; color: #ffe3e3; }
+.ability-fan__target[data-blocked][data-over] { outline-color: #ff7a7a; }
+/* Feed coin over the board: every Keru square lights up, red when it can't take a feed; the hovered one names why. */
+.ability-fan__target[data-potential-target="keru-square"] { overflow: visible; border-radius: 14px; }
+.ability-fan__target[data-potential-target="keru-square"][data-blocked] { border-color: #ff7a7a; background: #ff7a7a14; }
+[data-fx="low"] .keru-stack__links path { animation: none; filter: none; }
+@media (prefers-reduced-motion: reduce) { .keru-stack__links path { animation: none; } }
+
+/* 1012 Keru Upkeep: per-badge upkeep, the unpaid warning, dismissal, farewell buffs and flourish. */
+.keru-upkeep { position: relative; }
+.keru-upkeep__slot { position: relative; display: inline-flex; }
+.keru-upkeep__cost { position: absolute; right: -4px; bottom: -4px; min-width: 20px; height: 20px; padding: 0 3px; box-sizing: border-box; border-radius: 10px; background: #1b1408; border: 1px solid #ffd76a; color: #ffe9a8; font: 700 16px/18px system-ui, sans-serif; text-align: center; pointer-events: none; }
+.keru-harness__slot[data-starving] { border-color: #ff5a5a !important; animation: keru-starve 1s ease-in-out infinite; }
+.keru-harness__slot[data-starving] .keru-upkeep__cost { border-color: #ff5a5a; background: #3a0e0e; color: #ffd6d6; }
+@keyframes keru-starve { 0%, 100% { box-shadow: 0 0 0 1px #7a1414, 0 0 4px #ff5a5a66; } 50% { box-shadow: 0 0 0 2px #ff5a5a, 0 0 14px #ff5a5acc; } }
+.keru-harness__slot[data-dragging] { opacity: .4; }
+.keru-upkeep .keru-harness__slot { touch-action: none; cursor: grab; }
+.keru-upkeep__ghost { position: fixed; z-index: 60; translate: -50% -50%; display: grid; justify-items: center; gap: 2px; pointer-events: none; width: 44px; }
+.keru-upkeep__ghost > :first-child { width: 40px; height: 40px; }
+.keru-upkeep__ghost small { white-space: nowrap; padding: 2px 6px; border-radius: 6px; background: #11151bf0; border: 1px solid #8b8f99; color: #eef1f5; font: 600 16px/1.2 system-ui, sans-serif; }
+.keru-upkeep__ghost[data-off] small { border-color: #ffb43a; color: #ffe2a8; }
+.keru-upkeep__details { position: absolute; z-index: 40; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; display: grid; gap: 4px; width: 260px; padding: 8px 10px; border: 1px solid #b99b8d; border-radius: 8px; background: #151b20f5; color: #eef1f5; font-size: 16px; line-height: 1.25; text-align: left; box-shadow: 0 6px 18px #000b; }
+.keru-upkeep__warn { color: #ffb0b0; }
+.keru-upkeep__actions { display: flex; gap: 6px; justify-content: flex-end; }
+.keru-upkeep__actions button { min-height: 32px; padding: 2px 10px; border: 1px solid #c9a86a; border-radius: 6px; background: #2a2116; color: #ffe9a8; font-size: 16px; }
+.keru-upkeep__actions button:disabled { opacity: .5; }
+.keru-farewell-buff { position: relative; }
+.keru-farewell-buff small { position: absolute; right: -2px; bottom: -2px; min-width: 18px; border-radius: 9px; background: #10141a; border: 1px solid #b99b8d; font: 700 16px/18px system-ui, sans-serif; color: #fff; text-align: center; }
+.keru-farewell-toast { position: absolute; z-index: 35; left: 50%; bottom: calc(100% + 4px); translate: -50% 0; white-space: nowrap; padding: 3px 10px; border-radius: 8px; background: #1a1424f2; border: 1px solid #c79bff; color: #f4ecff; font: 600 16px/1.2 system-ui, sans-serif; pointer-events: none; animation: keru-farewell-rise 1.4s ease-out forwards; }
+@keyframes keru-farewell-rise { 0% { opacity: 0; transform: translateY(6px); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+.keru-farewell-foe { display: inline-grid; place-items: center; padding: 2px 8px; border-radius: 999px; background: #2a1408e6; border: 1px solid #ff9a4a; color: #ffe6cc; font: 700 16px/1.2 system-ui, sans-serif; animation: keru-farewell-burst 1.4s ease-out forwards; }
+.keru-farewell-foe[data-keru="mochi"] { background: #1c1430e6; border-color: #c79bff; color: #efe3ff; }
+@keyframes keru-farewell-burst { 0% { opacity: 0; transform: scale(.6); box-shadow: 0 0 0 0 #ff9a4a; } 20% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 18px 6px #ff9a4a88; } 80% { opacity: 1; transform: none; box-shadow: none; } 100% { opacity: 0; } }
+.battle-foundation__upkeep { flex: none; padding: 0 3px; cursor: help; border-radius: 5px; border: 1px solid #c9a86a; color: #ffe7a8; font: 600 16px/18px system-ui, sans-serif; white-space: nowrap; }
+.battle-foundation__upkeep[data-short] { border-color: #ff5a5a; color: #ffd0d0; background: #3a0e0e; }
+[data-fx="low"] .keru-harness__slot[data-starving] { animation: none; box-shadow: 0 0 0 2px #ff5a5a; }
+[data-fx="low"] .keru-farewell-toast, [data-fx="low"] .keru-farewell-foe { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .keru-harness__slot[data-starving] { animation: none; box-shadow: 0 0 0 2px #ff5a5a; }
+  .keru-farewell-toast, .keru-farewell-foe { animation: none; }
+}
+
+/* 1012 dismissal cooldown: a dismissed Keru's hand card is greyed with the party turns left until it can be invoked again. */
+.keru-cooldown-chip { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 6; display: inline-flex; align-items: center; gap: 2px; padding: 4px 10px; border: 2px solid #e8e2d0; border-radius: 999px; background: #141a1ccc; color: #fff; font: 700 18px/1 system-ui, sans-serif; text-shadow: 0 1px 2px #000; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 8px #000a; }
+
+/* Long-press a Keru card or badge for its jumbo: keep the OS callout and text selection out of the hold. */
+.battle-invoke-badge, .keru-farewell-buff, .ability-fan__card.keru-rarity-card, .ability-fan__card[data-draft-card] { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+
+/* Keru jumbo side panel: 1012's tier ladder, and farewell-buff notes. Sits beside the jumbo card on desktop. */
+.keru-jumbo-panel { position: absolute; top: 0; left: calc(100% + 20px); width: min(400px, calc((100vw - 100%) / 2 - 36px)); max-height: 100%; overflow-y: auto; box-sizing: border-box; display: grid; gap: 10px; align-content: start; padding: 12px; border: 1px solid #b99b8d; border-radius: 10px; background: #151b20f5; color: #eef1f5; font: 16px/1.3 system-ui, sans-serif; text-align: left; box-shadow: 0 6px 18px #000b; }
+.keru-jumbo-panel p { margin: 0; }
+.keru-jumbo-panel__note { padding: 8px 10px; border-radius: 8px; border: 1px solid #c79bff; background: #1a1424; }
+.keru-jumbo-panel__facts { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.keru-jumbo-panel__facts b { font-size: 20px; color: #ffe9a8; }
+.keru-jumbo-panel__cooldown { color: #ffd6a0; }
+.keru-tier-ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.keru-tier-ladder li { display: grid; gap: 3px; padding: 8px 10px; border: 1px solid var(--rarity-deep); border-left: 5px solid var(--rarity); border-radius: 8px; background: #0e1318; opacity: .82; }
+.keru-tier-ladder li[data-reached] { opacity: .65; }
+.keru-tier-ladder li[data-current] { opacity: 1; border-color: var(--rarity); background: color-mix(in srgb, var(--rarity) 16%, #0e1318); box-shadow: 0 0 0 1px var(--rarity), 0 0 12px color-mix(in srgb, var(--rarity) 45%, transparent); }
+.keru-tier-ladder__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.keru-tier-ladder__head b { color: var(--rarity); font-size: 18px; text-shadow: 0 1px 2px #000; }
+.keru-tier-ladder__head em { margin-left: auto; font-style: normal; font-weight: 700; padding: 0 8px; border-radius: 999px; background: var(--rarity); color: #10141a; }
+.keru-tier-ladder__progress { display: inline-flex; align-items: center; gap: 4px; }
+.keru-tier-ladder__progress i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--rarity); background: #0008; }
+.keru-tier-ladder__progress i[data-on] { background: var(--rarity); }
+.keru-tier-ladder__progress span { margin-left: 4px; }
+/* 1006, 1012 casts: the jumbo's cast line, the ladder's per-tier cast, and an exhausted card. */
+.keru-jumbo-panel__cast { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rarity); background: color-mix(in srgb, var(--rarity) 12%, #0e1318); }
+.keru-jumbo-panel__cast b { color: var(--rarity); margin-right: 4px; }
+.keru-jumbo-panel__cast[data-exhausted] { border-color: #8b8f99; background: #1a1d22; }
+.keru-jumbo-panel__cast[data-exhausted] b { color: #d7d0c0; }
+.keru-tier-ladder__cast { color: #ffe2a8; }
+.ability-jumbo[data-exhausted] .details-card.trading-card { filter: grayscale(1) brightness(.7); }
+
+/* Separate translucent copy planes leave the portrait visible between them. */
+.keru-deck-descriptions { position:absolute; z-index:6; inset:auto 6px 6px; display:grid; gap:3px; pointer-events:none; transform:translate3d(calc(var(--art-shift-x,0) * 8px),calc(var(--art-shift-y,0) * 8px),36px); }
+.keru-deck-description { padding:4px 6px; border:1px solid #d2bc8499; border-radius:5px; background:#081521cf; color:#fff2d1; font:10px/1.15 Georgia,serif; text-align:left; overflow-wrap:anywhere; }
+.keru-deck-description b { display:block; color:#ffe4a0; font-size:11px; }
+@media(prefers-reduced-motion:reduce) { .keru-deck-descriptions { transform:none; } }
+
+.ability-holo-stage:has(.keru-deck-descriptions) .ability-fan__stored-value { top:auto; right:5px; bottom:5px; }
+/* Let the AP bubble overlap the frame instead of clipping at the card edge. */
+.ability-holo-stage:has(.keru-deck-descriptions) > .trading-card { overflow:visible; }
+.ability-holo-stage:has(.keru-deck-descriptions) .trading-card__header { z-index:10; }
+.ability-holo-stage:has(.keru-deck-descriptions) .ability-fan__cost--ap { top:-10px; right:-12px; z-index:10; }
+.ability-holo-stage:has(.keru-deck-descriptions) .keru-deck-descriptions { bottom:42px; }
+.ability-jumbo .keru-deck-description { font-size:clamp(16px,2vh,20px); line-height:1.2; padding:8px; }
+.ability-jumbo .keru-deck-description b { font-size:1em; }
+.ability-jumbo .keru-rarity-art { overflow:visible; }
+.ability-jumbo .ability-keru-art__closeup { overflow:visible; }
+.ability-jumbo .ability-keru-art__subject { scale:1.22; }

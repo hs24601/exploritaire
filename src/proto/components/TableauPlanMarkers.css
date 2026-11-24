@@ -1,0 +1,13 @@
+/* Board plans: a dashed band over the destination row (its peek strip, or the whole front card), the full column for a tableau redeal, or a single card. */
+.tableau-plan { position:absolute; z-index:30; left:-2px; right:-2px; top:calc(var(--battle-peek) * var(--plan-depth, 0) - 2px); height:calc(var(--battle-peek) + 4px); border:2px dashed var(--plan-color); border-radius:5px; background:var(--plan-fill); box-shadow:0 0 10px var(--plan-fill); pointer-events:none; }
+.tableau-plan[data-front='true'], .tableau-plan[data-plan-kind='cards'] { height:calc(var(--classic-card-w) * 88 / 63 + 4px); }
+.tableau-plan[data-plan-kind='tableau'] { top:-2px; height:calc(var(--classic-card-w) * 88 / 63 + (var(--cards) - 1) * var(--battle-peek) + 4px); }
+.tableau-plan[data-plan-by='party'], .tableau-plan-legend__item[data-plan-by='party'] { --plan-color:#8ef2d4; --plan-fill:#8ef2d41f; }
+.tableau-plan[data-plan-by='enemy'], .tableau-plan-legend__item[data-plan-by='enemy'] { --plan-color:#ff8a70; --plan-fill:#ff8a7024; }
+.tableau-plan[data-plan-kind='cards'] { border-style:solid; }
+
+/* Labels hang left of the rack, outside the cards. */
+.battle-field__rack { position:relative; }
+.tableau-plan-legend { position:absolute; z-index:31; right:calc(100% + 10px); top:0; display:flex; flex-direction:column; align-items:flex-end; gap:6px; margin:0; padding:0; list-style:none; }
+.tableau-plan-legend__item { padding:4px 8px; border:2px dashed var(--plan-color); border-radius:6px; background:#0b1512e6; color:var(--plan-color); font:bold 16px/1.1 monospace; white-space:nowrap; cursor:help; }
+.tableau-plan-legend__item[data-plan-by='enemy'] { border-style:solid; }

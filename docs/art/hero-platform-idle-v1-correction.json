@@ -1,0 +1,12 @@
+{
+  "prompt": "Create exactly EIGHT animation cels of the reference dog Hero in a strict 4 column by 2 row sprite sheet, landscape 2:1, genuine transparent background. Use reference 1 for identity, face, colors, watercolor brush style; reference 2 is the SAME dog rising to stand and its LAST FRAME establishes the REQUIRED ALL-FOURS STANDING posture. All eight new frames MUST STAND on FOUR legs, with her rump raised, a long horizontal back and belly visibly above the ground, both forepaws under chest and hindpaws under raised hip. NO SITTING POSES. Idle breathing animation: 1 neutral stand 2 subtle inhale 3 chest slightly lifted 4 half blink 5 eyes gently shut 6 reopen 7 exhale 8 return to first standing posture. Same anatomy and scale every frame, all paws stay planted, right-facing side view, same eye-level camera, compact long low corgi-like body, short legs, huge upright ears, amber eyes, slate-charcoal and copper gold patches, creamy opaque muzzle blaze chest paw tips. Broad loose watercolor/gouache merged brush masses, no tiny hair detail. Do not add tail, flame, shadow, halo, backdrop, props, labels or grid lines. Keep every ear and paw within the central 76 percent of each cell, ample truly alpha-zero gutters, opaque pale fur. Produce a coherent subtle loop with consistent coat marking layout, not unrelated dog portraits.",
+  "references": [
+    "public/assets/runtime/characters/hero/platforming/v1/hero-sitting-side-v1.png",
+    "public/assets/sources/characters/hero/platforming/suite-v1/sit-stand-source.png"
+  ],
+  "referenceRoles": [
+    "Approved key identity and watercolor style",
+    "Pose reference: final frame standing on all four paws"
+  ],
+  "generatedPath": "C:\\Users\\ericm\\.codex\\generated_images\\01a1880e-38a6-7033-9b53-f7365a4c2c67\\exec-9e10fbc2-1e77-4cfd-9248-e587c3e3107b.png"
+}

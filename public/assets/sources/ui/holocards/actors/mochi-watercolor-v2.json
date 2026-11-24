@@ -1,0 +1,9 @@
+{
+  "asset": "runtime/ui/holocards/layered/mochi-watercolor-v2.png",
+  "date": "2026-10-24",
+  "generator": "built-in ImageGen",
+  "approvedSource": "artifacts/mochi-face-refinement/mochi-transparent-v1.png",
+  "background": "runtime/ui/holocards/layered/hero-night-background-v2-ordinary-day.png",
+  "direction": "User-approved reference restored to a soft storybook face, charcoal forehead markings extended into the face, pink nose top and dark underside matching paws, darkened mouth/chin then lightened approximately 20 percent. Final edit removed scenery with real alpha, preserving opaque cream fur.",
+  "integration": "Shared ActorCardArt layered holocard renderer, retaining Mochi greenery and reduced motion. Previous flat portrait remains historical."
+}

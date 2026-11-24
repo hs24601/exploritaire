@@ -1,0 +1,37 @@
+{
+  "commonPrompt": "Create ONLY an isolated transparent elemental overlay for Mochi's arms/legs, NOT a new character painting. Use the supplied Mochi portrait only for the broad chunky gouache/watercolor paint language, warm highlights and limb context. No cat, fur, paw, face, body, background, paper rectangle, text or frame in output. Genuine transparent alpha around and THROUGH the open center. A soft living VINE WRAP shaped like an organic wrist guard: two or three thick broad green vines braided loosely together, a tapered spiral following a limb, partial oval curves suggesting front/back wrapping. It must read as a coherent fitted bracer, not scattered leaves or a floating plant sprig. Moss/olive/jade paint patches with warm yellow-green highlights, a few clear value groups, jagged flat brush ends and subtle paper grain. No fine bark/vein texture, no metal, leather, jewelry, buckles, thorns or rigid armor. Restrained foliage: at most TWO tiny leaf tips integrated into the vine, vine structure is primary. Tight square-ish composition with complete ends and transparent padding. ",
+  "variants": [
+    {
+      "id": "mochi-raised-vine-guard",
+      "label": "Raised foreleg vine guard",
+      "prompt": "A short cuff tilted diagonally down toward the RIGHT, designed for Mochi's bent raised forearm. Two strong winding vines cross in a broad open C-shaped loop with one upper trailing stem to follow the foreleg. The inside remains transparent so black fur can show through. Slight asymmetry and softened painterly edges, no big leaf cluster.",
+      "x": 64,
+      "y": 55,
+      "w": 30,
+      "h": 18,
+      "rotation": 8
+    },
+    {
+      "id": "mochi-front-vine-guard",
+      "label": "Standing foreleg vine guard",
+      "prompt": "An upright tapered short bracer for a standing foreleg. Three thick living green vines spiral around an invisible vertical limb as two open elliptical turns, with a short climbing stem at one side. Wide at bottom and slightly narrower at top, center mostly empty transparent. Two tiny leaf tips at the outside upper seam only. Organic wrap not a closed solid band.",
+      "x": 70,
+      "y": 76,
+      "w": 26,
+      "h": 16,
+      "rotation": 8
+    },
+    {
+      "id": "mochi-hind-vine-guard",
+      "label": "Hind-leg vine guard",
+      "prompt": "A low compact open vine cuff for a sturdy hind ankle: two broad looping green vines cross into an incomplete horizontal oval, one short upward climbing tendril at the outer side. Front crossing reads as a protective wrist-guard shape around an invisible limb, transparent hollow interior. One small leaf tip at most. Broad soft distinct paint strokes, no leaf spray.",
+      "x": 8,
+      "y": 75,
+      "w": 26,
+      "h": 15,
+      "rotation": -8
+    }
+  ],
+  "reference": "runtime/ui/holocards/layered/mochi-watercolor-v2.png",
+  "note": "Hind cuff reused for both hind ankles; independent toggles."
+}

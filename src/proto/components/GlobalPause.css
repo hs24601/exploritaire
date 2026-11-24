@@ -1,0 +1,6 @@
+html[data-global-paused='true'] *:not([data-media-loading], [data-media-loading] *),
+html[data-global-paused='true'] *:not([data-media-loading], [data-media-loading] *)::before,
+html[data-global-paused='true'] *:not([data-media-loading], [data-media-loading] *)::after { animation-play-state:paused !important; }
+html[data-global-paused='true'] .proto-play-area { outline:2px solid #dcc47b99; outline-offset:-2px; }
+[data-global-pause-control][aria-pressed='true'] { background:#514730; border-color:#f1d489; }
+/* Pause/inspection sepia is temporarily disabled during presentation review. */

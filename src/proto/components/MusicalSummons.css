@@ -1,0 +1,15 @@
+.musical-summon-hand{position:fixed;aspect-ratio:63/88;padding:0;border:0;background:none;z-index:501;transform:rotate(-8deg);cursor:pointer}
+.musical-summon-hand>.trading-card-stage{width:200%;height:200%;transform:scale(.5);transform-origin:top left;pointer-events:none}
+.musical-summon-hand:focus-visible{outline:2px solid #f5dc9b;outline-offset:5px}
+.musical-summon-drag{position:fixed;aspect-ratio:63/88;transform:translate(-50%,-50%);z-index:100000;pointer-events:none;filter:drop-shadow(0 8px 12px #0009)}
+.musical-summon-drag>.trading-card-stage{width:100%;height:100%}
+.fast-swipes-momentum-cost{display:flex;align-items:center;gap:3px;padding:3px 5px;border:1px solid #d4bc76;border-radius:8px;background:#14252c;color:#ffebad;font:bold 18px Georgia,serif;white-space:nowrap}
+.fast-swipes-momentum-cost svg,.fast-swipes-momentum-cost img{width:20px;height:20px;object-fit:contain}
+[data-summoning] [data-gallery-card='Fast Swipes'],[data-summoning] [data-jumbo-card='Fast Swipes']{touch-action:none;cursor:grab}
+.fast-swipes-summon-action{padding:8px 12px;border:1px solid #ddc47e;border-radius:6px;background:#233e35;color:#fff0c6;cursor:pointer}
+.fast-swipes-summon-action:disabled{opacity:.5;cursor:default}
+[data-fast-swipes-support-target]{min-width:65px;outline:2px dashed #d7d69b;outline-offset:3px}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party']>.fast-swipes-support-slot{align-self:flex-start;max-width:none;width:100%}
+.musical-tableaus .combat-sandbox .battle-field__team[data-team='party'] .fast-swipes-support-slot .battle-field__foundation[data-fast-swipes-support-target]{box-sizing:border-box;padding:0;width:calc(clamp(126px,18vw,176px) * .8);height:auto;min-height:0;aspect-ratio:88/63;margin:0 auto;gap:4px}
+.musical-tableaus .fast-swipes-support-slot [data-fast-swipes-support-target]>span:first-child{font-size:24px}
+.musical-tableaus .fast-swipes-support-slot [data-fast-swipes-support-target]>span:last-child{font-size:11px;text-align:center}

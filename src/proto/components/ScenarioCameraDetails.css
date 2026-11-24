@@ -1,0 +1,12 @@
+.scenario-camera-details { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-top:8px; padding-top:8px; border-top:1px solid #88785c66; font:16px/1.35 system-ui,sans-serif; }
+.scenario-camera-details output { display:flex; flex-wrap:wrap; gap:4px 16px; min-width:0; font-variant-numeric:tabular-nums; color:#bcd8e5; }
+.scenario-camera-details output span { white-space:nowrap; }
+.scenario-camera-details > [role='status'] { color:#d8cfb9; }
+.scene-actor-emotion-row { display:flex; align-items:center; gap:6px; width:100%; min-width:0; }
+.scene-actor-emotion-row label, .scene-actor-emotion-row button { flex:none; white-space:nowrap; }
+.scene-actor-emotion-row select { flex:1; min-width:0; width:0; }
+.scenario-camera-details textarea { box-sizing:border-box; width:100%; min-height:90px; max-height:120px; background:#0d1920; color:#e5f5ff; font:16px/1.35 monospace; }
+
+.scenario-camera-details--compact { margin:0; padding:0; border:0; font:11px/1.2 system-ui,sans-serif; }
+.scenario-camera-details--compact > button { padding:4px 6px; border:1px solid #88785c; border-radius:3px; color:#e5d29e; background:#142623; }
+.scenario-camera-details--compact > [role='status'], .scenario-camera-details--compact textarea { position:absolute; bottom:36px; left:0; background:#0d1920; padding:6px; }

@@ -1,0 +1,28 @@
+{
+  "asset": "hero-sitting-side-v1",
+  "purpose": "Seated idle sprite for a platforming level; right-facing side-body/three-quarter head, natural paws-on-platform baseline.",
+  "generator": "Built-in image_gen.imagegen",
+  "transparent_background": true,
+  "prompt": "Use case: identity-preserve / stylized-concept. Asset type: a production-ready transparent 2D side-view platformer character sprite, ONE complete isolated seated dog, no sprite sheet. Input image 1 is Hero's current combat sprite: preserve her exact character identity, coat marking placement and proportions. Input image 2 is the approved side-view combat/rig crop: preserve her compact long low body, very short legs, huge upright perky ears, head shape and readable silhouette. Input image 3 is the actual approved watercolor style painting ONLY: borrow its broad loose pigment masses and wet brushwork, NEVER its forest or berries. Primary request: repaint Hero in a natural SITTING idle pose, body in clear side view facing SCREEN RIGHT at approximately dog eye level, no overhead/isometric viewpoint. Her rump rests on the same invisible horizontal platform baseline as her two little front paws, chest upright, forelegs straight and relaxed, hind legs comfortably tucked, head attentive with gentle curious brows and a small friendly relaxed smile. Keep every ear tip and paw fully inside the frame, with generous transparent gutters around a centered single character. Preserve rich charcoal/slate coat, warm golden-copper patches, opaque creamy white forehead blaze, muzzle, chest ruff and paw tips, amber eyes, small black nose and compact corgi-like proportions. Paint with a few broad irregular hand-dabbed watercolor/gouache pigment pools, softly merged wet-on-wet washes, varied feathered and pooled edges, sparse expressive broken indigo ink accents only around the face and major anatomy. Reduce tiny fur detail; no continuous thick outline, vector shapes, plastic gloss, photorealism or gritty grain. IMPORTANT: match the tail-free combat BODY reference, keeping the rear silhouette compact; do NOT add a long tail, fluffy tail plume, flame, magical aura or glow. Tail/effects are separate runtime layers. The scene is absolutely EMPTY with genuine alpha-0 transparency outside the dog and between limbs. Opaque creamy/white fur must stay opaque, never become holes. No paper rectangle, ground, grass, platform, scenery, baked ground shadow, halo, text, border, UI or watermark. Square high-resolution PNG, full clean dog silhouette, excellent readability when reduced to game sprite size.",
+  "references": [
+    {
+      "path": "public/assets/runtime/labs/forest-props/hero-battle.png",
+      "role": "Current combat body identity and proportions"
+    },
+    {
+      "path": "public/assets/sources/characters/hero/orbit/watercolor/v1/guides/hero-standing-low-side-approved-v3-crop.png",
+      "role": "Approved low side-view identity/silhouette"
+    },
+    {
+      "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+      "role": "ART.md loose watercolor medium; scenery excluded"
+    }
+  ],
+  "runtime": "public/assets/runtime/characters/hero/platforming/v1/hero-sitting-side-v1.png",
+  "source": "public/assets/sources/characters/hero/platforming/v1/hero-sitting-side-v1.png",
+  "notes": [
+    "Original generated PNG/alpha retained byte-for-byte in source and runtime.",
+    "Combat sprites and consumers are unchanged; new platforming asset only.",
+    "Body-only variant; tail/flame remain independently controlled."
+  ]
+}

@@ -1,0 +1,51 @@
+.tile-editor { position: fixed; right: 12px; top: 12px; bottom: 12px; z-index: 150; width: 350px; overflow: auto; padding: 18px; border: 1px solid #8ef2d466; border-radius: 18px; background: #101c1af5; color: #ecf4e9; box-shadow: 0 12px 48px #0009; font: 16px/1.4 system-ui, sans-serif; }
+.tile-editor h2 { margin: 0; font-size: 22px; }
+.tile-editor h3 { margin: 0 0 12px; font-size: 16px; color: #bdf4df; }
+.tile-editor small { color: #aad9c7; letter-spacing: .12em; }
+.tile-editor p { color: #b7c9c1; margin: 8px 0 14px; }
+.tile-editor-heading, .tile-editor-actions { display: flex; align-items: center; gap: 8px; }
+.tile-editor-heading { justify-content: space-between; }
+.tile-editor-actions > * { flex: 1; min-width: 0; }
+.tile-editor label { display: grid; gap: 5px; margin: 10px 0; }
+.tile-editor .tile-editor-check { display: flex; align-items: center; }
+.tile-editor input, .tile-editor select { min-width: 0; width: 100%; padding: 7px; border: 1px solid #719d8c88; border-radius: 6px; background: #07110f; color: #f1f6ee; font: inherit; }
+.tile-editor input[type=checkbox] { width: auto; accent-color: #8ef2d4; }
+.tile-editor button, .tile-editor-toggle { border: 1px solid #89d3b899; border-radius: 7px; padding: 8px 10px; background: #1c3a30; color: #e6fff4; font: inherit; cursor: pointer; }
+.tile-editor button:disabled, .tile-editor input:disabled, .tile-editor select:disabled, .tile-editor-toggle:disabled { opacity: .5; cursor: default; }
+.tile-editor :focus-visible { outline: 2px solid #ffdb96; outline-offset: 2px; }
+.tile-editor section, .tile-editor form, .tile-editor-footer { margin-top: 18px; padding-top: 16px; border-top: 1px solid #719d8c55; }
+.tile-editor-footer { display: grid; gap: 8px; }
+.tile-editor [role=alert] { color: #ffb9aa; }
+.proto-game-root.tile-editor-open { padding-right: 380px; }
+@media(max-width: 900px) {
+  .proto-game-root.tile-editor-open { padding-right: 10px; height: 55dvh; }
+  .tile-editor { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; height: 43dvh; }
+}
+
+.tile-editor-quick-menu { position:fixed; z-index:60010; width:224px; padding:8px; display:grid; gap:4px; border:1px solid #89d3b899; border-radius:8px; background:#101c1a; color:#ecf4e9; box-shadow:0 8px 24px #0009; }
+.tile-editor-quick-menu small { padding:4px 8px; }
+.tile-editor-quick-menu button { text-align:left; padding:8px; border:0; border-radius:4px; background:#1c3a30; color:inherit; cursor:pointer; }
+.tile-editor-quick-menu button:hover, .tile-editor-quick-menu button:focus-visible { background:#345d4d; outline:2px solid #ffdb96; }
+
+/* Floating workspace replaces the reserved right dock. Small viewports retain local overflow. */
+.proto-game-root.tile-editor-open { padding-right:10px; height:100%; }
+.tile-editor { box-sizing:border-box; left: max(8px, calc(100vw - 820px)); right:auto; top:12px; bottom:auto; width:min(800px, calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; }
+.tile-editor form > div:not(.tile-editor-actions) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 18px; }
+.tile-editor form > div > p { grid-column:1 / -1; }
+.tile-editor-footer { margin-top:8px; padding-top:8px; }
+@media(max-width:600px) { .tile-editor form > div:not(.tile-editor-actions) { grid-template-columns:1fr; } }
+
+.tile-editor-selection { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 16px; }
+.tile-editor-selection > p { grid-column:1 / -1; }
+.tile-editor label { margin:6px 0; gap:3px; }
+.tile-editor section, .tile-editor form { margin-top:8px; padding-top:8px; }
+.tile-editor-footer p { margin:4px 0; }
+.tile-editor small { letter-spacing:.04em; }
+.tile-editor { z-index:60005; }
+.tile-deal-preview{height:360px;grid-column:1/-1;min-width:0;margin-top:12px;--classic-radius:8px}
+.tile-deal-preview .tableau-template{grid-template-rows:auto minmax(0,1fr) auto}
+.tile-deal-preview .tableau-template__foundations{font-size:16px;padding:6px}
+.tile-deal-preview__columns{display:grid;gap:4px;width:100%;height:var(--classic-stack-height);align-self:center}
+.tile-deal-preview__column{position:relative;min-width:0}
+.tile-deal-preview .playing-card{padding:3px!important;border-radius:6px}
+@media(max-width:600px){.tile-deal-preview{height:290px}}

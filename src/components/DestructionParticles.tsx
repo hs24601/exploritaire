@@ -15,6 +15,11 @@ export const DestructionParticles: React.FC<DestructionParticlesProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -150,7 +155,7 @@ export const DestructionParticles: React.FC<DestructionParticlesProps> = ({
       renderer.render(scene, camera);
 
       if (allDead) {
-        if (onComplete) onComplete();
+        onCompleteRef.current?.();
       } else {
         animationFrame = requestAnimationFrame(animate);
       }
@@ -164,7 +169,7 @@ export const DestructionParticles: React.FC<DestructionParticlesProps> = ({
       material.dispose();
       renderer.dispose();
     };
-  }, [color, onComplete, scale]);
+  }, [color, scale]);
 
   return (
     <div ref={containerRef} className="absolute inset-0 pointer-events-none flex items-center justify-center z-[1000]">

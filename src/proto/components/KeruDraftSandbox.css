@@ -1,0 +1,47 @@
+/* Draft document flow is shared with the standalone Ice preview. */
+.keru-drafts { gap:22px; padding:24px max(24px,env(safe-area-inset-left)); }
+.keru-drafts__heading { text-align:center; }
+.keru-drafts__heading p { margin-top:6px; color:#bfcbd9; }
+.keru-drafts__selection { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; }
+.keru-drafts__selection button,.keru-drafts__selection a { box-sizing:border-box; min-height:48px; border:1px solid #799bb6; border-radius:9px; padding:8px 18px; background:#11253c; color:#e9f2ff; font:inherit; cursor:pointer; text-decoration:none; }
+.keru-drafts__selection button { display:grid; text-align:left; }
+.keru-drafts__selection button span { font-size:14px; color:#bfcbd9; }
+.keru-drafts__selection button[aria-pressed="true"] { background:#27445f; border-color:#f1d597; box-shadow:inset 0 0 0 1px #f1d597; }
+.keru-drafts :is(button,input,a,summary):focus-visible { outline:3px solid #f1d597; outline-offset:4px; }
+.keru-drafts__workspace { width:min(100%,1100px); display:grid; grid-template-columns:minmax(0,420px) minmax(0,1fr); gap:52px; align-items:start; }
+.keru-drafts__preview { display:flex; flex-direction:column; align-items:center; gap:16px; min-width:0; }
+.keru-drafts fieldset { margin:0; padding:8px 12px; border:1px solid #7e98ad; border-radius:6px; }
+.keru-drafts fieldset label,.keru-drafts .dem-draft__layers label { min-height:32px; display:flex; align-items:center; gap:5px; }
+.keru-drafts__card { width:min(360px,calc(100vw - 76px)); margin:12px 0; }
+.keru-drafts__card .trading-card__body { min-height:45%; align-content:center; }
+.keru-drafts__card .trading-card__description { font-size:17px; line-height:1.4; }
+.keru-drafts__card .trading-card__header h2 { font-size:18px; }
+.keru-drafts__forecast { display:block; margin-top:10px; color:#f2c6dd; font-weight:700; }
+.keru-abilities-workspace { width:min(1160px,100%); display:grid; gap:24px; }
+.keru-abilities-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:28px; }
+.keru-ability-option { min-width:0; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.keru-ability-option h3,.keru-ability-option p { margin:0; }
+.keru-ability-option > p { color:#bfcbd9; }
+.keru-ability-option .keru-drafts__card { width:calc(100% - 20px); max-width:340px; }
+.keru-ability-option details { width:100%; padding:10px; box-sizing:border-box; background:#14263a; border-radius:6px; }
+.keru-ability-option details p { margin-top:8px; }
+@media(max-width:850px) { .keru-abilities-grid { grid-template-columns:minmax(0,1fr); } .keru-ability-option { max-width:430px; width:100%; margin:auto; } }
+.keru-drafts__card .trading-card__art .ability-keru-art__subject { top:9%; left:0; width:100%; height:44%; object-fit:contain; filter:drop-shadow(0 2px 3px #07111d77); }
+.keru-drafts__card .ability-keru-art__sky { background:#192337; }
+.keru-drafts__assets { display:flex; gap:20px; }
+.keru-drafts a { color:#c8e4ff; }
+.keru-drafts__notes { min-width:0; border-top:2px solid var(--keru-tint); padding-top:12px; }
+.keru-drafts__notes h2 { margin:0; font-size:24px; }
+.keru-drafts__role { color:var(--keru-tint); margin:4px 0 16px !important; }
+.keru-drafts__notes h3 { margin:24px 0 6px; font-size:17px; color:#d5e6ed; }
+.keru-drafts__notes p,.keru-drafts__notes li { line-height:1.55; }
+.keru-drafts__notes ul { padding-left:22px; margin:8px 0; }
+.keru-drafts__notes li+li { margin-top:12px; }
+.keru-drafts__notes details { margin-top:24px; padding:12px; background:#14263a; border-radius:6px; }
+.keru-drafts__notes summary { cursor:pointer; }
+.keru-drafts__notes details p { margin-top:12px; }
+@media(max-width:760px) {
+ .keru-drafts__workspace { grid-template-columns:minmax(0,1fr); gap:30px; }
+ .keru-drafts__selection { gap:8px; }
+ .keru-drafts__selection button,.keru-drafts__selection a { padding:6px 12px; }
+}

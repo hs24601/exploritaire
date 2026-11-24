@@ -1,0 +1,6 @@
+.fast-swipes-art{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#08152b}
+.trading-card__art .fast-swipes-art img{position:absolute;max-width:none;max-height:none;image-rendering:auto;pointer-events:none}
+.trading-card__art .fast-swipes-art__sky{inset:-8%;width:116%;height:116%;object-fit:cover;filter:brightness(.6) saturate(.8);transform:translate(calc(var(--art-shift-x,0) * -2%),calc(var(--art-shift-y,0) * -2%))}
+.trading-card__art .fast-swipes-art__subject{inset:3% 4%;width:92%;height:94%;object-fit:contain;object-position:center}
+@media(prefers-reduced-motion:reduce){.fast-swipes-art img{transform:none!important}}
+[data-fx='low'] .fast-swipes-art img,[data-fx='off'] .fast-swipes-art img{transform:none!important}

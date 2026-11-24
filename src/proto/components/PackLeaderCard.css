@@ -1,0 +1,12 @@
+.pack-leader-card__badge{padding:4px 6px;border:1px solid #d4bd83;border-radius:6px;background:#15252b;color:#ffe6a5;font:700 11px/1 Georgia,serif}
+.pack-leader-card__status{position:absolute;z-index:4;bottom:10px;left:8px;right:8px;padding:7px;border:1px solid #d4bd83;border-radius:7px;background:#10202be8;color:#fff0c9;text-align:center;display:grid;gap:4px}
+.pack-leader-card__status b{font:700 16px/1.1 Georgia,serif}.pack-leader-card__status small{font:12px/1.2 Georgia,serif}
+.pack-leader-buff{position:relative;color:#f4d995;border-color:#d0b56d;cursor:pointer}
+.pack-leader-buff[data-ready]{box-shadow:0 0 8px #edcc6d44}
+.pack-leader-buff b{position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);padding:1px 4px;border:1px solid #c4aa72;border-radius:8px;background:#152225;color:#fff0bd;font:700 9px/1.2 Georgia,serif}
+.keru-foundation-jumbo__promotions{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:7px 0;pointer-events:auto}
+.keru-foundation-jumbo__promotions button{min-height:36px;padding:5px 10px;background:#334835;border:1px solid #d2b570;border-radius:7px;color:#fff1cf;font:13px Georgia,serif;cursor:pointer}
+.keru-foundation-jumbo__promotions button:disabled{opacity:.45;cursor:default}
+.keru-foundation-jumbo__caption:has(.keru-foundation-jumbo__promotions){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;text-align:left}
+.keru-foundation-jumbo__caption .keru-foundation-jumbo__promotions{margin:0;max-width:160px}
+.keru-foundation-jumbo__caption:has(.keru-foundation-jumbo__promotions)>small{grid-column:1/-1;text-align:center}

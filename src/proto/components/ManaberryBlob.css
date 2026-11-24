@@ -1,0 +1,8 @@
+/* Blob State Matter by Tiffany Rayside: https://codepen.io/tmrDevelops/pen/GoWmaM
+ * Local, transparent blue-white merging lobes, behind the original fruit. */
+.manaberry-blob { position:absolute; inset:-65%; pointer-events:none; isolation:isolate; border-radius:50%; background:radial-gradient(ellipse,#73dcff50, #477dff20 42%,transparent 70%); }
+.manaberry-blob::before,.manaberry-blob::after { content:''; position:absolute; inset:18%; border-radius:46% 54% 60% 40%; background:radial-gradient(ellipse,#e5ffffbb 0%,#93f4ff80 20%,#49bbff50 42%,#556dff18 60%,transparent 72%); mix-blend-mode:screen; animation:manaberry-matter 4.8s ease-in-out infinite alternate; }
+.manaberry-blob::after { inset:25% 12% 12% 28%; animation-delay:-2.4s; animation-direction:alternate-reverse; opacity:.75; }
+@keyframes manaberry-matter { from { transform:translate(-9%,9%) rotate(-25deg) scale(.82,1.08); } to { transform:translate(10%,-12%) rotate(35deg) scale(1.12,.88); } }
+@media(prefers-reduced-motion:reduce) { .manaberry-blob::before,.manaberry-blob::after { animation:none; } }
+[data-journey-paused='true'] .manaberry-blob::before,[data-journey-paused='true'] .manaberry-blob::after { animation-play-state:paused; }

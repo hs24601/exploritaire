@@ -1,0 +1,5 @@
+.offscreen-waypoints { position: absolute; inset: 0; z-index: 46; pointer-events: none; overflow: hidden; }
+.offscreen-waypoint { position: absolute; width: 112px; height: 128px; transform: translate(-50%, -50%); filter: drop-shadow(0 2px 4px #000); }
+.offscreen-waypoint[hidden] { display: none; }
+.offscreen-waypoint__preview { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 48px; height: 67.05px; overflow: hidden; border-radius: 3px; outline: 1px solid #ffd166; background: #17140b; }
+.offscreen-waypoint > svg { position: absolute; width: 24px; height: 24px; fill: none; stroke: #ffd166; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }

@@ -1,0 +1,43 @@
+/* Battle cue effects over the cards (useBattleFx), and the held fallen states. */
+
+.battle-fx-layer { position: fixed; inset: 0; z-index: 60002; pointer-events: none; overflow: hidden; }
+.battle-fx-layer > * { position: fixed; pointer-events: none; }
+.battle-fx-bit { image-rendering: pixelated; box-shadow: 0 0 0 1px #0006; }
+
+/* Bite: two rows of fangs close on the target. */
+.battle-fx-jaws { display: grid; align-content: center; filter: drop-shadow(0 2px 0 #000a); }
+.battle-fx-jaw { display: block; height: 32%; }
+.battle-fx-jaw svg { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.battle-fx-jaws[data-element='fire'] { filter: drop-shadow(0 0 6px #ff6a2a) sepia(.6) saturate(3) hue-rotate(-12deg); }
+
+/* Scratch: three streaks rake across in turn. */
+.battle-fx-claws { display: grid; align-content: center; gap: 12%; }
+.battle-fx-claws > span { display: block; height: 5px; border-radius: 3px; background: linear-gradient(90deg,transparent,#fff 20%,#fff 80%,transparent); box-shadow: 0 0 6px #fff; transform-origin: 50% 50%; }
+.battle-fx-claws[data-element='fire'] > span { background: linear-gradient(90deg,transparent,#ffe08a 20%,#ff8a3c 80%,transparent); box-shadow: 0 0 8px #ff6a2a; }
+.battle-fx-claws[data-tier='2'] > span { height: 6px; background: linear-gradient(90deg,transparent,#fff 15%,#ff5a5a 70%,transparent); box-shadow: 0 0 8px #ff3a3a; }
+
+/* A beaten slime flashes white, then evaporates upward; the card dims after. */
+.battle-foe[data-state='down'] { animation: battle-foe-gone 1.25s .24s both; }
+.battle-foe[data-state='down'] .battle-field__sprite { animation: battle-evaporate 1.1s .24s both; transform-origin: 50% 100%; }
+@keyframes battle-evaporate {
+  0% { filter: none; opacity: 1; transform: none; }
+  6%, 18% { filter: brightness(0) invert(1) drop-shadow(0 0 6px #fff); opacity: 1; transform: scale(1.08); }
+  100% { filter: brightness(0) invert(1) blur(3px); opacity: 0; transform: translateY(-20px) scale(.6, 1.6); }
+}
+@keyframes battle-foe-gone { from { opacity: 1; filter: none; } 40% { opacity: 1; filter: none; } to { opacity: .5; filter: grayscale(.8); } }
+
+/* A fallen party actor's card tips over and stays down while its HP is 0. */
+.battle-field__slot[data-down='true'] .battle-field__actor-card { animation: battle-down .6s .24s both; transform-origin: 20% 100%; }
+@keyframes battle-down {
+  0% { transform: none; }
+  45% { transform: rotate(-16deg) translateY(2px); }
+  70% { transform: rotate(-11deg) translateY(4px); }
+  100% { transform: rotate(-14deg) translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-foe[data-state='down'], .battle-field__slot[data-down='true'] .battle-field__actor-card { animation: none; }
+  .battle-foe[data-state='down'] { opacity: .5; filter: grayscale(.8); }
+  .battle-foe[data-state='down'] .battle-field__sprite { animation: none; opacity: 0; }
+  .battle-field__slot[data-down='true'] .battle-field__actor-card { transform: rotate(-14deg) translateY(6px); }
+}

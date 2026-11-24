@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "layouts": [
+    {
+      "id": "berry-cluster",
+      "name": "Sparse berry cluster",
+      "cards": [
+        {
+          "id": "c5",
+          "group": "left",
+          "order": 0,
+          "x": 0.55,
+          "y": 0.25,
+          "rotation": -6,
+          "layer": 1,
+          "rank": 5
+        },
+        {
+          "id": "c4",
+          "group": "left",
+          "order": 1,
+          "x": 0.28,
+          "y": 1.75,
+          "rotation": -8,
+          "layer": 4,
+          "rank": 4
+        },
+        {
+          "id": "c2",
+          "group": "right",
+          "order": 0,
+          "x": 2.4,
+          "y": 0.35,
+          "rotation": 7,
+          "layer": 2,
+          "rank": 2
+        },
+        {
+          "id": "c3-back",
+          "group": "center",
+          "order": 0,
+          "x": 1.5,
+          "y": 1.32,
+          "rotation": 0,
+          "layer": 3,
+          "rank": 3
+        },
+        {
+          "id": "c3-front",
+          "group": "center",
+          "order": 1,
+          "x": 1.4,
+          "y": 2.25,
+          "rotation": 0,
+          "layer": 6,
+          "rank": 3
+        },
+        {
+          "id": "c6",
+          "group": "lower-right",
+          "order": 0,
+          "x": 2.6,
+          "y": 1.8,
+          "rotation": 8,
+          "layer": 5,
+          "rank": 6
+        }
+      ]
+    }
+  ],
+  "assignments": {}
+}

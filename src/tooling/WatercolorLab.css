@@ -1,0 +1,37 @@
+html, body, #root { margin:0; height:100%; }
+.watercolor-lab { box-sizing:border-box; height:100dvh; display:grid; grid-template-columns:320px minmax(0,1fr); grid-template-rows:auto minmax(0,1fr) auto; gap:16px; padding:20px; background:#101817; color:#ecebdc; font:16px/1.4 system-ui,sans-serif; }
+.watercolor-lab * { box-sizing:border-box; }
+.watercolor-lab header { grid-column:1/-1; display:flex; align-items:center; gap:24px; }
+.watercolor-lab header > div { margin-right:auto; }
+.watercolor-lab h1 { margin:0; font-size:26px; }
+.watercolor-lab h2 { font-size:18px; margin:0 0 12px; }
+.watercolor-lab p { margin:4px 0; color:#b7c7bd; }
+.watercolor-lab a { color:#a8dfd1; }
+.watercolor-lab aside, .watercolor-lab__preview { min-width:0; overflow:auto; padding:18px; border:1px solid #527567; border-radius:12px; background:#192522; }
+.watercolor-lab label { display:block; position:relative; margin-bottom:14px; }
+.watercolor-lab input, .watercolor-lab select { display:block; width:100%; min-width:0; margin-top:5px; padding:6px; font:inherit; color:inherit; background:#0e1917; border:1px solid #6f9484; border-radius:5px; }
+.watercolor-lab input[type=range] { padding:0; accent-color:#9ad3bd; }
+.watercolor-lab input[type=color] { height:40px; padding:4px; cursor:pointer; }
+.watercolor-lab output { float:right; font-variant-numeric:tabular-nums; }
+.watercolor-lab button { font:inherit; color:#eef6e6; background:#294b3d; border:1px solid #749f8c; border-radius:6px; padding:8px; cursor:pointer; }
+.watercolor-lab button:disabled { opacity:.45; cursor:default; }
+.watercolor-lab :focus-visible { outline:2px solid #f0cc89; outline-offset:3px; }
+.watercolor-lab__commands { display:grid; gap:10px; margin:20px 0; }
+.watercolor-lab__commands label { margin:0; }
+.watercolor-lab__import input { font-size:16px; }
+.watercolor-lab code { overflow-wrap:anywhere; }
+.watercolor-lab__preview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:24px; }
+.watercolor-lab__group { min-width:0; }
+.watercolor-lab__preview-heading label { max-width:230px; }
+.watercolor-lab__pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-bottom:24px; }
+.watercolor-lab figure { margin:0; min-width:0; text-align:center; }
+.watercolor-lab figcaption { padding-top:10px; }
+.watercolor-lab__ground img { width:min(100%,256px); aspect-ratio:1; object-fit:contain; border-radius:8px; }
+.watercolor-lab__ground--checker img { background:conic-gradient(#b7b9af 25%,#e6e7de 0 50%,#b7b9af 0 75%,#e6e7de 0) 0 0 / 24px 24px; }
+.watercolor-lab__ground--dark img { background:#1c2521; }
+.watercolor-lab__ground--light img { background:#f2eddf; }
+.watercolor-lab__cards img { width:min(100%,238px); aspect-ratio:63/88; object-fit:contain; border-radius:10px; }
+.watercolor-lab footer { grid-column:1/-1; }
+.watercolor-lab [role=alert] { color:#ffbca9; }
+@media(max-width:1000px) { .watercolor-lab__preview { grid-template-columns:1fr; } }
+@media(max-width:700px) { .watercolor-lab { padding:10px; gap:10px; grid-template-columns:1fr; grid-template-rows:auto minmax(180px,.8fr) minmax(240px,1fr) auto; } .watercolor-lab header { flex-wrap:wrap; gap:10px 20px; } .watercolor-lab header > div { width:100%; } .watercolor-lab__pair { gap:10px; } }

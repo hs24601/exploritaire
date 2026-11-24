@@ -1,0 +1,8 @@
+.tableau-lighting,.tableau-lighting__shade,.tableau-lighting__glow { position:absolute; inset:0; pointer-events:none; border-radius:inherit; }
+.tableau-lighting { z-index:-1; overflow:hidden; }
+.proto-tableau-field:has(> .tableau-lighting) > .proto-tableau-landscape,
+.travel-tableau:has(> .tableau-lighting) > .proto-tableau-landscape { z-index:-2; }
+.travel-tableau:has(> .tableau-lighting) { isolation:isolate; }
+/* Cardboard remains opaque. Disabled moves dim ink, never the whole face. */
+.proto-tableau-field .playing-card:not(.opacity-0),
+.travel-tableau .playing-card:not(.opacity-0) { opacity:1; background-color:#10171c; filter:brightness(calc(var(--surface-brightness, 1) * var(--tableau-card-brightness, 1))); }

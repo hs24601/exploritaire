@@ -1,0 +1,45 @@
+.table-card-layers {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  transform-style: preserve-3d;
+}
+.table-card-layers__shadow,
+.table-card-layers__stock {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.table-card-layers__shadow {
+  background: #0007;
+  box-shadow: 0 1px 2px #0009, 1px 3px 5px #0006;
+}
+.table-card-layers__stock {
+  background: #ad9169;
+  border: .5px solid #493722;
+}
+.table-card-layers__stock:nth-of-type(odd) { background: #dcc6a0; }
+.table-card-layers__face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform: translateZ(2.4px);
+  border-radius: inherit;
+}
+.proto-story-card,
+.table-quest-card { transform-style: preserve-3d; }
+.table-card-layers__face > .proto-ordinary-day {
+  box-shadow: inset 0 0 0 2px #b49b6950;
+}
+[data-held-visual] .table-card-layers__shadow {
+  box-shadow: 0 8px 12px #0006, 0 20px 32px #0004;
+}
+/* Flat panel cards use the same stock edge and close contact shadow. */
+.proto-game-root [data-component="playing-card"]:not([data-card-jumbo]) {
+  box-shadow: 0 1px 0 #d0b58d, 0 2px 0 #57432c, 0 3px 2px #0009, 1px 5px 8px #0005;
+}
+.proto-game-root [data-component="playing-card"][data-highlight="true"] {
+  filter: drop-shadow(0 0 8px #8ef2d440);
+}

@@ -1,0 +1,21 @@
+.khad-roots { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; z-index:4; }
+.khad-root-link { position:absolute; z-index:2; overflow:visible; pointer-events:none; }
+/* The solid wood and projecting hooks carry the silhouette. Red is a faint
+   surrounding stain and a few internal cracks, never a luminous outline. */
+.khad-roots__wood,.khad-roots__thorns { stroke:#2b0c22; stroke-width:.35; stroke-linejoin:round; }
+.khad-roots__haze { fill:none; stroke:#ed1748; stroke-width:5; opacity:.65; stroke-linecap:round; }
+.khad-roots__fissures { fill:none; stroke:#ff5262; stroke-width:1.05; opacity:.95; stroke-linecap:round; }
+.khad-roots__mote { opacity:0; animation:khad-ember-rise 4s ease-out infinite; }
+@keyframes khad-ember-rise {
+  0% { opacity:0; transform:translate(0,2px) scale(.8); }
+  18% { opacity:.9; }
+  65% { opacity:.5; }
+  100% { opacity:0; transform:translate(var(--khad-drift),-23px) scale(.45); }
+}
+[data-journey-paused='true'] .khad-roots__mote { animation-play-state:paused; }
+@media (prefers-reduced-motion:reduce) {
+  .khad-roots__mote { animation:none; opacity:0; }
+}
+
+.khad-roots__bark { fill:none; stroke:#734252; stroke-width:.75; opacity:.55; stroke-linecap:round; }
+.khad-roots__seam-glow { fill:none; stroke:#ff174c; stroke-width:2.4; opacity:.9; }

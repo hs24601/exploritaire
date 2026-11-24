@@ -1,0 +1,6 @@
+.editor-ribbon { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+.editor-ribbon [aria-selected=true] { background:#42665e; border-color:#f1cc81; }
+.editor-drag-handle { cursor:move; touch-action:none; user-select:none; }
+.editor-command-bar { display:flex; flex-wrap:wrap; gap:6px; padding:8px 0; border-bottom:1px solid #719d8c66; }
+[data-editor-safe=true] { overscroll-behavior:contain; }
+[data-editor-safe=true] [hidden] { display:none !important; }

@@ -1,10 +1,10 @@
 import { createContext, useContext } from 'react';
 
-export type CardScalePreset = 'table' | 'hand' | 'drag' | 'jumbo';
+export type CardScalePreset = 'board' | 'hand' | 'drag' | 'jumbo';
 
 export interface CardScaleProfile {
   zoom: number;
-  table: number;
+  board: number;
   hand: number;
   drag: number;
   jumbo: number;
@@ -12,7 +12,7 @@ export interface CardScaleProfile {
 
 const DEFAULT_CARD_SCALE_PROFILE: CardScaleProfile = {
   zoom: 1,
-  table: 1,
+  board: 1,
   hand: 1,
   drag: 1,
   jumbo: 1,
@@ -29,7 +29,7 @@ function normalizeCardScaleProfile(value: number | Partial<CardScaleProfile>): C
   }
   return {
     zoom: Number.isFinite(value.zoom ?? NaN) ? Number(value.zoom) : 1,
-    table: Number.isFinite(value.table ?? NaN) ? Number(value.table) : 1,
+    board: Number.isFinite(value.board ?? NaN) ? Number(value.board) : 1,
     hand: Number.isFinite(value.hand ?? NaN) ? Number(value.hand) : 1,
     drag: Number.isFinite(value.drag ?? NaN) ? Number(value.drag) : 1,
     jumbo: Number.isFinite(value.jumbo ?? NaN) ? Number(value.jumbo) : 1,
@@ -53,7 +53,7 @@ export function CardScaleProvider({
 
 export function useCardScale(): number {
   const profile = useContext(CardScaleContext);
-  return profile.zoom * profile.table;
+  return profile.zoom * profile.board;
 }
 
 export function useCardScalePreset(preset: CardScalePreset): number {

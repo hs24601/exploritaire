@@ -1,0 +1,11 @@
+.actor-drag-preview { position:absolute; inset:0; z-index:70; pointer-events:none; overflow:hidden; }
+.actor-drag-preview[hidden] { display:none; }
+.actor-drag-preview__card { position:absolute; pointer-events:none; filter:drop-shadow(0 8px 12px #0008); }
+.actor-drag-preview__card .actor-map-card { position:static; width:100%; height:100%; margin:0; }
+.actor-drag-preview__hand { position:absolute; width:48px; height:57px; transform:translate(-18px,-9px) rotate(-14deg); overflow:visible; filter:drop-shadow(0 2px 4px #0009); }
+.actor-drag-preview__hand path { fill:#fff3db; stroke:#695b44; stroke-width:2.5; stroke-linejoin:round; }
+.actor-drag-preview__hand[data-grabbing=true] { transform:translate(-18px,-9px) rotate(-9deg) scale(.92); }
+.actor-drag-preview__target { position:absolute; inset:0; width:100%; height:100%; }
+.actor-drag-preview__destination { fill:#94dbff18; stroke:#b5eaff; stroke-width:2; stroke-dasharray:5 5; }
+.tableau-drag-preview { position:fixed; z-index:110; }
+.tableau-drag-preview .actor-drag-preview__card * { animation:none !important; transition:none !important; }

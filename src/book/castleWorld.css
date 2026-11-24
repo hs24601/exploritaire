@@ -1,0 +1,45 @@
+body.castle-world #book-tools,body.castle-world #book-right-tools,body.castle-world #book-navigator,body.castle-world #camera-readout,body.castle-world #scene-action,body.castle-world .paper-hit,body.castle-world #event{display:none!important}
+body.castle-world{background:#0b0d14;overflow:hidden}
+body.castle-world #book-stage{position:fixed;inset:0}
+body.castle-world canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+body.castle-world canvas.dragging{cursor:grabbing}
+body.castle-world #fps-readout{display:block;position:fixed;left:20px;bottom:24px;z-index:28;padding:8px 12px;border:1px solid #a9d3df88;border-radius:8px;background:#17333cef;color:#e4f5fa;font:13px/1.4 monospace;pointer-events:none}
+#castle-vignette{position:fixed;inset:0;pointer-events:none;z-index:30;background:radial-gradient(ellipse 78% 70% at 50% 52%,transparent 58%,rgba(8,6,10,.55) 100%)}
+/* the page edges soften at the sides, as in a close look at paper */
+#castle-vignette.soft-edges{-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);-webkit-mask-image:linear-gradient(90deg,#000 0,rgba(0,0,0,.6) 6%,transparent 14%,transparent 86%,rgba(0,0,0,.6) 94%,#000 100%);mask-image:linear-gradient(90deg,#000 0,rgba(0,0,0,.6) 6%,transparent 14%,transparent 86%,rgba(0,0,0,.6) 94%,#000 100%)}
+#castle-ui{position:fixed;inset:0;z-index:40;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:16px 20px;color:#f1e7cc;font-family:Georgia,serif}
+#castle-ui header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#castle-ui .castle-title{background:#141821c9;border:1px solid #c9b38a40;border-radius:7px;padding:7px 12px}
+#castle-ui .castle-eyebrow{display:block;font:10px/1.6 system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#c9b38a}
+#castle-ui h1{margin:0;font-size:18px;font-weight:normal}
+#castle-ui .castle-meadow-credit{font:11px/1.4 system-ui,sans-serif;color:#c7d9ce;pointer-events:auto}
+#castle-ui .castle-meadow-credit a{color:inherit}
+#castle-ui nav{display:flex;gap:7px;align-items:center;pointer-events:auto}
+#castle-ui button,#castle-ui .castle-quality{min-height:38px;padding:6px 12px;border:1px solid #c9b38a55;border-radius:7px;background:#141821d9;color:#f1e7cc;font:14px Georgia,serif;display:inline-flex;align-items:center;gap:6px}
+#castle-ui button{cursor:pointer}#castle-ui button:hover{background:#2a2f3c}
+#castle-ui button:focus-visible,#castle-ui select:focus-visible{outline:2px solid #e8c67e;outline-offset:2px}
+#castle-ui button[hidden]{display:none}
+#castle-ui select{background:transparent;color:inherit;border:0;font:inherit;cursor:pointer}#castle-ui select option{background:#141821}
+#castle-ui footer{display:flex;justify-content:flex-end}
+#castle-ui .castle-hint{margin:0;padding:7px 14px;border-radius:7px;background:#141821b0;font-size:14px;transition:opacity 1.2s}
+#castle-ui .castle-hint.fade{opacity:0}
+/* settings flyout: quality, watercolor, replay */
+#castle-ui .castle-settings{position:relative}
+#castle-ui .castle-gear{width:40px;justify-content:center;padding:0}
+#castle-ui .castle-gear svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+#castle-ui .castle-gear[aria-expanded="true"]{background:#2a2f3c;border-color:#e8c67e88}
+#castle-ui .castle-panel{position:absolute;right:0;top:calc(100% + 8px);min-width:220px;display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid #c9b38a55;border-radius:9px;background:#141821f2;box-shadow:0 10px 30px #0008}
+#castle-ui .castle-panel[hidden]{display:none}
+#castle-ui .castle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:38px;padding:4px 10px;border:1px solid #c9b38a33;border-radius:7px;background:#1b202b;color:#f1e7cc;font:14px Georgia,serif}
+#castle-ui button.castle-row{justify-content:center;cursor:pointer}
+#castle-ui .castle-switch{cursor:pointer}
+#castle-ui .castle-switch input{position:absolute;opacity:0;width:1px;height:1px}
+#castle-ui .castle-switch span{position:relative;width:38px;height:22px;border-radius:11px;background:#3a3f4c;transition:background .2s}
+#castle-ui .castle-switch span::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#f1e7cc;transition:transform .2s}
+#castle-ui .castle-switch input:checked+span{background:#b98a4e}
+#castle-ui .castle-switch input:checked+span::after{transform:translateX(16px)}
+#castle-ui .castle-switch input:focus-visible+span{outline:2px solid #e8c67e;outline-offset:2px}
+#castle-ui .castle-switch:has([data-castle="free-camera"]){font-size:16px}
+body.castle-world #castle-ui:has([data-castle="free-camera"]) .castle-panel{max-height:calc(100dvh - 90px);overflow-y:auto}
+body.castle-world #castle-ui:has([data-castle="free-camera"]) .castle-row{font-size:16px}
+body.castle-world #castle-ui:has([data-castle="free-camera"]) .castle-hint{max-width:100%;box-sizing:border-box;font-size:16px;line-height:1.4}

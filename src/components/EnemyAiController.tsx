@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { GameState, EnemyDifficulty } from '../engine/types';
 import { getEnemyDelayMs, selectEnemyMove, getEnemyPlayableMoves } from '../engine/ai/enemyAi';
+import { getCombatActiveSide, getCombatTurnNumber } from '../engine/combat/sessionBridge';
 
 interface EnemyAiControllerProps {
   active: boolean;
@@ -134,7 +135,7 @@ export function EnemyAiController({
       return;
     }
 
-    const token = `${state.randomBiomeTurnNumber ?? 0}-${state.randomBiomeActiveSide ?? 'player'}`;
+    const token = `${getCombatTurnNumber(state) ?? 0}-${getCombatActiveSide(state)}`;
     if (runningRef.current && turnTokenRef.current === token) return;
 
     runningRef.current = true;
@@ -244,7 +245,7 @@ export function EnemyAiController({
         timerIntervalRef.current = null;
       }
     };
-  }, [active, difficulty, state.randomBiomeActiveSide, state.randomBiomeTurnNumber, timedMode]);
+  }, [active, difficulty, state.activeCombatSide, state.combatTurnNumber, timedMode]);
 
   return null;
 }

@@ -1,0 +1,9 @@
+import {describe,it,expect} from 'vitest';
+import {validPageDocument,DEFAULT_BOOK_ATMOSPHERE,type BookPageDocument} from './pageDocument';
+const document=():BookPageDocument=>({version:1,revision:0,pages:[{page:1,atmosphere:{...DEFAULT_BOOK_ATMOSPHERE},controls:[{id:'page1:new',name:'Story',kind:'text',x:-2,z:1,elevation:0,width:3,height:1,rotation:0,visible:true,locked:false,opacity:1,layer:0,text:'Hello',textState:'locked-to-page',fontSize:24,color:'#493e2d',paper:'#f0e2c2',paperOpacity:1,align:'left'}]}]});
+describe('saved page layouts',()=>{
+ it('accepts fixed and camera-facing text with configurable atmosphere',()=>{const d=document();expect(validPageDocument(d)).toBe(true);d.pages[0].controls[0].textState='camera-popup';d.pages[0].atmosphere.enabled=true;expect(validPageDocument(d)).toBe(true);});
+ it('rejects duplicate page/control identities',()=>{let d=document();d.pages.push(structuredClone(d.pages[0]));expect(validPageDocument(d)).toBe(false);d=document();d.pages[0].controls.push({...d.pages[0].controls[0]});expect(validPageDocument(d)).toBe(false);});
+ it('rejects unbounded geometry, nonfinite values and invalid fog',()=>{for(const value of [NaN,Infinity,26]){const d=document();d.pages[0].controls[0].width=value;expect(validPageDocument(d)).toBe(false);}const d=document();d.pages[0].atmosphere.density=1;expect(validPageDocument(d)).toBe(false);});
+ it('accepts local popup artwork and rejects traversal or remote sources',()=>{const d=document(),c=d.pages[0].controls[0];c.kind='prop';for(const path of ['environment/watercolor/v1/pine-relief-v1.png','characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png']){c.art=path;expect(validPageDocument(d)).toBe(true);}for(const path of ['../secret.png','https://example.com/a.png','C:/secret.png']){c.art=path;expect(validPageDocument(d)).toBe(false);}});
+});

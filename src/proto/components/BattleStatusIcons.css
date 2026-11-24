@@ -1,0 +1,53 @@
+.battle-status-icon { position:relative; line-height:1; }
+.battle-riv-placeholder { display:grid; place-items:center; width:100%; height:100%; color:#ddece5; font:600 42px/1 system-ui; border:2px dashed #82a89b; border-radius:8px; box-sizing:border-box; background:#18312d; }
+.battle-summon-slot .battle-field__foundation { border:2px dashed #a7dbc5; background:#15332b99; color:#d4f5e6; display:flex!important; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+.battle-summon-slot .battle-field__foundation>span:first-child { font:40px/1 system-ui; }
+.battle-summon-slot .battle-field__foundation>span:last-child { font:16px/1.2 system-ui; }
+/* First-pass tuning: gain = one bloom, loss = a crossed-out fading echo.
+   Keep the departing slot until its cue ends so simultaneous swaps remain legible. */
+.battle-status-icon { --status-cue-color:#b6f4ce; }
+.battle-status-icon.battle-debuff-icon { --status-cue-color:#ffb7ad; }
+.battle-status-icon[data-status-change='gained'] { z-index:2; animation:battle-status-gained 900ms ease-out both; }
+.battle-status-icon[data-status-change='lost'] { display:inline-flex; align-items:center; justify-content:center; pointer-events:none; animation:battle-status-lost 900ms ease-in both; }
+.battle-status-change__mark { position:absolute; left:-7px; top:-8px; width:18px; height:18px; border-radius:50%; border:1px solid currentColor; background:#182328; color:var(--status-cue-color); font:bold 17px/16px system-ui; text-align:center; pointer-events:none; }
+.battle-status-icon[data-status-change='lost']::after { content:''; position:absolute; left:12%; right:12%; top:50%; height:2px; background:var(--status-cue-color); transform:rotate(-40deg); box-shadow:0 0 3px #181010; }
+@keyframes battle-status-gained {
+  0% { transform:scale(.85); box-shadow:0 0 0 2px var(--status-cue-color),0 0 16px var(--status-cue-color); }
+  25% { transform:scale(1.22); box-shadow:0 0 0 3px var(--status-cue-color),0 0 18px var(--status-cue-color); }
+  65% { transform:scale(1); box-shadow:0 0 0 1px var(--status-cue-color),0 0 8px var(--status-cue-color); }
+  100% { transform:scale(1); box-shadow:0 0 0 0 transparent; }
+}
+@keyframes battle-status-lost {
+  0%,25% { opacity:.85; transform:scale(1); }
+  100% { opacity:0; transform:translateY(7px) scale(.7); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .battle-status-icon[data-status-change='gained'] { animation-name:battle-status-gained-still; }
+  .battle-status-icon[data-status-change='lost'] { animation-name:battle-status-lost-still; }
+  @keyframes battle-status-gained-still { 0%,85% { outline:2px solid var(--status-cue-color); outline-offset:2px; } 100% { outline-color:transparent; } }
+  @keyframes battle-status-lost-still { 0%,85% { opacity:.65; } 100% { opacity:0; } }
+}
+.battle-status-icon > span { font-size:24px; }
+.battle-status-icon > b { position:absolute; right:-6px; bottom:-6px; min-width:20px; height:20px; box-sizing:border-box; padding:0 4px; border:1px solid #f1d79a; border-radius:10px; background:#14100d; color:#fff3cf; font:bold 16px/18px Georgia,serif; text-align:center; pointer-events:none; }
+.battle-status-icon[data-status='insight'] { border-color:#ffe48a; background:radial-gradient(circle,#4a4220,#182321); box-shadow:0 0 8px #ffe48a66; cursor:pointer; }
+.battle-enemy-momentum .momentum-icon { width:34px; height:34px; margin:0; object-fit:contain; pointer-events:none; }
+.battle-rounds { flex:none; padding:6px 12px; border:1px solid #d8bf7b; border-radius:16px; background:#14100dd9; color:#fff0bd; font:16px/1.2 Georgia,serif; white-space:nowrap; }
+/* AP replaces the unused party stagger meter: a label row (AP n/cap, then 1012's upkeep chip)
+   above its own pip row, one pip per point up to the cap. The pips wrap at high caps (up to 18)
+   instead of shrinking, and nothing (upkeep chip, feed coin) is ever laid over them. */
+.battle-foundation__ap { display:grid; grid-template-rows:auto auto; row-gap:2px; min-width:0; }
+/* The head sizes to its content: the upkeep chip sits beside the label when it fits and wraps under it otherwise, never past the column. */
+.battle-foundation__ap-head { display:flex; flex-wrap:wrap; align-items:center; gap:2px 4px; min-width:0; min-height:20px; }
+.battle-foundation__ap-label { flex:none; color:#ffe7a8; font:bold 16px/1 Georgia,serif; white-space:nowrap; }
+.battle-foundation__ap-pips { display:flex; flex-wrap:wrap; min-width:0; gap:2px; }
+.battle-foundation__ap-pips > i { flex:none; width:10px; height:10px; box-sizing:border-box; border:1px solid #c9a86a; border-radius:3px; background:#1d1712; }
+.battle-foundation__ap-pips > i[data-on] { background:linear-gradient(#ffd982,#d9902f); border-color:#ffe7a8; }
+/* 1012 upkeep, static at every effects tier: reserved pips stay lit but carry an amber ring and hatch;
+   short pips are red outlined empties. A ↻ chip opens the run inline (it wraps with the pips and covers none),
+   and +N trails past the cap. A pour preview dashes the marked pips. */
+.battle-foundation__ap-pips { align-items:center; }
+.battle-foundation__ap-pips > i[data-upkeep='reserved'] { border-color:#ff9a3c; box-shadow:0 0 0 1px #ff9a3c; background:repeating-linear-gradient(135deg,#ffd982 0 2px,#b8641c 2px 4px); }
+.battle-foundation__ap-pips > i[data-upkeep='short'] { border-color:#ff5a5a; box-shadow:0 0 0 1px #ff5a5a88; background:#3a0e0e; }
+.battle-foundation__ap-pips[data-preview] > i[data-upkeep] { border-style:dashed; }
+.battle-foundation__ap-reserve-mark, .battle-foundation__ap-overflow { flex:none; height:12px; padding:0 2px; border-radius:3px; color:#ffb35c; font:700 11px/12px system-ui,sans-serif; }
+.battle-foundation__ap-reserve-mark[data-short], .battle-foundation__ap-overflow { color:#ff8a8a; }

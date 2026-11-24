@@ -1,0 +1,28 @@
+const assert=require('node:assert/strict'),fs=require('fs'),{chromium}=require('playwright');
+(async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const p=await b.newPage({viewport:{width:1280,height:800}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const doc=JSON.parse(fs.readFileSync('src/data/bookPages.json','utf8')),page=doc.pages.find(p=>p.page===1),den=page.controls.find(c=>c.kind==='popup'&&c.art.includes('den'));
+ assert.ok(den);den.popup.delay=0;const delayed=structuredClone(den);delayed.id='delayed-den-test';delayed.x=2.9;delayed.popup.delay=.65;page.controls=[den,delayed];
+ await p.addInitScript(doc=>localStorage.setItem('exploritaire.book-page-draft.v1',JSON.stringify(doc)),doc);
+ await p.goto('http://127.0.0.1:5178/book.html?page=00');await p.waitForFunction(()=>document.querySelector('#book-stage>canvas').dataset.ready==='true',null,{timeout:90000});
+ await p.locator('#book-stage>canvas').focus();await p.keyboard.press('ArrowRight');
+ await p.waitForFunction(()=>{const d=document.querySelector('#book-stage>canvas').dataset;return d.coverStage==='opening-cover'&&+d.coverOpenness>.3&&+d.coverOpenness<.6},null,{timeout:30000});
+ const during=await p.locator('#book-stage>canvas').evaluate(c=>({...c.dataset}));const poses=JSON.parse(during.turnPopupPoses);
+ assert.equal(during.turnPopupCount,'2');assert.ok(+during.coverOpenness<1);assert.ok(poses[den.id]>0);assert.ok(Math.abs(poses[den.id]-Number(during.coverOpenness))<.0001);assert.equal(poses[delayed.id],0);
+ fs.mkdirSync('output/book',{recursive:true});await p.screenshot({path:'output/book/den-during-cover-opening.png'});
+ await p.waitForFunction(()=>document.querySelector('#book-stage>canvas').dataset.sceneIndex==='0'&&document.querySelector('#book-stage>canvas').dataset.turning==='false',null,{timeout:30000});
+ await p.screenshot({path:'output/book/den-after-cover-opening.png'});
+ await p.locator('#book-stage>canvas').focus();await p.keyboard.press('ArrowLeft');
+ await p.waitForFunction(()=>{const d=document.querySelector('#book-stage>canvas').dataset;return d.coverStage==='closing-cover'&&+d.coverOpenness>.2&&+d.coverOpenness<.7},null,{timeout:30000});
+ const closing=await p.locator('#book-stage>canvas').evaluate(c=>({...c.dataset}));assert.ok(JSON.parse(closing.turnPopupPoses)[den.id]>0);
+ await p.waitForFunction(()=>document.querySelector('#book-stage>canvas').dataset.sceneIndex==='-1'&&document.querySelector('#book-stage>canvas').dataset.turning==='false',null,{timeout:30000});
+ await p.locator('#book-stage>canvas').focus();await p.keyboard.press('ArrowRight');
+ await p.waitForFunction(()=>document.querySelector('#book-stage>canvas').dataset.sceneIndex==='0'&&document.querySelector('#book-stage>canvas').dataset.turning==='false',null,{timeout:30000});
+ await p.keyboard.press('ArrowRight');await p.waitForFunction(()=>document.querySelector('#book-stage>canvas').dataset.sceneIndex==='1'&&document.querySelector('#book-stage>canvas').dataset.turning==='false',null,{timeout:30000});
+ await p.keyboard.press('ArrowLeft');await p.waitForFunction(()=>{const d=document.querySelector('#book-stage>canvas').dataset;return d.leafTextured==='true'&&+d.turnPopupOpen>.2&&+d.turnPopupOpen<.8},null,{timeout:30000});
+ const turning=await p.locator('#book-stage>canvas').evaluate(c=>({...c.dataset}));assert.equal(turning.turnPopupCount,'2');
+ await p.screenshot({path:'output/book/den-during-page-turn.png'});
+ await p.waitForFunction(()=>document.querySelector('#book-stage>canvas').dataset.sceneIndex==='0'&&document.querySelector('#book-stage>canvas').dataset.turning==='false',null,{timeout:30000});
+ console.log(JSON.stringify({leafTravelPopups:turning.turnPopupCount,openness:turning.turnPopupOpen}));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({during:{openness:during.coverOpenness,poses},closing:{openness:closing.coverOpenness,poses:JSON.parse(closing.turnPopupPoses)},errors}));
+ }finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

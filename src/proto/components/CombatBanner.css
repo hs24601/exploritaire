@@ -1,0 +1,13 @@
+.combat-banner { position:fixed; inset:30% 0 auto; z-index:64000; display:grid; justify-items:center; gap:6px; box-sizing:border-box; padding:24px 16px; background:linear-gradient(110deg,#160c29ee,#5b1549f5,#160c29ee); border-block:4px solid #ffd776; color:#fff0bf; text-align:center; transform:rotate(-3deg); box-shadow:0 0 60px #cc75ff88; pointer-events:none; animation:combat-banner-enter 180ms ease-out both; }
+.combat-banner strong { font:italic 900 clamp(22px,4vw,54px)/1.1 sans-serif; text-shadow:3px 3px #3d103f; overflow-wrap:anywhere; }
+.combat-banner em { font:bold clamp(22px,3vw,38px)/1.1 sans-serif; letter-spacing:.15em; }
+.combat-banner[data-kind='party'] { background:linear-gradient(110deg,#081e2aee,#205268f5,#081e2aee); box-shadow:0 0 50px #92dfff55; }
+.combat-banner[data-kind='enemy'] { background:linear-gradient(110deg,#210e28ee,#5b254bf5,#210e28ee); }
+.combat-banner[data-paused] { animation-play-state:paused; }
+@keyframes combat-banner-enter { from { filter:brightness(1.35); } to { filter:brightness(1); } }
+@media(prefers-reduced-motion:reduce) { .combat-banner { animation:none; transform:none; } }
+
+.combat-banner[data-position='upper'] { top:5%; }
+
+/* Timed team announcements own their fade and queue completion on the game clock. */
+.combat-banner[data-timed] { animation:none; }

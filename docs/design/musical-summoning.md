@@ -1,0 +1,11 @@
+# Musical summon scaffold
+
+Available unsummoned cards start hidden and reset to hidden on scene restart. The Momentum gauge toggles their visibility without spending currency or opening the old team maneuver menu. Mochi is the only available Keru. Her ordinary portrait card occupies the left-hand position beside Bite; summoned allies no longer appear among offers.
+
+Inspect Mochi to see her jumbo portrait and the existing side gallery of Fast Swipes, Scratch, Claw and Lacerate. Select Fast Swipes or drag its gallery preview directly. A drag lifts after eight pixels, dismisses the inspector and reveals an empty support foundation aligned with the other foundations. Release inside that target to summon; release elsewhere, cancel the pointer or press Escape to cancel. The target exists only while dragging. Touch uses the same pointer flow; the inspector's explicit summon-to-support button provides keyboard access.
+
+Fast Swipes costs exactly 3 shared Momentum at Common, Rare, Epic and Legendary rarity. Check the current battle again on release, including funds, party turn, Hero's ability restrictions and duplicate Mochi. Successful summoning spends Momentum once and preserves Hero AP, the prime tableau and independent ability progress. Insufficient/invalid attempts return the original battle. Existing passive rarity cadence, +1 Mochi max AP, 0 starting Mochi AP and bounded Legendary refund remain unchanged. The passive watches the current prime, including when Hero is supporting.
+
+The new `MusicalSummons` component owns inspection and the pointer lifecycle. It survives the inspector's dismissal, so closing the overlay cannot lose a drag or commit a summon accidentally. `KeruFoundationJumbo` retains its gallery swap animation and exposes summon-specific drag/action hooks. Other scenes retain their existing hands and gauge menus. `equipFastSwipes` remains the single authoritative recruitment rule, now debiting Momentum.
+
+Validation: `tools/musical-summoning-check.cjs` covers default hiding, gauge toggle, only-Mochi offers, full gallery inspection, Momentum copy, invalid/unaffordable drops, successful drag, unchanged Hero AP, removal of the offer and phone rendering. Focused rule tests cover all tiers and ordinary/free leader promotions.

@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau Layout Ideas</title>
+<style>
+/* Static gallery: each tile pairs a mockup board (left) with its description (right). */
+:root {
+  --night: #0b1020;
+  --night-2: #111830;
+  --panel: #141c30;
+  --panel-edge: rgba(150, 175, 215, .22);
+  --card-a: #1d2738;
+  --card-b: #121a27;
+  --card-edge: rgba(185, 205, 235, .55);
+  --rank: #f6ead0;
+  --brass: #d1a94e;
+  --brass-soft: rgba(209, 169, 78, .75);
+  --text: #e9e3d4;
+  --text-dim: #a9b2c6;
+  --accent: #8fb4e8;
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: radial-gradient(ellipse at 30% 0%, #18213d 0%, var(--night) 55%) fixed, var(--night);
+  color: var(--text);
+  font: 16px/1.45 var(--font);
+  min-height: 100vh;
+}
+header {
+  padding: 28px 32px 8px;
+  max-width: 1880px; margin: 0 auto;
+}
+h1 { margin: 0 0 6px; font-weight: 600; font-size: 28px; letter-spacing: .01em; }
+.intro { margin: 0; max-width: 980px; color: var(--text-dim); font-size: 17px; }
+.legend { display: flex; flex-wrap: wrap; gap: 22px; margin: 16px 0 0; padding: 0; list-style: none; color: var(--text-dim); }
+.legend li { display: flex; align-items: center; gap: 10px; }
+.legend .sw { position: relative; width: 26px; height: 36px; flex: none; }
+
+main {
+  max-width: 1880px; margin: 0 auto;
+  padding: 18px 32px 48px;
+  display: grid; gap: 22px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1700px) { main { grid-template-columns: 1fr 1fr; } }
+.section-head { grid-column: 1 / -1; margin: 14px 0 -6px; font-size: 20px; font-weight: 600; color: var(--accent); letter-spacing: .03em; }
+
+.tile {
+  display: grid; grid-template-columns: 480px minmax(0, 1fr); gap: 24px;
+  background: linear-gradient(180deg, var(--night-2), var(--panel));
+  border: 1px solid var(--panel-edge);
+  border-radius: 16px;
+  padding: 18px;
+}
+.tile.baseline { border-color: rgba(209, 169, 78, .35); }
+.board {
+  position: relative; width: 480px; height: 400px;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 45%, #18223a 0%, #0d1324 75%);
+  box-shadow: inset 0 0 0 1px rgba(150,175,215,.14), inset 0 0 40px rgba(0,0,0,.5);
+  overflow: hidden;
+}
+.board svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.desc h2 { margin: 2px 0 4px; font-size: 22px; font-weight: 600; }
+.desc h2 .num { color: var(--brass); margin-right: 8px; }
+.desc .tag { margin: 0 0 10px; color: var(--accent); font-size: 17px; }
+.desc p { margin: 0 0 12px; }
+.levers { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
+.levers dt { color: var(--text-dim); }
+.levers dd { margin: 0; }
+.watch { margin-top: 12px !important; padding: 8px 12px; border-left: 3px solid var(--brass-soft); background: rgba(209,169,78,.07); border-radius: 0 8px 8px 0; }
+
+/* ---- cards ---- */
+.c {
+  position: absolute; width: var(--w, 56px); height: var(--h, 78px);
+  border-radius: 8px;
+  background: linear-gradient(165deg, var(--card-a), var(--card-b));
+  border: 1px solid var(--card-edge);
+  box-shadow: 0 3px 6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  display: grid; place-items: center;
+  color: var(--rank);
+  font-weight: 300; font-size: var(--fs, 40px); line-height: 1;
+}
+.c.pk { align-items: start; padding-top: 3px; font-size: 18px; font-weight: 500; }
+.c.dim { filter: brightness(.5) saturate(.6); }
+.c.down {
+  background:
+    repeating-linear-gradient(45deg, rgba(143,180,232,.13) 0 2px, transparent 2px 8px),
+    repeating-linear-gradient(-45deg, rgba(143,180,232,.13) 0 2px, transparent 2px 8px),
+    linear-gradient(165deg, #1a2444, #0f1630);
+  box-shadow: 0 3px 6px rgba(0,0,0,.55), inset 0 0 0 4px #0b1020, inset 0 0 0 5px rgba(143,180,232,.35);
+  color: transparent;
+}
+.c.down.dim { filter: brightness(.6); }
+.c.found {
+  border: 2px solid var(--brass);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(160,40,50,.55), transparent 62%),
+    linear-gradient(165deg, #241a1e, #12101a);
+  box-shadow: 0 0 0 3px rgba(209,169,78,.18), 0 3px 8px rgba(0,0,0,.6);
+  color: #ffe6a6;
+}
+.c.last { box-shadow: 0 0 0 3px var(--brass), 0 3px 6px rgba(0,0,0,.55); }
+.c.hex {
+  border: none; border-radius: 0; box-shadow: none;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: linear-gradient(165deg, #3c4a63, #2a3448);
+}
+.c.hex::before {
+  content: ""; position: absolute; inset: 1.5px;
+  clip-path: inherit;
+  background: linear-gradient(165deg, var(--card-a), var(--card-b));
+  z-index: -1;
+}
+.c.hex { isolation: isolate; }
+.c.hex.found { background: var(--brass); }
+.c.hex.found::before { background: radial-gradient(circle at 50% 42%, rgba(160,40,50,.55), transparent 65%), linear-gradient(165deg, #241a1e, #12101a); }
+.c.gone { background: none; border: 1px dashed rgba(150,175,215,.25); box-shadow: none; }
+.c.hex.gone { background: rgba(150,175,215,.22); }
+.c.hex.gone::before { background: #0f1628; }
+
+.tab {
+  position: absolute; border-radius: 7px;
+  background: linear-gradient(165deg, #2a3650, #1a2336);
+  border: 1px solid rgba(185,205,235,.45);
+  color: #cfdcf0; font-size: 18px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1;
+}
+.tab.v { flex-direction: column; }
+.note { position: absolute; font-size: 16px; color: var(--text-dim); white-space: nowrap; line-height: 1.2; }
+.note.b { color: #ffe0a0; }
+.pill {
+  position: absolute; font-size: 16px; white-space: nowrap; padding: 4px 12px; border-radius: 999px;
+  background: linear-gradient(180deg, #e7c46d, var(--brass)); color: #1f1c19; font-weight: 600;
+  box-shadow: 0 2px 0 #5b3a22;
+}
+.zone { position: absolute; border-radius: 12px; border: 1px dashed rgba(143,180,232,.45); background: rgba(143,180,232,.06); }
+.zone.gold { border-color: rgba(209,169,78,.6); background: rgba(209,169,78,.06); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tableau layout ideas</h1>
+  <p class="intro">Static mockups of eight layouts that feed one or more foundations from several candidates, with the 3×3 grid and the 7-column tableau as baselines. The levers that keep a layout in the goldilocks zone are how many candidates are live (roughly 4 to 7) and how fast the board refills. Ranks are placeholders.</p>
+  <ul class="legend" aria-label="Legend">
+    <li><span class="sw"><span class="c" style="--w:26px;--h:36px;--fs:18px">7</span></span>Live candidate</li>
+    <li><span class="sw"><span class="c dim" style="--w:26px;--h:36px;--fs:18px">7</span></span>Waiting or covered</li>
+    <li><span class="sw"><span class="c down" style="--w:26px;--h:36px"></span></span>Face down</li>
+    <li><span class="sw"><span class="c found" style="--w:26px;--h:36px;--fs:18px">7</span></span>Foundation</li>
+  </ul>
+</header>
+
+<main id="gallery"></main>
+
+<script>
+const W = 56, H = 78;
+const ARROW = '<defs><marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8fb4e8"/></marker><marker id="ahg" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d1a94e"/></marker></defs>';
+
+function makeBoard(draw) {
+  const el = document.createElement('div');
+  el.className = 'board';
+  const svgParts = [];
+  const add = (html) => el.insertAdjacentHTML('beforeend', html);
+  const size = (o) => (o.w ? `--w:${o.w}px;` : '') + (o.h ? `--h:${o.h}px;` : '') + (o.fs ? `--fs:${o.fs}px;` : '');
+  const b = {
+    card(x, y, r = '', o = {}) {
+      const cls = ['c', o.dim && 'dim', o.down && 'down', o.found && 'found', o.last && 'last', o.pk && 'pk', o.hex && 'hex', o.gone && 'gone'].filter(Boolean).join(' ');
+      const rot = o.rot ? `transform:rotate(${o.rot}deg);` : '';
+      add(`<div class="${cls}" style="left:${x}px;top:${y}px;${size(o)}${rot}">${o.down || o.gone ? '' : r}</div>`);
+    },
+    tab(x, y, w, h, text, vertical) { add(`<div class="tab${vertical ? ' v' : ''}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${text}</div>`); },
+    note(x, y, text, o = {}) {
+      const align = o.align === 'center' ? 'transform:translateX(-50%);' : o.align === 'right' ? 'transform:translateX(-100%);' : '';
+      add(`<div class="note${o.gold ? ' b' : ''}" style="left:${x}px;top:${y}px;${align}">${text}</div>`);
+    },
+    pill(x, y, text) { add(`<div class="pill" style="left:${x}px;top:${y}px">${text}</div>`); },
+    zone(x, y, w, h, gold) { add(`<div class="zone${gold ? ' gold' : ''}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"></div>`); },
+    path(d, gold, dash) { svgParts.push(`<path d="${d}" fill="none" stroke="${gold ? '#d1a94e' : '#8fb4e8'}" stroke-width="2.5" ${dash ? 'stroke-dasharray="6 6"' : ''} marker-end="url(#${gold ? 'ahg' : 'ah'})" opacity=".85"/>`); },
+  };
+  draw(b);
+  el.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 480 400" aria-hidden="true">${ARROW}${svgParts.join('')}</svg>`);
+  return el;
+}
+
+/* ---------- layouts ---------- */
+const layouts = [];
+
+layouts.push({ baseline: true, title: '3×3 grid', tag: 'Current baseline: 8 neighbours around one foundation.',
+  body: 'The foundation sits in the centre with eight cards around it. Each outer card has a backfill stack peeking out from behind it, so you can see what comes next before you commit.',
+  levers: [['Live', '8 at all times'], ['Refill', 'Instant, from the peeking stacks'], ['Bad-deal relief', 'Hand of 4 below the grid restarts a run']],
+  watch: 'All eight are live every turn, so the pressure comes from the backfill order rather than from position.',
+  draw(b) {
+    const gx = 146, gy = 70, g = 10, ranks = ['A', 'J', '10', 'J', null, 'Q', '8', 'K', '3'];
+    const top = ['2', 'A', '7'], bot = ['9', '8', '6'], left = ['J', '8', 'A'], right = ['3', '4', '5'];
+    for (let c = 0; c < 3; c++) {
+      b.tab(gx + c * (W + g) + 6, gy - 32, W - 12, 26, `${top[c]} <small>▾</small>`);
+      b.tab(gx + c * (W + g) + 6, gy + 3 * H + 2 * g + 6, W - 12, 26, `${bot[c]} <small>▴</small>`);
+    }
+    for (let r = 0; r < 3; r++) {
+      b.tab(gx - 32, gy + r * (H + g) + 6, 26, H - 12, `${left[r]}<small>▸</small>`, true);
+      b.tab(gx + 3 * W + 2 * g + 6, gy + r * (H + g) + 6, 26, H - 12, `${right[r]}<small>◂</small>`, true);
+    }
+    ranks.forEach((r, i) => {
+      const x = gx + (i % 3) * (W + g), y = gy + Math.floor(i / 3) * (H + g);
+      if (r === null) b.card(x, y, '7', { found: true }); else b.card(x, y, r);
+    });
+    b.note(240, 370, 'backfill tabs peek from every edge', { align: 'center' });
+  } });
+
+layouts.push({ baseline: true, title: '7-column tableau', tag: 'Current baseline: 2 foundations × 7 columns.',
+  body: 'Classic golf columns. Only the bottom card of each column is playable, and each play exposes the card above it. The Monte Carlo pass put this at the sweet spot of foundations × columns ≈ 14.',
+  levers: [['Live', '7 (one per column)'], ['Refill', 'Exposes the next card up'], ['Bad-deal relief', 'Second foundation and the stock']],
+  watch: 'A buried run can lock behind a bad bottom card, which is the sequencing pain the other layouts try to soften.',
+  draw(b) {
+    const w = 48, h = 68, fs = 34, x0 = 48, step = 56;
+    b.card(156, 14, '5', { found: true, w, h, fs });
+    b.card(276, 14, 'Q', { found: true, w, h, fs });
+    b.note(180, 88, 'foundation', { align: 'center' });
+    b.note(300, 88, 'foundation', { align: 'center' });
+    const cols = [['9', '2', 'K', '6'], ['4', 'J', '8', '4'], ['A', '7', '3', 'J'], ['10', 'Q', '5', '6'], ['3', '9', 'A', 'K'], ['8', '2', '10', '4'], ['J', '6', '9', 'Q']];
+    cols.forEach((col, c) => col.forEach((r, i) => b.card(x0 + c * step, 124 + i * 24, r, { w, h, fs, dim: i < col.length - 1, pk: i < col.length - 1 })));
+    b.note(240, 300, 'bottom card of each column is live', { align: 'center' });
+    b.card(400, 326, '', { down: true, w: 40, h: 56 }); b.card(404, 322, '', { down: true, w: 40, h: 56 });
+    b.note(392, 344, 'stock', { align: 'right' });
+  } });
+
+layouts.push({ title: 'Ring / clock', tag: 'Short piles in a ring; only the neighbours of your last play are live.',
+  body: 'Ten short piles sit around the foundation. After you play from a pile, the two piles beside it become your options, so your position walks around the ring. A bad pocket is temporary because the next play moves you on.',
+  levers: [['Live', '2 by position (3 if the played pile can repeat)'], ['Refill', 'Each pile shows its next card'], ['Bad-deal relief', 'A paid “skip a pile” step, or a stock flip']],
+  watch: 'Two is below the goldilocks range. Widening to “within two steps” gives 4 live and keeps the walking feel.',
+  draw(b) {
+    const cx = 240, cy = 196, rx = 186, ry = 148, ranks = ['4', '8', 'Q', '2', 'J', '9', 'A', '5', '10', '6'];
+    b.card(cx - W / 2, cy - H / 2, '7', { found: true });
+    ranks.forEach((r, i) => {
+      const a = -Math.PI / 2 + i * (2 * Math.PI / 10);
+      const x = cx + rx * Math.cos(a) - W / 2, y = cy + ry * Math.sin(a) - H / 2;
+      b.card(x + 4, y + 4, '', { down: true, dim: true });
+      const live = i === 1 || i === 9;
+      b.card(x, y, r, { dim: !live && i !== 0, last: i === 0 });
+    });
+    b.path('M 268 70 Q 300 100 318 118', true);
+    b.path('M 212 70 Q 180 100 162 118', true);
+    b.note(cx, cy + 46, 'last play came', { align: 'center', gold: true });
+    b.note(cx, cy + 66, 'from the top pile', { align: 'center', gold: true });
+  } });
+
+layouts.push({ title: 'Pyramid', tag: 'Overlapping rows; a card frees up once both cards covering it are gone.',
+  body: 'A TriPeaks-style stack. The front row starts exposed, and clearing two neighbours uncovers the card they were holding down. Sequencing matters because you choose which pairs to open, but there are no hard dead ends while the front row still has cards.',
+  levers: [['Live', '4 to 6 (front row plus anything uncovered)'], ['Refill', 'Opens upward as pairs clear'], ['Bad-deal relief', 'Stock flip onto the foundation']],
+  watch: 'Live count shrinks near the peak. Two or three small peaks side by side keep it wider for longer.',
+  draw(b) {
+    const w = 50, h = 70, fs = 34, sx = 54, sy = 34, cx = 240, y0 = 12;
+    const rows = [['K'], ['3', '9'], ['6', 'Q', '2'], ['10', '4', 'J', '7'], ['5', null, null, 'A', '8']];
+    rows.forEach((row, ri) => {
+      const x0 = cx - (row.length * sx - 4) / 2;
+      row.forEach((r, i) => {
+        const x = x0 + i * sx, y = y0 + ri * sy;
+        if (r === null) return b.card(x, y, '', { gone: true, w, h });
+        const front = ri === 4, freed = ri === 3 && i === 1;
+        b.card(x, y, r, { w, h, fs, down: ri < 2, dim: !(front || freed), pk: !(front || freed) });
+      });
+    });
+    b.note(cx, 236, 'two front cards cleared, so the 4 behind them is live', { align: 'center' });
+    b.card(196, 290, '6', { found: true });
+    b.card(276, 294, '', { down: true }); b.card(280, 290, '', { down: true });
+    b.note(224, 374, 'foundation', { align: 'center' });
+    b.note(308, 374, 'stock', { align: 'center' });
+  } });
+
+layouts.push({ title: 'Hex cluster', tag: 'A honeycomb around the foundation; a tile is live when it has an open edge.',
+  body: 'Six tiles touch the foundation with an outer ring around them. Any tile with an empty or outside edge is playable, so clearing tiles carves paths inward toward the centre. This is close to the spatial-tableau “reach ring” idea.',
+  levers: [['Live', 'Starts with the whole outer ring'], ['Refill', 'None; the cluster opens inward'], ['Bad-deal relief', 'Inner tiles join as soon as a neighbour clears']],
+  watch: 'Twelve outer tiles start live, which is too generous. Six outer “petals” (corners only) brings it to about 6.',
+  draw(b) {
+    const s = 37, cx = 240, cy = 192, tw = Math.sqrt(3) * s, th = 2 * s;
+    const ring1 = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+    const ring2 = [[2, 0], [2, -1], [2, -2], [1, -2], [0, -2], [-1, -1], [-2, 0], [-2, 1], [-2, 2], [-1, 2], [0, 2], [1, 1]];
+    const gone = new Set(['2,-1', '2,-2']);
+    const pos = (q, r) => [cx + s * Math.sqrt(3) * (q + r / 2) - tw / 2, cy + s * 1.5 * r - th / 2];
+    const rk = ['8', '3', 'Q', '5', 'J', '9', '2', 'K', '6', '4', 'A', '10', '7', '3', 'J', '8', '5', 'Q'];
+    let k = 0;
+    const opt = { hex: true, w: tw - 3, h: th - 3, fs: 30 };
+    ring2.forEach(([q, r]) => { const [x, y] = pos(q, r); const key = q + ',' + r; b.card(x, y, rk[k++], { ...opt, gone: gone.has(key) }); });
+    ring1.forEach(([q, r]) => {
+      const [x, y] = pos(q, r);
+      const open = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]].some(([dq, dr]) => gone.has((q + dq) + ',' + (r + dr)));
+      b.card(x, y, rk[k++], { ...opt, dim: !open });
+    });
+    const [fx, fy] = pos(0, 0); b.card(fx, fy, '7', { ...opt, found: true });
+    b.note(470, 46, 'two cleared,', { align: 'right' });
+    b.note(470, 66, 'inner tiles open', { align: 'right' });
+  } });
+
+layouts.push({ title: 'Conveyor / river', tag: 'Five slots slide along a belt; new cards feed in, old ones wash out.',
+  body: 'You always see five candidates. Playing one closes the gap and a new card enters from the feed. When nothing plays, the belt advances one step and the oldest card falls off, so a bad deal washes away instead of locking you in.',
+  levers: [['Live', '5, always'], ['Refill', 'One new card per play or per advance'], ['Bad-deal relief', 'Built in: the belt moves on']],
+  watch: 'Little long-term planning. A visible “next two” on the feed brings back some lookahead.',
+  draw(b) {
+    b.card(212, 22, '7', { found: true });
+    b.note(240, 106, 'foundation', { align: 'center' });
+    b.zone(74, 176, 324, 100);
+    const ranks = ['2', '8', 'J', '6', '10'];
+    ranks.forEach((r, i) => b.card(84 + i * 62, 187, r));
+    b.card(410, 191, '', { down: true }); b.card(414, 187, '', { down: true });
+    b.card(16, 187, '4', { dim: true, rot: -8 });
+    b.path('M 400 156 L 90 156');
+    b.note(442, 286, 'feed', { align: 'center' });
+    b.note(10, 286, 'washes out');
+    b.note(236, 300, 'play any of the five', { align: 'center' });
+    b.path('M 240 176 L 240 132', true);
+  } });
+
+layouts.push({ title: 'Two-sided foundation', tag: 'One foundation with an up track and a down track, each with its own columns.',
+  body: 'The foundation has two faces. The up track only takes +1 and the down track only takes −1, and each is fed by three short columns. It gives you two kinds of candidate, like a run and a pull-back, without adding a second foundation.',
+  levers: [['Live', '6 (3 per side)'], ['Refill', 'Each column exposes its next card'], ['Bad-deal relief', 'If one side stalls, the other usually still plays']],
+  watch: 'Without wraparound the tracks hit A or K and stop. Wrapping K↔A, or flipping a track’s direction for stamina, keeps both alive.',
+  draw(b) {
+    b.zone(156, 10, 168, 128, true);
+    b.card(172, 22, '7', { found: true });
+    b.card(252, 22, '7', { found: true });
+    b.note(200, 106, '▲ +1', { align: 'center', gold: true });
+    b.note(280, 106, '▼ −1', { align: 'center', gold: true });
+    const left = [['Q', '3', '8'], ['5', 'K', '2'], ['J', '9', '6']], right = [['A', '10', '6'], ['4', '9', 'Q'], ['8', 'J', '3']];
+    const xsL = [20, 82, 144], xsR = [280, 342, 404];
+    [[left, xsL], [right, xsR]].forEach(([cols, xs]) => cols.forEach((col, c) => col.forEach((r, i) => b.card(xs[c], 168 + i * 26, r, { dim: i < 2, pk: i < 2 }))));
+    b.path('M 110 160 Q 130 110 164 76', true);
+    b.path('M 370 160 Q 350 110 316 76', true);
+    b.note(110, 330, 'feed the up track', { align: 'center' });
+    b.note(370, 330, 'feed the down track', { align: 'center' });
+  } });
+
+layouts.push({ title: 'Shared crossroads', tag: 'Two foundations with columns between them that either one can take.',
+  body: 'Each foundation owns two columns, and three columns in the middle are open to both. Contested columns make every middle play a choice about which side benefits, which suits co-op play or a pair of kin working together.',
+  levers: [['Live', '5 per foundation (7 in total)'], ['Refill', 'Each column exposes its next card'], ['Bad-deal relief', 'The other foundation can drain a blocked middle column']],
+  watch: 'Solo, it plays like a 2-foundation tableau. It earns its keep when two actors share it.',
+  draw(b) {
+    const w = 48, h = 68, fs = 34;
+    b.card(40, 16, '9', { found: true, w, h, fs });
+    b.card(390, 16, '4', { found: true, w, h, fs });
+    b.note(64, 88, 'Hero', { align: 'center', gold: true });
+    b.note(414, 88, 'Kin', { align: 'center', gold: true });
+    b.zone(144, 120, 192, 172);
+    const xs = [14, 68, 160, 216, 272, 362, 416];
+    const cols = [['3', 'K', '8'], ['6', '2', 'J'], ['Q', '5', '10'], ['A', '7', '3'], ['9', 'J', '5'], ['K', '6', '2'], ['8', 'Q', '3']];
+    cols.forEach((col, c) => col.forEach((r, i) => b.card(xs[c], 132 + i * 24, r, { w, h, fs, dim: i < 2, pk: i < 2 })));
+    b.note(240, 262, 'shared: either side', { align: 'center' });
+    b.path('M 180 128 Q 140 70 96 52', true);
+    b.path('M 300 128 Q 340 70 384 52', true);
+    b.note(68, 300, 'Hero only', { align: 'center' });
+    b.note(416, 300, 'Kin only', { align: 'center' });
+  } });
+
+layouts.push({ title: 'Hand + board', tag: 'A small hand plus a short board; the hand is your relief valve.',
+  body: 'A four-column board with a hand of three or four cards. Either can play to the foundation. A dead board is still playable from the hand, and deciding which hand cards to hold for later is a real choice.',
+  levers: [['Live', '4 board + 3 or 4 in hand'], ['Refill', 'Board exposes upward; the hand draws back up at turn end'], ['Bad-deal relief', 'The hand']],
+  watch: 'If the hand refills too fast it becomes the whole game. Drawing only at turn end, or for stamina, keeps the board relevant.',
+  draw(b) {
+    const xs = [30, 96, 162, 228], cols = [['K', '4', '9'], ['2', 'J', '6'], ['10', '5', 'Q'], ['8', 'A', '3']];
+    cols.forEach((col, c) => col.forEach((r, i) => b.card(xs[c], 18 + i * 26, r, { dim: i < 2, pk: i < 2 })));
+    b.note(160, 162, 'board', { align: 'center' });
+    b.card(372, 52, '7', { found: true });
+    b.note(400, 136, 'foundation', { align: 'center' });
+    const hand = ['8', '2', 'J', '6'];
+    hand.forEach((r, i) => b.card(150 + i * 46, 236 + Math.abs(i - 1.5) * 6, r, { rot: (i - 1.5) * 5 }));
+    b.note(240, 340, 'hand', { align: 'center' });
+    b.path('M 350 262 Q 400 230 400 162', true);
+  } });
+
+layouts.push({ title: 'Rotating dial', tag: 'The 3×3 ring turns one step per stamina to bring new cards to the front.',
+  body: 'Built from the 3×3 grid, but only the four cards on the edges (facing the foundation straight on) are live. The corners wait their turn. Paying stamina rotates the ring one step, which swaps corners and edges, a gentler cousin of a redeal.',
+  levers: [['Live', '4, changeable for stamina'], ['Refill', 'Peeking backfill, as in the 3×3 grid'], ['Bad-deal relief', 'Spin the dial']],
+  watch: 'Spinning should feel like a choice, not a tax. A free spin when nothing is playable avoids a soft lock.',
+  draw(b) {
+    const gx = 146, gy = 72, g = 10, ranks = ['Q', '8', '2', '6', null, 'J', '4', '10', 'K'];
+    ranks.forEach((r, i) => {
+      const x = gx + (i % 3) * (W + g), y = gy + Math.floor(i / 3) * (H + g);
+      if (r === null) return b.card(x, y, '9', { found: true });
+      b.card(x, y, r, { dim: i % 2 === 0 });
+    });
+    b.path('M 352 92 A 172 172 0 0 1 392 196', true);
+    b.path('M 128 306 A 172 172 0 0 1 88 204', true);
+    b.pill(306, 356, '⟳ Spin · 1 stamina');
+    b.note(240, 22, 'edges live · corners wait', { align: 'center' });
+  } });
+
+/* ---------- render ---------- */
+const gallery = document.getElementById('gallery');
+const section = (text) => gallery.insertAdjacentHTML('beforeend', `<h2 class="section-head">${text}</h2>`);
+let n = 0;
+section('Baselines');
+layouts.forEach((L, i) => {
+  if (i === 2) section('New layout ideas');
+  const tile = document.createElement('article');
+  tile.className = 'tile' + (L.baseline ? ' baseline' : '');
+  tile.appendChild(makeBoard(L.draw));
+  const label = L.baseline ? '' : `<span class="num">${++n}</span>`;
+  tile.insertAdjacentHTML('beforeend', `<div class="desc">
+    <h2>${label}${L.title}</h2>
+    <p class="tag">${L.tag}</p>
+    <p>${L.body}</p>
+    <dl class="levers">${L.levers.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    <p class="watch">${L.watch}</p>
+  </div>`);
+  gallery.appendChild(tile);
+});
+</script>
+</body>
+</html>

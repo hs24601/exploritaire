@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "seed": "exploritaire-wash-01",
+  "load": 0.68,
+  "water": 0.46,
+  "rim": 0.42,
+  "granulation": 0.25,
+  "roughness": 0.54,
+  "opacity": 0.52
+}

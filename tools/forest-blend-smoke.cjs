@@ -1,0 +1,41 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const { findLayoutDefects } = require('./lib/layout-check.cjs');
+(async () => {
+  fs.mkdirSync('output/forest-blend', { recursive: true });
+  const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, hasTouch: true });
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    await page.goto('http://127.0.0.1:5183/tools/live-paint-lab.html');
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.ready === 'true', { timeout: 45000 });
+    await page.waitForTimeout(350);
+    assert.equal(await page.locator('canvas').getAttribute('data-billboard'), 'camera-facing');
+    assert.equal(await page.locator('canvas').getAttribute('data-blend'), '70');
+    await page.screenshot({ path: 'output/forest-blend/ground.png' });
+    assert.ok(fs.statSync('output/forest-blend/ground.png').size > 60000);
+    await page.locator('#flight').click();
+    await page.waitForFunction(() => Number(document.querySelector('canvas').dataset.camera.split(',')[1]) === 13);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'output/forest-blend/flight-facing.png' });
+    await page.locator('#upright').tap();
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.billboard === 'upright');
+    await page.locator('#upright').tap();
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.billboard === 'camera-facing');
+    await page.locator('#blend').evaluate(el => { el.value = '0'; el.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.blend === '0');
+    await page.locator('#blend').evaluate(el => { el.value = '70'; el.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.blend === '70');
+    await page.locator('canvas').focus();
+    const before = await page.locator('canvas').getAttribute('data-camera');
+    await page.keyboard.down('a'); await page.waitForTimeout(550); await page.keyboard.up('a');
+    await page.waitForFunction(before => document.querySelector('canvas').dataset.camera !== before, before);
+    await page.screenshot({ path: 'output/forest-blend/moving.png' });
+    assert.deepEqual(await findLayoutDefects(page, '#forest-controls', { parts: ':scope > label,:scope > button' }), []);
+    assert.equal(await page.locator('#forest-error').isVisible(), false);
+    assert.deepEqual(errors, []);
+    console.log('PASS: camera-facing forest and flight render, temporal blend on/off, touch Upright comparison, movement and desktop control layout; no WebGL/browser errors.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

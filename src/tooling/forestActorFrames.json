@@ -1,0 +1,248 @@
+{
+  "hero": [
+    {
+      "key": "hero-view-0",
+      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        48,
+        20,
+        206,
+        251
+      ],
+      "aspect": 0.8207171314741036
+    },
+    {
+      "key": "hero-view-1",
+      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        41,
+        289,
+        272,
+        248
+      ],
+      "aspect": 1.096774193548387
+    },
+    {
+      "key": "hero-view-2",
+      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        19,
+        546,
+        321,
+        254
+      ],
+      "aspect": 1.263779527559055
+    },
+    {
+      "key": "hero-view-3",
+      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        25,
+        812,
+        291,
+        256
+      ],
+      "aspect": 1.13671875
+    },
+    {
+      "key": "hero-view-4",
+      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        55,
+        1080,
+        183,
+        273
+      ],
+      "aspect": 0.6703296703296703
+    },
+    {
+      "key": "hero-view-5",
+      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "rect": [
+        44,
+        43,
+        194,
+        228
+      ],
+      "aspect": 0.8508771929824561
+    },
+    {
+      "key": "hero-view-6",
+      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "rect": [
+        44,
+        274,
+        242,
+        228
+      ],
+      "aspect": 1.0614035087719298
+    },
+    {
+      "key": "hero-view-7",
+      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "rect": [
+        28,
+        509,
+        286,
+        242
+      ],
+      "aspect": 1.1818181818181819
+    },
+    {
+      "key": "hero-view-8",
+      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "rect": [
+        41,
+        753,
+        258,
+        254
+      ],
+      "aspect": 1.015748031496063
+    },
+    {
+      "key": "hero-view-9",
+      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "rect": [
+        55,
+        1080,
+        183,
+        273
+      ],
+      "aspect": 0.6703296703296703
+    },
+    {
+      "key": "hero-view-10",
+      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "rect": [
+        71,
+        1022,
+        174,
+        398
+      ],
+      "aspect": 0.4371859296482412
+    }
+  ],
+  "slime": [
+    {
+      "key": "slime-view-0",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        38,
+        114,
+        357,
+        269
+      ],
+      "aspect": 1.3271375464684014
+    },
+    {
+      "key": "slime-view-1",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        449,
+        102,
+        360,
+        281
+      ],
+      "aspect": 1.2811387900355873
+    },
+    {
+      "key": "slime-view-2",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        874,
+        104,
+        350,
+        274
+      ],
+      "aspect": 1.2773722627737227
+    },
+    {
+      "key": "slime-view-3",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        40,
+        495,
+        344,
+        275
+      ],
+      "aspect": 1.250909090909091
+    },
+    {
+      "key": "slime-view-4",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        448,
+        501,
+        361,
+        269
+      ],
+      "aspect": 1.342007434944238
+    },
+    {
+      "key": "slime-view-5",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        38,
+        114,
+        357,
+        269
+      ],
+      "aspect": 1.3271375464684014
+    },
+    {
+      "key": "slime-view-6",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        875,
+        522,
+        334,
+        257
+      ],
+      "aspect": 1.2996108949416343
+    },
+    {
+      "key": "slime-view-7",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        41,
+        896,
+        344,
+        261
+      ],
+      "aspect": 1.318007662835249
+    },
+    {
+      "key": "slime-view-8",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        448,
+        893,
+        353,
+        264
+      ],
+      "aspect": 1.3371212121212122
+    },
+    {
+      "key": "slime-view-9",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        448,
+        501,
+        361,
+        269
+      ],
+      "aspect": 1.342007434944238
+    },
+    {
+      "key": "slime-view-10",
+      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "rect": [
+        882,
+        883,
+        327,
+        302
+      ],
+      "aspect": 1.0827814569536425
+    }
+  ]
+}

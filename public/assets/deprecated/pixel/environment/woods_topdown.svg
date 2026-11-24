@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <rect width="48" height="48" fill="#263b2d"/>
+  <path d="M17 48V36h4V26h5V14h4V0h7v18h-5v12h-5v10h-3v8" fill="#655a3c"/>
+  <path d="M20 48V38h4V28h5V16h4V0h2v18h-4v12h-5v10h-4v8" fill="#8a7950"/>
+  <g id="pine">
+    <path d="M5 2h6v2h3v3h2v6h-2v3h-3v2H5v-2H2v-3H0V7h2V4h3Z" fill="#13281e"/>
+    <path d="M6 3h4v3h3v3h2v3h-4v3H7v2H4v-4H1V9h3V6h2Z" fill="#326044"/>
+    <path d="M6 4h3v3h3v2H8v3H5V9H3V7h3Z" fill="#57815a"/>
+    <path d="M7 7h2v3H7Z" fill="#9bac6b"/>
+    <path d="M11 12h3v2h-3v2H8v-2h3Z" fill="#1e4030"/>
+  </g>
+  <use href="#pine" x="29" y="4"/>
+  <use href="#pine" x="5" y="14"/>
+  <use href="#pine" x="28" y="26"/>
+  <use href="#pine" x="1" y="29"/>
+  <path d="M18 5h2v2h-2Zm4 8h2v1h-2ZM4 25h2v2H4Zm35-3h2v2h-2ZM26 43h2v2h-2Zm18-24h2v2h-2Z" fill="#78916a"/>
+  <path d="M23 4h3v2h-3ZM16 34h3v2h-3ZM40 44h3v2h-3Z" fill="#aba38b"/>
+</svg>

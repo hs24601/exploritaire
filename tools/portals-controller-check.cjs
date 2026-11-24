@@ -1,0 +1,23 @@
+const {chromium}=require('playwright');const assert=require('node:assert/strict');const fs=require('node:fs');
+(async()=>{const browser=await chromium.launch({headless:true,args:process.platform==='win32'?['--use-angle=d3d11']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1280,height:800},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+try{
+await page.addInitScript(()=>{window.testPad={connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};Object.defineProperty(navigator,'getGamepads',{value:()=>[window.testPad]});});
+await page.goto('http://127.0.0.1:5178/portals.html?tree&quality=low',{waitUntil:'domcontentloaded'});
+await page.waitForFunction(()=>window.__castle1111&&document.querySelector('.portals-pause-button'),null,{timeout:90000});
+const press=async(i,check)=>{await page.evaluate(i=>window.testPad.buttons[i]={pressed:true,value:1},i);if(check)await page.waitForFunction(check,null,{timeout:10000});else await page.waitForTimeout(300);await page.evaluate(i=>window.testPad.buttons[i]={pressed:false,value:0},i);await page.waitForTimeout(250);};
+await press(9,()=>document.querySelector('canvas').dataset.portalsPaused==='true');
+const pose=await page.evaluate(()=>JSON.stringify({hero:window.__castle1111.hero,camera:window.__castle1111.camera}));await page.waitForTimeout(400);assert.equal(await page.evaluate(()=>JSON.stringify({hero:window.__castle1111.hero,camera:window.__castle1111.camera})),pose);
+await page.click('[data-settings]');
+assert.equal(await page.locator('[role=tab]').count(),6);
+await press(5,()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Controller');
+await press(5,()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Paint');
+const coverage=page.locator('[aria-label="Stroke coverage"]');await coverage.focus();const before=Number(await coverage.inputValue());await press(14);assert(Number(await coverage.inputValue())<before);
+await press(4,()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Controller');
+await press(4,()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Display');
+await page.screenshot({path:'output/portals-settings.png'});
+await press(1,()=>!document.querySelector('[data-pause-home]').hidden);
+await press(9,()=>document.querySelector('canvas').dataset.portalsPaused==='false');
+const beforeMove=await page.evaluate(()=>window.__castle1111.hero);await page.evaluate(()=>window.testPad.axes[0]=1);await page.waitForTimeout(900);await page.evaluate(()=>window.testPad.axes[0]=0);const afterMove=await page.evaluate(()=>window.__castle1111.hero);assert(Math.hypot(beforeMove.x-afterMove.x,beforeMove.z-afterMove.z)>.1);
+await press(1,()=>!window.__castle1111.platform.grounded);await press(9,()=>document.querySelector('canvas').dataset.portalsPaused==='true');await page.screenshot({path:'output/portals-pause.png'});
+assert.deepEqual(errors,[]);console.log('PASS: dedicated route; Start pause/resume; frozen hero/camera; six tabs; LB/RB; controller range editing; B back; analog movement; B jump; no runtime errors.');
+}catch(e){console.error('Runtime errors:',errors);console.error('Page status:',await page.locator('body').innerText());await page.screenshot({path:'output/portals-test-failure.png'});throw e;}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

@@ -28,3 +28,7 @@ Thumbs.db
 # agent temp files
 tmpclaude-*
 .codex/
+samples/
+
+# Local screenshots and check output (Playwright, art reviews); kept on disk, never committed.
+artifacts/

@@ -1,0 +1,27 @@
+/* Real Proto map on the left; the shared tile editor owns the authoring workspace. */
+html.proto-tooling-page .proto-authoring-root.tile-editor-open{width:44%;padding:8px}
+html.proto-tooling-page .tile-editor--workspace{left:44%;top:8px;width:calc(56% - 8px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);padding:16px;border-radius:12px}
+html.proto-tooling-page .proto-authoring-root.tile-editor-open .proto-workspace{grid-template-columns:minmax(0,1fr)}
+html.proto-tooling-page .proto-authoring-root.tile-editor-open .proto-day-panel{display:none}
+.tile-editor .tile-editor-current{padding:10px;background:#223a33;border-radius:6px;color:#e9efdf}
+.tile-editor .tile-editor-import{margin:0;padding:5px;display:flex;align-items:center;gap:8px;max-width:100%}
+.tile-editor .tile-editor-import input{width:210px}
+.tile-editor .tableau-editor{padding:12px;min-width:0}
+.tile-editor .tableau-editor header,.tile-editor .tableau-editor nav{position:static;display:flex;flex-wrap:wrap;gap:8px}
+.tile-editor .tableau-editor h1{font-size:22px}
+.tile-editor .tableau-editor label{display:flex;flex-wrap:wrap;align-items:center;min-width:0;max-width:100%}
+.tile-editor .tableau-editor input,.tile-editor .tableau-editor select{width:auto;max-width:100%}
+.tile-editor .tableau-editor .layout-board{max-height:none}
+.tile-editor .tableau-editor .layout-workspace{display:grid;grid-template-columns:minmax(0,1fr)}
+.tile-editor .tableau-editor .layout-workspace aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile-editor .tableau-editor .layout-workspace aside>p{grid-column:1/-1}
+.tableau-target{padding:12px;background:#1c332e;border-radius:6px;margin-bottom:12px}
+.tile-editor .tableau-target label{display:grid}
+@media(max-width:850px){
+ html.proto-tooling-page .proto-authoring-root.tile-editor-open{width:100%;height:34dvh;padding:4px}
+ html.proto-tooling-page .tile-editor--workspace{left:8px;top:34dvh;width:calc(100% - 16px);height:calc(66dvh - 8px);max-height:calc(66dvh - 8px);padding:10px}
+ html.proto-tooling-page .proto-authoring-root.tile-editor-open .proto-play-area>section{padding:4px}
+ .tile-editor .tableau-editor .layout-workspace aside{grid-template-columns:minmax(0,1fr)}
+}
+.tile-editor-context{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin:8px 0}
+.tile-editor-context .tile-editor-current{margin:0;font-size:16px}

@@ -1,7 +1,6 @@
 import type { GameState, Move, EnemyDifficulty } from '../types';
 import { analyzeOptimalSequence } from '../analysis';
 import { canPlayCard, canPlayCardWithWild } from '../rules';
-import { getBiomeDefinition } from '../biomes';
 import { getActiveBlindLevel, getBlindedHiddenTableauIndexes } from '../rpgBlind';
 
 type DifficultyProfile = {
@@ -19,8 +18,7 @@ const DIFFICULTY_PROFILES: Record<EnemyDifficulty, DifficultyProfile> = {
 };
 
 function getMode(state: GameState): 'standard' | 'wild' {
-  const biomeDef = state.currentBiome ? getBiomeDefinition(state.currentBiome) : null;
-  return biomeDef?.randomlyGenerated ? 'wild' : 'standard';
+  return state.combatFlowMode === 'real_time_shared' ? 'standard' : 'wild';
 }
 
 export function getEnemyPlayableMoves(state: GameState): Move[] {

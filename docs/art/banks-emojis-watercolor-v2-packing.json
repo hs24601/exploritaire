@@ -1,0 +1,144 @@
+{
+  "source": [
+    1279,
+    1230
+  ],
+  "frames": {
+    "happy": {
+      "source": [
+        28,
+        27,
+        390,
+        390
+      ],
+      "scale": 1.1487179487179486,
+      "components": [
+        1
+      ],
+      "transparent": 111542,
+      "partial": 18137,
+      "opaque": 132465
+    },
+    "blush": {
+      "source": [
+        439,
+        34,
+        393,
+        382
+      ],
+      "scale": 1.1399491094147582,
+      "components": [
+        3
+      ],
+      "transparent": 111579,
+      "partial": 18325,
+      "opaque": 132240
+    },
+    "heartEyes": {
+      "source": [
+        859,
+        33,
+        397,
+        384
+      ],
+      "scale": 1.128463476070529,
+      "components": [
+        2
+      ],
+      "transparent": 114186,
+      "partial": 18000,
+      "opaque": 129958
+    },
+    "sad": {
+      "source": [
+        22,
+        427,
+        397,
+        384
+      ],
+      "scale": 1.128463476070529,
+      "components": [
+        28
+      ],
+      "transparent": 109930,
+      "partial": 18158,
+      "opaque": 134056
+    },
+    "stars": {
+      "source": [
+        439,
+        427,
+        404,
+        385
+      ],
+      "scale": 1.108910891089109,
+      "components": [
+        29
+      ],
+      "transparent": 112986,
+      "partial": 17384,
+      "opaque": 131774
+    },
+    "upset": {
+      "source": [
+        861,
+        429,
+        398,
+        382
+      ],
+      "scale": 1.1256281407035176,
+      "components": [
+        30
+      ],
+      "transparent": 112674,
+      "partial": 18134,
+      "opaque": 131336
+    },
+    "upsetWithSymbol": {
+      "source": [
+        18,
+        823,
+        452,
+        370
+      ],
+      "scale": 0.9911504424778761,
+      "components": [
+        67,
+        70
+      ],
+      "transparent": 145242,
+      "partial": 15854,
+      "opaque": 101048
+    },
+    "behind": {
+      "source": [
+        452,
+        820,
+        389,
+        378
+      ],
+      "scale": 1.1516709511568124,
+      "components": [
+        66
+      ],
+      "transparent": 111438,
+      "partial": 17890,
+      "opaque": 132816
+    },
+    "fighting": {
+      "source": [
+        866,
+        817,
+        399,
+        386
+      ],
+      "scale": 1.1228070175438596,
+      "components": [
+        65
+      ],
+      "transparent": 112010,
+      "partial": 18843,
+      "opaque": 131291
+    }
+  }
+}

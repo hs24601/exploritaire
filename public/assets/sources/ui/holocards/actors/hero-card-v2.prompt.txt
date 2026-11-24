@@ -1,0 +1,4 @@
+Hero card artwork v2
+Generated using the built-in image_gen tool; reference: public/assets/actors/hero.png.
+Final asset: public/assets/actors/hero-card-v2.png
+Prompt: Original full-art illustration for Exploritaire Hero trading card. Use the supplied Hero PNG as character inspiration: a lively tricolor black, white and warm tan fluffy shepherd puppy with white blaze and chest and expressive ears. Draw a new dynamic variant bounding toward the viewer through a lush enchanted forest with teal pines, mossy stones, luminous fireflies and warm diagonal sunlight. Premium fantasy trading-card illustration with crisp pixel-art-inspired shapes and rich painterly lighting, clear silhouette and friendly courageous face. Portrait composition; background fills canvas; no lettering, borders, logos or baked-in hologram. Foil rendered in CSS.

@@ -1,0 +1,93 @@
+{
+  "generator": "built-in image_gen",
+  "referenceRoles": {
+    "hero": "artifacts/hero-flame-motifs-v1/hero-flame-motifs-v1.png supplies flame styling; character excluded from output",
+    "mochi": "public/assets/runtime/ui/holocards/actors/mochi-card-watercolor-v1.png supplies character/paint context; character excluded from output"
+  },
+  "assets": [
+    {
+      "id": "hero-shoulder-left",
+      "actor": "hero",
+      "label": "Left shoulder flames",
+      "prompt": "Use case: compositing. Create ONLY ONE isolated decorative overlay asset for an existing storybook watercolor character portrait. Original character in reference is a positioning/style reference only and MUST NOT appear in output. Preserve wide chunky visibly separate angular gouache/watercolor strokes, soft pigment variations, opaque paint and grain within marks, a few clear value groups. Tight readable group on genuinely transparent alpha with transparent padding. No character anatomy, fur, paws, face, background, paper rectangle, frame, labels or text. No photorealism, glossy 3D, delicate microdetail or complex pattern. This will be anchored programmatically over the unchanged original portrait. A small outward curling plume of THREE soft flame tongues for the viewer-left shoulder of Hero. Cream-gold inner paint, amber/orange middle, sparse muted coral tips, one tiny ember at most. Gentle S-shaped flame group, compact and asymmetrical, lean left with broad pointed brush ends. No animal fur or silhouette. Restrained elemental accent, not a fireball.",
+      "anchor": {
+        "x": 3,
+        "y": 37,
+        "w": 21,
+        "h": 19,
+        "rotation": -12
+      },
+      "runtime": "public/assets/runtime/ui/holocards/motifs/v1/hero-shoulder-left.png"
+    },
+    {
+      "id": "hero-shoulder-right",
+      "actor": "hero",
+      "label": "Right shoulder flames",
+      "prompt": "Use case: compositing. Create ONLY ONE isolated decorative overlay asset for an existing storybook watercolor character portrait. Original character in reference is a positioning/style reference only and MUST NOT appear in output. Preserve wide chunky visibly separate angular gouache/watercolor strokes, soft pigment variations, opaque paint and grain within marks, a few clear value groups. Tight readable group on genuinely transparent alpha with transparent padding. No character anatomy, fur, paws, face, background, paper rectangle, frame, labels or text. No photorealism, glossy 3D, delicate microdetail or complex pattern. This will be anchored programmatically over the unchanged original portrait. A small outward curling plume of TWO OR THREE soft flame tongues for the viewer-right shoulder of Hero. Cream-gold inner paint, amber/orange middle, sparse muted coral tips, one tiny ember at most. Compact upward C-shaped group leaning right, asymmetrical natural gesture. Not the entire character or a pair of flames. No fur.",
+      "anchor": {
+        "x": 73,
+        "y": 43,
+        "w": 19,
+        "h": 17,
+        "rotation": 8
+      },
+      "runtime": "public/assets/runtime/ui/holocards/motifs/v1/hero-shoulder-right.png"
+    },
+    {
+      "id": "hero-paw",
+      "actor": "hero",
+      "label": "Paw flame",
+      "prompt": "Use case: compositing. Create ONLY ONE isolated decorative overlay asset for an existing storybook watercolor character portrait. Original character in reference is a positioning/style reference only and MUST NOT appear in output. Preserve wide chunky visibly separate angular gouache/watercolor strokes, soft pigment variations, opaque paint and grain within marks, a few clear value groups. Tight readable group on genuinely transparent alpha with transparent padding. No character anatomy, fur, paws, face, background, paper rectangle, frame, labels or text. No photorealism, glossy 3D, delicate microdetail or complex pattern. This will be anchored programmatically over the unchanged original portrait. One tiny low curling flame tuft for Hero's lifted forepaw/outer wrist. Two short rounded tapering licks, cream-yellow core, warm orange and soft coral tips, broad chunky painterly edges. Crescent-like compact shape leaning up-left. No hand, paw, arm, fur, sparks cloud or surrounding creature.",
+      "anchor": {
+        "x": 9,
+        "y": 64,
+        "w": 17,
+        "h": 14,
+        "rotation": -10
+      },
+      "runtime": "public/assets/runtime/ui/holocards/motifs/v1/hero-paw.png"
+    },
+    {
+      "id": "mochi-mane",
+      "actor": "mochi",
+      "label": "Mane leaves",
+      "prompt": "Use case: compositing. Create ONLY ONE isolated decorative overlay asset for an existing storybook watercolor character portrait. Original character in reference is a positioning/style reference only and MUST NOT appear in output. Preserve wide chunky visibly separate angular gouache/watercolor strokes, soft pigment variations, opaque paint and grain within marks, a few clear value groups. Tight readable group on genuinely transparent alpha with transparent padding. No character anatomy, fur, paws, face, background, paper rectangle, frame, labels or text. No photorealism, glossy 3D, delicate microdetail or complex pattern. This will be anchored programmatically over the unchanged original portrait. One small loose sprig of FIVE broad soft green leaves on a short gently curving stem to nestle into the viewer-left edge of Mochi's fluffy shoulder mane. Moss green, jade and fresh yellow-green grouped paint patches, warm cream highlights. Leaves have broad angular brush silhouettes, just one suggested central vein, no detailed veins. Delicate in scale but chunky in paint, no flowers or fruit and no cat fur.",
+      "anchor": {
+        "x": 29,
+        "y": 46,
+        "w": 18,
+        "h": 17,
+        "rotation": -22
+      },
+      "runtime": "public/assets/runtime/ui/holocards/motifs/v1/mochi-mane.png"
+    },
+    {
+      "id": "mochi-paw-vine",
+      "actor": "mochi",
+      "label": "Paw vine",
+      "prompt": "Use case: compositing. Create ONLY ONE isolated decorative overlay asset for an existing storybook watercolor character portrait. Original character in reference is a positioning/style reference only and MUST NOT appear in output. Preserve wide chunky visibly separate angular gouache/watercolor strokes, soft pigment variations, opaque paint and grain within marks, a few clear value groups. Tight readable group on genuinely transparent alpha with transparent padding. No character anatomy, fur, paws, face, background, paper rectangle, frame, labels or text. No photorealism, glossy 3D, delicate microdetail or complex pattern. This will be anchored programmatically over the unchanged original portrait. One short C-shaped curling green vine with THREE broad fresh leaves, designed to rest around the outer edge of Mochi's raised forepaw/wrist without covering the black paw. Open-center crescent, gentle botanical curl, moss/olive/teal-green grouped watercolor/gouache strokes, pale yellow-green lifted highlights. Not a closed bracelet, not jewelry. No paw, limb, cat, fur or detailed leaf veins.",
+      "anchor": {
+        "x": 71,
+        "y": 59,
+        "w": 20,
+        "h": 17,
+        "rotation": 12
+      },
+      "runtime": "public/assets/runtime/ui/holocards/motifs/v1/mochi-paw-vine.png"
+    },
+    {
+      "id": "mochi-tail",
+      "actor": "mochi",
+      "label": "Tail greenery",
+      "prompt": "Use case: compositing. Create ONLY ONE isolated decorative overlay asset for an existing storybook watercolor character portrait. Original character in reference is a positioning/style reference only and MUST NOT appear in output. Preserve wide chunky visibly separate angular gouache/watercolor strokes, soft pigment variations, opaque paint and grain within marks, a few clear value groups. Tight readable group on genuinely transparent alpha with transparent padding. No character anatomy, fur, paws, face, background, paper rectangle, frame, labels or text. No photorealism, glossy 3D, delicate microdetail or complex pattern. This will be anchored programmatically over the unchanged original portrait. One airy diagonal cluster of FOUR broad little green leaves and a single loose curling vine tip to accent the outer lower portion of Mochi's plume tail. Asymmetric rising diagonal, jade/moss and warm yellow-green, wide distinct storybook brush marks, muted plum at stem base. Transparent gaps between leaf groups. No tree, bush, animal, tail or fur; just the isolated leaves and short vine.",
+      "anchor": {
+        "x": 12,
+        "y": 38,
+        "w": 22,
+        "h": 19,
+        "rotation": -22
+      },
+      "runtime": "public/assets/runtime/ui/holocards/motifs/v1/mochi-tail.png"
+    }
+  ]
+}

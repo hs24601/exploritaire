@@ -1,0 +1,4 @@
+import {describe,it,expect} from 'vitest';
+import * as THREE from 'three';
+import {resizedAnchorOrigin} from './resizeAnchor';
+describe('opposite-corner resizing',()=>{it('retains the anchor for rotated paper panels and upright props',()=>{for(const rotation of[new THREE.Euler(-Math.PI/2,.4,0),new THREE.Euler(0,.5,0)]){const q=new THREE.Quaternion().setFromEuler(rotation),u=new THREE.Vector3(1,0,0).applyQuaternion(q),v=new THREE.Vector3(0,1,0).applyQuaternion(q),n=u.clone().cross(v),origin=new THREE.Vector3(2,.15,-1);for(const sx of[-1,1])for(const sy of[-1,1]){const offset=u.clone().multiplyScalar(sx*2).addScaledVector(v,sy*3).addScaledVector(n,.2),anchor=origin.clone().add(offset),next=resizedAnchorOrigin(origin,anchor,u,v,1.5,.7,1.2),after=next.clone().addScaledVector(u,sx*2*1.5).addScaledVector(v,sy*3*.7).addScaledVector(n,.2*1.2);expect(after.distanceTo(anchor)).toBeLessThan(1e-10);}}});});

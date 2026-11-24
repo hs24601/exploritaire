@@ -1,5 +1,6 @@
 import type { Card, GameState, OrimDefinition, TriggerTiming } from './types';
 import { canActivateOrim } from './orimTriggers';
+import { getPartyAssignments } from './combat/stateAliases';
 
 export interface OrimEffectContext {
   state: GameState;
@@ -105,7 +106,7 @@ function applyBideCooldownsForActor(state: GameState, actorId: string): GameStat
 function findActorById(state: GameState, actorId: string) {
   const available = state.availableActors.find((actor) => actor.id === actorId);
   if (available) return available;
-  for (const party of Object.values(state.tileParties)) {
+  for (const party of Object.values(getPartyAssignments(state))) {
     const match = party.find((actor) => actor.id === actorId);
     if (match) return match;
   }

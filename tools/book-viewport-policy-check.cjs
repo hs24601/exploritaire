@@ -1,0 +1,28 @@
+const{chromium}=require('playwright'),assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const p=await b.newPage({viewport:{width:1280,height:800},deviceScaleFactor:2,reducedMotion:'reduce'}),errors=[];
+ p.on('pageerror',e=>errors.push(e.message));p.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url())});
+ await p.goto('http://localhost:5183/book.html?page=01');await p.waitForFunction(()=>document.querySelector('canvas').dataset.safeFrame,null,{timeout:60000});
+ assert.equal(await p.locator('canvas').getAttribute('data-authoring-frame'),'1920x1080');
+ await p.locator('#book-framing>summary').click();
+ await p.getByLabel('Device preview').selectOption('desktop');await p.waitForTimeout(600);
+ const rect=await p.locator('canvas').boundingBox();assert(Math.abs(rect.width/rect.height-16/9)<.01);
+ await p.getByLabel('Device preview').selectOption('native');await p.waitForTimeout(500);
+ await p.evaluate(()=>dispatchEvent(new CustomEvent('book:camera-play',{detail:[{name:'Reference view',shot:{position:[0,10,12],target:[-1,.2,0],fov:38},durationMs:0,holdMs:0,easing:'cut'}]})));
+ await p.waitForFunction(()=>document.querySelector('canvas').dataset.cameraTarget?.startsWith('-1.00000'),null,{timeout:10000});
+ await p.getByRole('button',{name:'Capture shot',exact:true}).click();
+ const doc=await p.evaluate(()=>JSON.parse(localStorage.getItem('exploritaire.book-scene-draft.v1'))),shots=doc.chapters.flatMap(c=>c.scenes.flatMap(s=>s.shots)),captured=shots.find(s=>s.shot.composition?.width===1920);
+ assert.deepEqual(captured.shot.composition,{width:1920,height:1080});
+ const before=await p.locator('canvas').evaluate(c=>({target:c.dataset.cameraTarget,camera:c.dataset.camera,safe:c.dataset.safeFrame}));
+ await p.getByLabel('Render quality',{exact:true}).selectOption('low');await p.waitForTimeout(600);const low=await p.locator('canvas').getAttribute('data-render-resolution');
+ await p.getByLabel('Render quality',{exact:true}).selectOption('high');await p.waitForTimeout(600);const high=await p.locator('canvas').getAttribute('data-render-resolution');
+ assert.notEqual(low,high);assert.deepEqual(await p.locator('canvas').evaluate(c=>({target:c.dataset.cameraTarget,camera:c.dataset.camera,safe:c.dataset.safeFrame})),before);
+ await p.setViewportSize({width:390,height:844});await p.waitForTimeout(800);
+ assert.equal(await p.locator('canvas').getAttribute('data-camera-target'),before.target);
+ const safe=JSON.parse(await p.locator('canvas').getAttribute('data-safe-frame'));assert(safe.width>0&&safe.height>0);assert.equal(await p.evaluate(()=>innerWidth<document.documentElement.scrollWidth),false);
+ await p.screenshot({path:'output/book/reference-frame-story-mobile.png'});
+ await p.goto('http://localhost:5183/book.html?combatsbx');await p.waitForFunction(()=>document.querySelector('canvas').dataset.sandbox==='combat',null,{timeout:60000});
+ assert.equal(await p.locator('canvas').getAttribute('data-composition'),'combat-focus');await p.screenshot({path:'output/book/reference-frame-duel-mobile.png'});
+ await p.getByLabel('Arena framing and quality').click();await p.getByLabel('Arena composition').selectOption('arena');assert.equal(await p.locator('canvas').getAttribute('data-composition'),'whole-arena');
+ assert.deepEqual(errors,[]);console.log('PASS 1920×1080 authoring preview and shot metadata, independent quality, portable shot resize, mobile safe frame, adaptive combat/whole-arena override, no browser errors');
+}finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

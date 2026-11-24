@@ -1,0 +1,4 @@
+.scenario-share__copy{display:inline-grid;place-items:center;box-sizing:border-box;width:40px;height:40px;padding:8px;border:1px solid #adba9e;border-radius:7px;color:#eee5c9;background:#172b2b;font-size:18px;line-height:1;cursor:pointer}
+.scenario-share__copy:hover{background:#243c38}
+.scenario-share__copy:focus-visible{outline:2px solid #a4e8ff;outline-offset:3px}
+.scenario-share__copy:disabled{opacity:.55;cursor:wait}

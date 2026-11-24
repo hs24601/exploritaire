@@ -1,0 +1,102 @@
+.snowflake-drag {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 20%;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.snowflake-drag:focus-visible,
+.snowflake-drag[aria-pressed="true"] {
+  outline: 2px solid #c1f2ff;
+  outline-offset: 2px;
+}
+
+.snowflake-drag[data-dragging] { opacity: 0; pointer-events: none; cursor: grabbing; }
+.snowflake-drag:disabled { opacity: .55; cursor: default; }
+.snowflake-drag-ghost {
+  position: fixed;
+  z-index: 120010;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(-8deg) scale(1.06);
+}
+
+.snowflake-reward-shade {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 119998;
+  pointer-events: none;
+}
+
+.snowflake-opening {
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  color: #d7f4ff;
+  text-align: center;
+  font: 16px/1.25 Georgia, serif;
+}
+
+.snowflake-opening {
+  position: fixed;
+  z-index: 119999;
+  width: min(clamp(64px, 13dvh, 120px), 30vw, 30dvh);
+}
+.snowflake-opening__sticker {
+  position: relative;
+  z-index: 0;
+  transform: translate(var(--flurry-x, 0px), var(--flurry-y, 0px));
+  transition: transform 650ms cubic-bezier(.2,.65,.25,1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .snowflake-opening__sticker { transform: none; transition: none; }
+}
+
+.snowflake-opening p {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  translate: -50% 0;
+  margin: 0;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #0c1c26e8;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.snowflake-opening p span { display: block; color: #b4d5de; }
+.snowflake-opening:has([data-dragging]) p { visibility: hidden; }
+
+[data-snowflake-active] [data-snowflake-eligible] {
+  outline: 2px solid #b4efff;
+  outline-offset: 4px;
+  box-shadow: 0 0 22px #63ddf975;
+}
+
+[data-snowflake-bound]::after {
+  content: '❄';
+  position: absolute;
+  right: 6%;
+  bottom: 6%;
+  font-size: clamp(20px, 3vw, 36px);
+  color: #cef6ff;
+  text-shadow: 0 1px 2px #05405c, 0 0 7px #a0f0ff;
+  pointer-events: none;
+}
+
+.element-glyph[data-element="ice"] { color: #cef6ff; text-shadow: 0 0 4px #176587; }
+
+@media (min-width: 601px) {
+  .snowflake-opening p {
+    top: 50%;
+    left: calc(100% + 12px);
+    translate: 0 -50%;
+    text-align: left;
+  }
+}
+

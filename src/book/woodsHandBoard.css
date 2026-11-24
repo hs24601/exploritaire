@@ -1,0 +1,217 @@
+/* Hand + Board combat overlay for ?combat: an invisible spell drop zone over the Khadroot,
+ * HP plates under each party member, a channel lane per kin, the board + hand
+ * tray along the bottom and the ability fan in the bottom-right corner. */
+.woods-hb{position:fixed;inset:0;z-index:40;pointer-events:none;color:#f1e8d4;font:16px/1.3 Georgia,serif;
+ --hb-w:76px;--hb-h:106px;--hb-card-a:#1d2738;--hb-card-b:#121a27;--hb-edge:rgba(185,205,235,.6);--hb-rank:#f6ead0;--hb-brass:#d1a94e;--hb-ember:#ff9a3c}
+.woods-hb[hidden],.woods-hb [hidden]{display:none!important}
+.woods-hb button:not(.woods-hb-card){font-family:inherit}
+
+/* Invisible spell drop zone over the Khadroot; it only glows while a spell hovers it. */
+.woods-hb-frame{position:absolute;pointer-events:none;border-radius:16px;transition:filter .15s}
+.woods-hb-frame--over{background:radial-gradient(closest-side,rgba(255,200,110,.35),rgba(255,160,60,0))}
+
+.woods-hb-plate{position:absolute;translate:-50% 0;display:grid;grid-template-columns:auto auto;gap:2px 10px;align-items:center;padding:6px 12px;border-radius:10px;background:rgba(10,16,26,.8);border:1px solid rgba(185,205,235,.35);white-space:nowrap;pointer-events:none}
+.woods-hb-plate strong{font-weight:600}
+.woods-hb-plate span{font-size:16px;color:#c9bfa8;justify-self:end}
+.woods-hb-plate meter{grid-column:1/-1;width:128px;height:10px}
+.woods-hb-plate em{grid-column:1/-1;font-style:normal;font-size:16px;color:var(--hb-ember)}
+.woods-hb-plate--down{opacity:.6}
+.woods-hb-hit{animation:woods-hb-shake .38s ease}
+@keyframes woods-hb-shake{0%,100%{transform:none}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+/* Channel lanes: one per kin, above the tray on either side of the party. */
+.woods-hb-lane{position:absolute;bottom:236px;width:300px;padding:10px 12px 12px;border-radius:14px;background:linear-gradient(180deg,rgba(10,16,28,.6),rgba(8,12,22,.85));border:1px solid rgba(150,175,215,.25);box-shadow:0 8px 20px rgba(0,0,0,.35);pointer-events:auto;touch-action:none}
+.woods-hb-lane--hero{left:16px}
+.woods-hb-lane--mochi{right:16px}
+.woods-hb-lane[data-state=spell]{border-color:rgba(255,154,60,.55)}
+.woods-hb-lane-head{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 10px;margin-bottom:8px}
+.woods-hb-lane-head strong{font-size:18px;white-space:nowrap}
+.woods-hb-lane-head span{grid-column:1;color:#c9bfa8;white-space:nowrap}
+.woods-hb-lane-head .woods-hb-lane-cancel{grid-column:2;grid-row:1/3}
+.woods-hb-lane-cancel{width:32px;height:32px;padding:0;border-radius:8px;border:1px solid rgba(185,205,235,.4);background:rgba(20,28,44,.9);color:#e6dcc6;font-size:16px;cursor:pointer}
+.woods-hb-lane-open{min-height:44px;width:100%;border-radius:10px;border:1px dashed rgba(233,220,184,.55);background:rgba(20,28,44,.6);color:#f1e8d4;font-size:17px;cursor:pointer}
+.woods-hb-pips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.woods-hb-pips i{width:10px;height:10px;border-radius:50%;background:rgba(150,175,215,.25);box-shadow:inset 0 0 0 1px rgba(150,175,215,.4)}
+.woods-hb-pips i[data-on]{background:radial-gradient(circle,#fff2c8,var(--hb-ember));box-shadow:0 0 6px var(--hb-ember)}
+.woods-hb-lane-cards{display:flex;align-items:center;gap:10px}
+.woods-hb-lane-deck{width:44px;height:64px;display:grid;place-items:center;border-radius:8px;border:1px solid rgba(143,180,232,.35);background:repeating-linear-gradient(45deg,rgba(143,180,232,.13) 0 2px,transparent 2px 8px),linear-gradient(165deg,#1a2444,#0f1630);color:#cfdcf0;font-size:16px}
+
+/* Tray: board columns, hand fan, turn controls. */
+.woods-hb-tray{position:absolute;left:50%;bottom:16px;translate:-50% 0;display:flex;align-items:flex-end;gap:32px;padding:14px 22px;border-radius:16px;background:linear-gradient(180deg,rgba(10,16,28,.55),rgba(8,12,22,.82));border:1px solid rgba(150,175,215,.22);box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:auto;touch-action:none}
+.woods-hb-board{display:flex;gap:12px}
+.woods-hb-column{position:relative;width:var(--hb-w);height:calc(var(--hb-h) + 2 * 30px)}
+.woods-hb-column .woods-hb-card{position:absolute;left:0;top:calc(var(--i) * 30px)}
+.woods-hb-hand{position:relative;display:flex;align-items:flex-end;min-width:calc(var(--hb-w) * 4 - 14px * 3 + 12px);height:calc(var(--hb-h) + 2 * 30px);padding:0 6px}
+.woods-hb-hand .woods-hb-card{position:relative;margin-left:calc(-14px - max(0, var(--count, 4) - 4) * 6px);rotate:calc(var(--fan) * 4deg);translate:0 calc(var(--fan) * var(--fan) * 3px)}
+.woods-hb-hand .woods-hb-card:first-child{margin-left:0}
+/* Standard 7-column tableau: 4 deep with a tighter peek so the tray stays under the lanes; the hand only holds wildfire and spell cards. */
+.woods-hb-tray--tableau .woods-hb-board{gap:10px}
+.woods-hb-tray--tableau .woods-hb-column{height:calc(var(--hb-h) + 3 * 24px)}
+.woods-hb-tray--tableau .woods-hb-column .woods-hb-card{top:calc(var(--i) * 24px)}
+.woods-hb-tray--tableau .woods-hb-card--covered{padding-top:1px;font-size:19px}
+.woods-hb-tray--tableau .woods-hb-hand{min-width:calc(var(--hb-w) * 2);height:var(--hb-h)}
+/* Five-slot phase spells (Meteo) use smaller live cards so they fit the lane. */
+.woods-hb-lane-cards:has(> :nth-child(5)){gap:6px}
+.woods-hb-lane-cards:has(> :nth-child(5)) .woods-hb-card--live{--hb-w:48px;--hb-h:70px;font-size:30px}
+.woods-hb-lane-cards:has(> :nth-child(5)) .woods-hb-card--open:has(.woods-hb-card-goal){font-size:26px}
+/* Flip supply: deck, face-up card and a two-card look-ahead; the hand only holds wildfire and spell cards. */
+.woods-hb-tray--flip .woods-hb-board{align-items:flex-end;gap:18px}
+.woods-hb-tray--flip .woods-hb-hand{min-width:calc(var(--hb-w) * 2);height:var(--hb-h)}
+.woods-hb-deck{width:var(--hb-w);height:var(--hb-h);border-radius:9px;border:1px solid var(--hb-edge);background:repeating-linear-gradient(45deg,#24304a 0 8px,#1b2438 8px 16px);box-shadow:0 3px 7px rgba(0,0,0,.55),3px 3px 0 -1px #141b2b,6px 6px 0 -2px #10172a;color:#ffe6a6;display:grid;place-content:center;gap:6px;font:600 18px/1 "Segoe UI",system-ui,sans-serif;cursor:pointer}
+.woods-hb-deck .woods-hb-deck-count{font-weight:400;font-size:16px;color:#d9cfb4}
+.woods-hb-deck:disabled{cursor:default;filter:grayscale(.7) brightness(.7)}
+.woods-hb-card--current{box-shadow:0 0 0 2px rgba(233,220,184,.5),0 6px 14px rgba(0,0,0,.6)}
+.woods-hb-ahead{display:flex;align-items:flex-end;gap:6px;position:relative;padding-top:22px}
+.woods-hb-ahead-label{position:absolute;top:0;left:0;font:500 16px/1 "Segoe UI",system-ui,sans-serif;color:#cdbf9c}
+.woods-hb-card--ahead{--hb-w:52px;--hb-h:72px;font-size:32px;filter:brightness(.72) saturate(.7);cursor:default}
+.woods-hb-side{display:flex;flex-direction:column;align-items:center;gap:10px;align-self:center;min-width:120px;order:3}
+.woods-hb-turn{margin:0;color:#c9bfa8}
+.woods-hb .woods-hb-end,.woods-hb .woods-hb-end:hover,.woods-hb .woods-hb-end:focus{min-height:44px;white-space:nowrap;padding:8px 18px;font:600 17px Georgia,serif;color:#1f1c19;background:linear-gradient(180deg,#e7c46d,var(--hb-brass));border:1px solid #8a6a24;border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 2px 0 #3a2414;cursor:pointer;pointer-events:auto}
+.woods-hb .woods-hb-end:disabled{opacity:.5;cursor:default}
+.woods-hb button:focus-visible{outline:3px solid #ffdf9f;outline-offset:3px}
+
+.woods-hb-card{position:relative;width:var(--hb-w);height:var(--hb-h);padding:0;border-radius:9px;background:linear-gradient(165deg,var(--hb-card-a),var(--hb-card-b));border:1px solid var(--hb-edge);box-shadow:0 3px 7px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);color:var(--hb-rank);display:grid;place-items:center;font:300 calc(var(--hb-w) * .63)/1 "Segoe UI",system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;overflow:hidden}
+.woods-hb-card:disabled{cursor:default}
+.woods-hb-card--covered{filter:brightness(.62) saturate(.7);align-items:start;padding-top:5px;font-size:20px;font-weight:500}
+.woods-hb-card--live{--hb-w:64px;--hb-h:90px;font-size:40px}
+.woods-hb-card--open{background:transparent;border:2px dashed rgba(233,220,184,.55);box-shadow:none;color:rgba(255,236,190,.8);font-size:20px}
+.woods-hb-card--open:has(.woods-hb-card-goal){font-size:36px}
+.woods-hb-card-goal{position:absolute;left:0;right:0;bottom:4px;font:600 16px/1 "Segoe UI",system-ui,sans-serif;color:#ffcf7a;text-align:center}
+.woods-hb-card--met{border-color:#e9c46a;box-shadow:0 0 0 2px rgba(233,196,106,.6),0 3px 7px rgba(0,0,0,.55);color:#ffe6a6}
+.woods-hb-card--met .woods-hb-card-goal{color:#9be27a}
+.woods-hb-card--target{cursor:default;transition:box-shadow .12s,translate .12s}
+.woods-hb-card--over{translate:0 -4px;box-shadow:0 0 0 3px var(--hb-brass),0 0 16px rgba(255,226,150,.75)}
+.woods-hb-card--wildfire{background:radial-gradient(circle at 50% 38%,#ffd27a 0,#ff7a1a 34%,#7a1d0c 72%,#2a0c08);border-color:#ffcf8a;color:#fff4d6;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.woods-hb-card-glyph{font-size:34px;line-height:1;text-shadow:0 0 10px #fff1c2}
+.woods-hb-card-name{font:600 16px Georgia,serif;text-shadow:0 1px 3px #000}
+.woods-hb-card--spell{background:linear-gradient(165deg,#3b2112,#140b08);border:2px solid var(--hb-ember);box-shadow:0 0 14px rgba(255,154,60,.55),0 3px 7px rgba(0,0,0,.55);display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:6px;gap:2px}
+.woods-hb-card--spell img{position:absolute;inset:6px 6px 34px;width:calc(100% - 12px);height:calc(100% - 40px);object-fit:contain}
+.woods-hb-card--spell .woods-hb-card-dmg{position:absolute;top:4px;right:6px;font:700 18px Georgia,serif;color:#ffe0a0;text-shadow:0 1px 3px #000}
+.woods-hb-dragging{z-index:5;cursor:grabbing;box-shadow:0 16px 26px rgba(0,0,0,.55);transition:none}
+.woods-hb-ghost{position:fixed;z-index:50;pointer-events:none;margin:0}
+.woods-hb-wiggle{animation:woods-hb-shake .3s ease}
+
+/* Ability fan: replaces the Woods ability-hand button while combat is up. */
+.woods-hand-board-on .woods-spell-toggle{display:none}
+.woods-hb-fan-toggle{position:absolute;right:16px;bottom:16px;width:76px;height:64px;padding:0;border:1px solid #b7a46a80;border-radius:12px;background:#0e1b20d9;pointer-events:auto;cursor:pointer}
+.woods-hb-fan-toggle[aria-expanded=true],.woods-hb-fan-toggle:hover{border-color:#ffe3a6;box-shadow:0 0 20px #edd59835}
+.woods-hb-fan-toggle img{width:100%;height:100%;object-fit:contain}
+.woods-hb-fan{position:absolute;right:16px;bottom:92px;width:min(620px,calc(100vw - 32px));padding:14px;border-radius:16px;background:rgba(8,12,22,.94);border:1px solid rgba(233,220,184,.4);box-shadow:0 14px 30px rgba(0,0,0,.55);pointer-events:auto;z-index:3}
+.woods-hb-fan-tabs{display:flex;gap:8px;margin-bottom:12px}
+.woods-hb-fan-tab{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 14px 4px 6px;border-radius:10px;border:1px solid rgba(185,205,235,.35);background:rgba(20,28,44,.8);color:#f1e8d4;font-size:17px;cursor:pointer}
+.woods-hb-fan-tab img{width:36px;height:36px;object-fit:contain}
+.woods-hb-fan-tab[aria-pressed=true]{border-color:var(--hb-brass);background:rgba(60,44,18,.8)}
+.woods-hb-fan-list{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.woods-hb-fan-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:200px;padding:10px 8px;border-radius:12px;border:1px solid rgba(255,154,60,.5);background:linear-gradient(170deg,#2a1810,#110b0a);color:#f1e8d4;text-align:center;cursor:pointer}
+.woods-hb-fan-card:hover:not(:disabled){border-color:#ffd08a;box-shadow:0 0 14px rgba(255,154,60,.45)}
+.woods-hb-fan-card:disabled{cursor:default;opacity:.75}
+.woods-hb-fan-card img{width:64px;height:64px;object-fit:contain}
+.woods-hb-fan-card strong{font-size:18px}
+.woods-hb-fan-meta{font-size:16px;color:#ffe0a0}
+.woods-hb-fan-blurb{font-size:16px;color:#c9bfa8;line-height:1.25}
+.woods-hb-fan-badge{margin-top:auto;padding:2px 8px;border-radius:999px;font-size:16px;background:rgba(255,154,60,.18);color:#ffcf8a}
+.woods-hb-fan-badge--on{background:rgba(209,169,78,.3);color:#ffe6a6}
+.woods-hb-fan-list:has(> :only-child){grid-template-columns:minmax(0,220px)}
+
+.woods-hb-pops{position:absolute;inset:0;pointer-events:none}
+.woods-hb-pop{position:absolute;translate:-50% -50%;white-space:nowrap;font:700 26px Georgia,serif;text-shadow:0 2px 6px #000;animation:woods-hb-rise 1.3s ease-out forwards}
+.woods-hb-pop--enemy{color:#ffe0a0}
+.woods-hb-pop--crit{color:#fff07a;font-size:32px}
+.woods-hb-pop--spell{color:var(--hb-ember);font-size:30px}
+.woods-hb-pop--hero{color:#ff9a8a}
+@keyframes woods-hb-rise{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-44px)}}
+
+.woods-hb-banner{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:170px;text-align:center}
+.woods-hb-banner p{margin:0;font:600 18px Georgia,serif;color:#ffe6a6}
+
+@media (prefers-reduced-motion:reduce){.woods-hb-hit,.woods-hb-wiggle,.woods-hb-pop{animation-duration:1ms}}
+
+/* Enemy status on the Khadroot plate: stagger gauge and the spell it is casting. */
+.woods-hb-stagger{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:16px;color:#c9bfa8}
+.woods-hb-stagger meter{width:90px;height:8px}
+.woods-hb-stagger--on{color:#fff07a}
+.woods-hb-enemy-cast{grid-column:1/-1;display:grid;gap:4px;margin-top:2px}
+.woods-hb-enemy-cast-name{font-size:16px;color:#ff9a8a}
+.woods-hb-enemy-slots{display:flex;gap:3px}
+.woods-hb-enemy-slot{min-width:24px;padding:1px 2px;border-radius:5px;border:1px dashed rgba(255,154,138,.55);font:600 16px/1.2 "Segoe UI",system-ui,sans-serif;text-align:center;color:rgba(255,214,200,.7)}
+.woods-hb-enemy-slot[data-on]{border-style:solid;background:rgba(150,40,30,.55);color:#ffe2d8}
+.woods-hb-card--spill{border-color:#ff9a8a;box-shadow:0 0 0 2px rgba(255,120,100,.45),0 3px 7px rgba(0,0,0,.55)}
+
+/* Layout toggle: cycles the card supply (7 columns, flip deck, 4 columns + hand). */
+.woods-hb .woods-hb-layout{min-height:44px;padding:6px 12px;border-radius:8px;border:1px solid rgba(185,205,235,.4);background:rgba(20,28,44,.9);color:#f1e8d4;font-size:16px;white-space:nowrap;cursor:pointer;pointer-events:auto}
+
+/* Compact layout (under 1100px wide, e.g. Z Fold 7 unfolded in either orientation): the tray spans the bottom,
+ * turn controls and the ability fan button sit in a row on top, and cards size to fit seven columns. */
+@media (max-width:1099px){
+ .woods-hb{--hb-w:min(76px,calc((100vw - 72px - 6 * 8px) / 7));--hb-h:calc(var(--hb-w) * 88 / 63)}
+ .woods-hb-tray{left:12px;right:12px;bottom:12px;translate:none;display:grid;grid-template-columns:auto auto;grid-template-areas:"side side" "board hand";justify-content:center;gap:10px 16px;padding:10px 12px}
+ .woods-hb-side{grid-area:side;flex-direction:row;flex-wrap:wrap;justify-content:center;min-width:0;order:0}
+ .woods-hb-board{grid-area:board}.woods-hb-hand{grid-area:hand}
+ .woods-hb-tray--tableau .woods-hb-board{gap:8px}
+ .woods-hb-tray--tableau .woods-hb-column{height:calc(var(--hb-h) + 3 * max(20px, var(--hb-w) * .3))}
+ .woods-hb-tray--tableau .woods-hb-column .woods-hb-card{top:calc(var(--i) * max(20px, var(--hb-w) * .3))}
+ .woods-hb-tray--tableau .woods-hb-card--covered{font-size:16px}
+ .woods-hb-side .woods-hb-fan-toggle{position:static;width:56px;height:48px}
+ .woods-hb-banner{flex-direction:row;max-width:none}
+ .woods-hb-lane{width:min(300px,calc(50vw - 24px))}
+ .woods-hb-lane--hero{left:12px}.woods-hb-lane--mochi{right:12px}
+ .woods-hb-fan{bottom:var(--tray-space,92px);max-height:calc(100vh - var(--tray-space,92px) - 12px);overflow:auto}
+}
+/* 600–849px (Z Fold 7 unfolded, portrait): special cards share the top row with the controls. */
+@media (max-width:849px){
+ .woods-hb-tray{grid-template-columns:auto 1fr;grid-template-areas:"hand side" "board board"}
+ .woods-hb-tray--tableau .woods-hb-hand,.woods-hb-tray--flip .woods-hb-hand{min-width:0;height:auto;min-height:44px}
+}
+/* Under 600px (Z Fold 7 cover screen): one column; the lanes stack full width above the tray. */
+@media (max-width:599px){
+ .woods-hb{--hb-w:min(76px,calc((100vw - 48px - 6 * 6px) / 7))}
+ .woods-hb-tray{grid-template-columns:1fr;grid-template-areas:"side" "board" "hand";left:8px;right:8px;bottom:8px;padding:8px}
+ .woods-hb-tray--tableau .woods-hb-board{gap:6px;justify-content:center}
+ .woods-hb-hand{justify-content:center;--hb-w:60px;--hb-h:84px}
+ .woods-hb-lane{left:8px;right:8px;width:auto}
+ .woods-hb-lane--hero{left:8px}.woods-hb-lane--mochi{right:8px}
+ .woods-hb-fan-list{grid-template-columns:repeat(2,1fr)}
+ .woods-hb-fan{right:8px;width:calc(100vw - 16px)}
+}
+/* One card face with independent artwork, foil, type, and receipt layers. */
+.woods-hb-holo{--hx:0;--hy:0;position:relative;isolation:isolate;aspect-ratio:63 / 88;box-sizing:border-box;display:block;min-height:0;padding:0;overflow:hidden;border:1px solid #ad8754;border-radius:10px;background:#251813;color:#fff1d4;text-align:left}
+.woods-hb-holo-art,.woods-hb-holo-sheen{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.woods-hb-holo .woods-hb-holo-art{width:100%;height:100%;object-fit:cover;transform:translate(calc(var(--hx) * 9px),calc(var(--hy) * 9px)) scale(1.1)}
+.woods-hb-holo-sheen{background:linear-gradient(180deg,#0a0912e8,transparent 40%,#0a0912e8 83%),linear-gradient(120deg,#ffc77b38,transparent 30%,#8dbeff45 55%,transparent 75%);background-size:100% 100%,180% 180%;background-position:center,calc(50% + var(--hx) * 60%) calc(50% + var(--hy) * 60%)}
+.woods-hb-holo-title,.woods-hb-holo-detail,.woods-hb-holo-status,.woods-hb-holo .woods-hb-pips,.woods-hb-enemy-slots{position:absolute;inset-inline:7%;font:600 12px/1.15 system-ui,sans-serif;text-shadow:0 1px 3px #000;transform:translate(calc(var(--hx) * 3px),calc(var(--hy) * 3px))}
+.woods-hb-holo .woods-hb-holo-title{top:6%;font:bold 14px/1.1 Georgia,serif}
+.woods-hb-holo-detail{bottom:7%}
+.woods-hb-holo-status,.woods-hb-holo .woods-hb-pips,.woods-hb-enemy-slots{bottom:19%;margin:0}
+.woods-hb-holo .woods-hb-pips:has(+ .woods-hb-holo-status){bottom:28%}
+.woods-hb-fan-card.woods-hb-holo{width:min(100%,132px);align-self:start}
+.woods-hb-card--spell.woods-hb-holo{height:auto;aspect-ratio:63 / 88}
+.woods-hb-lane:is([data-state=spell],[data-state=swipes]){width:auto;padding:0;background:none;border:0;box-shadow:none;pointer-events:none;right:auto}
+.woods-hb-lane--mochi:is([data-state=spell],[data-state=swipes]){left:auto;right:8px}
+.woods-hb-active-card{width:clamp(100px,14vw,132px);pointer-events:auto}
+.woods-hb-active-card .woods-hb-holo-title{inset-inline-end:29%}
+.woods-hb-active-card .woods-hb-lane-cancel{position:absolute;right:3px;top:3px;width:27px;height:27px}
+.woods-hb-active-card .woods-hb-lane-cards{position:absolute;inset-inline:7%;bottom:29%;gap:3px}
+.woods-hb-active-card .woods-hb-card--live{width:31px;height:auto;aspect-ratio:63 / 88;font-size:14px}
+.woods-hb-active-card .woods-hb-card--target .woods-hb-card-rank{font-size:inherit}
+.woods-hb-active-card .woods-hb-phase-targets .woods-hb-card--live{flex:1;min-width:0;font-size:12px}
+.woods-hb-active-card .woods-hb-card-goal{display:none}
+.woods-hb-enemy-cast.woods-hb-holo{width:116px;justify-self:center}
+.woods-hb-enemy-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
+.woods-hb-enemy-slot{min-width:0;padding:2px 0;font-size:12px;background:#251813dd}
+@media (prefers-reduced-motion: reduce){.woods-hb-holo{--hx:0 !important;--hy:0 !important}}
+.woods-hb-holo.woods-hb-ghost{position:fixed;pointer-events:none}
+.woods-hb-enemy-cast .woods-hb-enemy-slot{width:100%;box-sizing:border-box;font-size:12px;color:#ffe2d8}
+.woods-hb-plate .woods-hb-holo-detail{font-size:12px;color:#fff1d4}
+.woods-hb-card--spell .woods-hb-holo-art{inset:0}
+.woods-hb-enemy-cast{pointer-events:auto;cursor:pointer}
+.woods-hb-inspection{padding:0;border:0;background:transparent;color:inherit;overflow:visible}
+.woods-hb-inspection::backdrop{background:#071018bc}
+.woods-hb-inspection-face{width:min(64vw,250px,54vh)}
+.woods-hb-inspection-face .woods-hb-holo-title{font-size:19px}
+.woods-hb-inspection-face .woods-hb-lane-cancel{position:absolute;top:4px;right:4px}
+.woods-hb-inspection-phases{position:absolute;bottom:18%;inset-inline:7%;display:grid;gap:4px;margin:0;padding:5px;list-style:none;border-radius:6px;background:#130f15db;font:600 12px/1.2 system-ui,sans-serif}
+.woods-hb-inspection-phases li{display:grid;align-items:center;grid-template-columns:1.8fr repeat(4,minmax(0,1fr));gap:2px}
+.woods-hb-inspection-phases li[aria-current=step]{color:#ffd48d}
+.woods-hb-inspection-phases .woods-hb-enemy-slot{width:100%;box-sizing:border-box}
+.woods-hb-inspection{pointer-events:auto}
+.woods-hb-holo .woods-hb-pips{gap:3px}.woods-hb-holo .woods-hb-pips i{width:7px;height:7px}

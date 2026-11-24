@@ -1,0 +1,4 @@
+.momentum-study__web { position:relative; aspect-ratio:1; }
+.momentum-study__web canvas { display:block; width:100%; height:100%; }
+.momentum-study__web canvas[hidden] { display:none; }
+.momentum-study__web > strong { position:absolute; inset:0; display:grid; place-items:center; font:700 clamp(20px,3vw,34px)/1 Georgia,serif; color:#fff1cd; -webkit-text-stroke:6px #12191f; paint-order:stroke fill; text-shadow:0 2px 4px #000; pointer-events:none; }

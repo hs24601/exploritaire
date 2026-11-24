@@ -1,0 +1,2 @@
+.ability-tray { display: grid; grid-template-rows: repeat(var(--combat-ability-slots,4),var(--ability-row-height,32px)); gap: var(--ability-row-gap,4px); width: 100%; height: var(--ability-tray-height,140px); min-height: var(--ability-tray-height,140px); max-height: var(--ability-tray-height,140px); box-sizing: border-box; }
+.ability-tray__empty { display: block; width: 100%; height: var(--ability-row-height,32px); box-sizing: border-box; border: 1px solid #567366; border-radius: 4px; background: #0c1c1780; pointer-events: none; }

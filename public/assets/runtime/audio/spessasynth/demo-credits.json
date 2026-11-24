@@ -1,0 +1,10 @@
+{
+  "title": "TO MAKE THE END OF BATTLE",
+  "game": "Ys II",
+  "composer": "Yuzo Koshiro / Nihon Falcom",
+  "arrangement": "SC-88 by kou1",
+  "source": "https://raw.githubusercontent.com/spessasus/spessasynth-demo-songs/58f3bc63269a621f9baedb819752408c51d9c38a/demo_songs/To%20Make%20the%20End%20of%20Battle.mid",
+  "sourceCommit": "58f3bc63269a621f9baedb819752408c51d9c38a",
+  "sha256": "e0da6eff9dbe6594c3bceddc3a127276da57d773f2625bd17e7de5c22635f39d",
+  "purpose": "Optional reference demo; original MIDI arrangement, not generated game music"
+}

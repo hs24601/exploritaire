@@ -1,0 +1,15 @@
+# Fast Swipes lenticular v4
+
+The Mochi foundation now displays the ability title **Fast Swipes** in prime and support modes. The nearest afterimage plane moves from left/top −42%/46% to −22%/27%, roughly halfway toward the face. Its independently generated paw/trail stays a separate depth plane.
+
+Four new built-in ImageGen paintings—ready, left strike, recoil, right strike—use the v3 Fast Swipes master for identity/registration, actual Scratch v3 for the lighter soft-wash treatment, and the actual approved Hero v6 painting for the style baseline. The main paw remains visibly connected to the shoulder and the ready pose tucks it beneath the chin. The head, eyes, ears and tail retain their common registration. Original alpha and substantially opaque pale paint remain intact.
+
+Runtime: `public/assets/runtime/ui/holocards/mochi-fast-swipes/v4/swipe-{ready,left,recoil,right}.png`. Byte-identical sources, exact prompts and reference roles: `public/assets/sources/ui/holocards/mochi-fast-swipes/v4/manifest.json`. The three extra paw planes remain the separate v3 images. Digests and alpha statistics: `output/swipes-v4-alpha-report.json`.
+
+The shared optical renderer accepts the `fast-swipes` profile. It selects the four poses using `fract(abs(lateral) * 3)` and the existing narrow lens-slice gates, repeating three complete four-pose sequences per center-to-edge tilt. There is no clock or autoplay. Each extra paw plane is sampled separately with its own rotation, opacity, parallax depth and phase-offset horizontal sweep; far/body/middle/near layer order and placements match the DOM fallback. The shader uses eight texture units and bounded-resolution uploads. The shared global lens toggle, context-loss recovery, reduced-motion and low-FX ready-pose fallbacks remain in effect.
+
+`art.md` now contains the full reusable ImageGen lenticular animation contract, including reference roles, anatomical connections, registered pose authoring, separate afterimages, angle mapping, renderer/fallback integration and validation. Future requests can invoke it directly without repeating these requirements.
+
+The jumbo now has a substantially larger centered card and left/right gallery fans exclusively. No surrounding cards occupy the top or bottom of the central stage. Side cards still exchange places with the jumbo using crossing arcs, with immediate exchange under reduced motion.
+
+Validation: `tools/fast-swipes-lenticular-check.cjs` verifies the foundation title, all four generated images and byte-identical alpha masters, actual pointer selection of `[0,1,2,3]` three times, idle pose stability, context recovery, reduced motion, large centered jumbo and side-only gallery positions at four desktop/phone sizes. `tools/holo-radial-layout-check.cjs` covers swapping, global toggling and wrapped-status/footer clearance. Bite angle regression and TypeScript pass. Sensor behavior remains covered by the shared tilt implementation; physical-phone permission/performance is not certified by headless tests.

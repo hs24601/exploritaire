@@ -1,0 +1,48 @@
+.momentum-lab { min-height:100dvh; padding:clamp(16px,3vw,40px); background:#0b181d; color:#e7e9da; font:14px/1.5 'Segoe UI',sans-serif; color-scheme:dark; }
+.momentum-lab * { box-sizing:border-box; }
+.momentum-lab header { display:flex; justify-content:space-between; gap:20px; align-items:start; max-width:1500px; margin:auto auto 24px; }
+.momentum-lab h1 { margin:3px 0 7px; font:clamp(27px,4vw,44px)/1.15 Georgia,serif; color:#f5dca6; }
+.momentum-lab p { margin:5px 0; color:#a9bab8; }
+.momentum-lab a { color:#e2c994; white-space:nowrap; }
+.momentum-lab button,.momentum-lab select { padding:8px 12px; border:1px solid #738b82; border-radius:8px; background:#192b30; color:#e8edde; font:inherit; cursor:pointer; }
+.momentum-lab button:focus-visible,.momentum-lab input:focus-visible { outline:2px solid #ffe3a4; outline-offset:4px; }
+.momentum-lab button[aria-pressed='true'] { border-color:#e2b975; background:#3b3426; }
+.momentum-lab input { accent-color:#dfb475; }
+.momentum-lab__controls { max-width:1500px; margin:auto; padding:20px; border:1px solid #49615d; border-radius:16px; background:#102127; }
+.momentum-lab__slider { display:grid; grid-template-columns:1fr auto; gap:8px; font-weight:600; }
+.momentum-lab__slider input { grid-column:1/-1; width:100%; min-height:28px; }
+.momentum-lab__buttons,.momentum-lab__options { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:12px; }
+.momentum-lab__options label { display:flex; align-items:center; gap:6px; font-size:12px; }
+.momentum-lab__options input[type='range'] { width:95px; }
+.momentum-lab__studies { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:16px; max-width:1500px; margin:24px auto; }
+.momentum-study { padding:18px; min-width:0; border:1px solid #3d5351; border-radius:16px; background:radial-gradient(ellipse at 50% 35%,#25303555,#102127 70%); }
+.momentum-study[data-selected='true'] { border-color:#c7a36a; box-shadow:0 0 0 1px #c7a36a33; }
+.momentum-study__select { display:flex; gap:10px; align-items:center; width:100%; text-align:left; border:0!important; background:none!important; padding:0!important; }
+.momentum-study__select > span { color:#c7a36a; font:13px monospace; }
+.momentum-study h2 { font:22px/1.2 Georgia,serif; margin:0; }
+.momentum-study__icon { position:relative; aspect-ratio:1; margin:18px auto; }
+.momentum-study canvas { display:block; width:100%; height:100%; }
+.momentum-study__icon strong { position:absolute; inset:0; display:grid; place-items:center; font:700 clamp(20px,3vw,34px)/1 Georgia,serif; color:#fff1cd; -webkit-text-stroke:6px #12191f; paint-order:stroke fill; text-shadow:0 1px 4px #000; pointer-events:none; }
+.momentum-study small { display:block; margin-top:12px; color:#c5a97b; }
+.momentum-study__stages { display:flex; gap:5px; margin-top:10px; }
+.momentum-study__stages i { flex:1; height:3px; border-radius:2px; background:#53605a; }
+.momentum-study__stages i[data-filled='true'] { background:#e4bd7b; }
+.momentum-study__stages i[data-active='true'] { background:#ba7d47; }
+.momentum-lab__studies[data-mode='focus'] { max-width:620px; }
+.momentum-lab footer { display:flex; align-items:center; gap:20px; max-width:1000px; margin:24px auto; padding:20px; border-top:1px solid #455a55; }
+.momentum-lab footer .momentum-icon { width:80px; height:80px; }
+.momentum-lab footer p { font-size:12px; }
+.momentum-lab[data-paper='true'] { background:#e5decd; color:#34372e; color-scheme:light; }
+.momentum-lab[data-paper='true'] .momentum-study,.momentum-lab[data-paper='true'] .momentum-lab__controls { background:#f1e9d8; }
+.momentum-lab[data-paper='true'] p { color:#5f695e; }
+.momentum-lab[data-paper='true'] h1 { color:#784a27; }
+@media(max-width:600px) { .momentum-lab header { flex-direction:column; gap:8px; }.momentum-lab__controls { padding:14px; }.momentum-lab__buttons button { flex:1 0 auto; }.momentum-lab footer { align-items:start; }.momentum-lab footer .momentum-icon { width:54px;height:54px; } }
+/* The comparison lab scrolls independently of the game's viewport lock. */
+.momentum-lab { height:100dvh; overflow:auto; }
+.momentum-lab__studies { grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); }
+.momentum-lab__flames { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.momentum-study__web { background:radial-gradient(ellipse,#b0591410,transparent 70%); }
+.momentum-study [role='alert'] { display:block; color:#ffb19e; font:12px/1.4 monospace; }
+@media(max-width:760px) { .momentum-lab__flames { grid-template-columns:1fr; } }
+.momentum-lab__flames { grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr)); }
+.momentum-lab__flames[data-mode='focus'] { grid-template-columns:minmax(0,1fr); }

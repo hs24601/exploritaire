@@ -1,0 +1,550 @@
+{
+  "version": 1,
+  "defaults": {
+    "path": {
+      "traversalDifficulty": 0,
+      "travelCards": 3
+    },
+    "dirt": {
+      "traversalDifficulty": 1,
+      "travelCards": 3
+    },
+    "woods": {
+      "traversalDifficulty": 3,
+      "travelCards": 12
+    },
+    "water": {
+      "traversalDifficulty": 4,
+      "travelCards": 12
+    },
+    "berry-patch": {
+      "traversalDifficulty": 2,
+      "travelCards": 12
+    },
+    "hero-den": {
+      "traversalDifficulty": 0,
+      "travelCards": 3
+    },
+    "impassable-mountain": {
+      "traversalDifficulty": 0,
+      "travelCards": 12
+    }
+  },
+  "tiles": [
+    {
+      "id": "woods-danger",
+      "title": "Dark Woods",
+      "kind": "woods",
+      "populationDensity": 3,
+      "column": -3,
+      "row": 1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "high",
+      "initiallyRevealed": false,
+      "flags": [
+        "danger"
+      ]
+    },
+    {
+      "id": "hero-den",
+      "title": "Hero's Den",
+      "kind": "hero-den",
+      "column": 0,
+      "row": 2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 30,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": true,
+      "flags": []
+    },
+    {
+      "id": "mountain--2-2",
+      "title": "Impassable Mountains",
+      "kind": "impassable-mountain",
+      "column": -2,
+      "row": 2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "mountain--1-2",
+      "title": "Impassable Mountains",
+      "kind": "impassable-mountain",
+      "column": -1,
+      "row": 2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "mountain-1-2",
+      "title": "Impassable Mountains",
+      "kind": "impassable-mountain",
+      "column": 1,
+      "row": 2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "mountain--1-3",
+      "title": "Impassable Mountains",
+      "kind": "impassable-mountain",
+      "column": -1,
+      "row": 3,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "mountain-0-3",
+      "title": "Impassable Mountains",
+      "kind": "impassable-mountain",
+      "column": 0,
+      "row": 3,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ],
+      "passage": {
+        "axis": "north-south",
+        "title": "Hastily Buried Trapdoor",
+        "tags": [
+          "buried"
+        ],
+        "columns": 7,
+        "breachAP": 1
+      },
+      "travelCards": 14,
+      "traversalDifficulty": 3,
+      "opensTableauOnArrival": false
+    },
+    {
+      "id": "mountain-1-3",
+      "title": "Impassable Mountains",
+      "kind": "impassable-mountain",
+      "column": 1,
+      "row": 3,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "day-one-berries",
+      "title": "Manaberry Patch",
+      "kind": "berry-patch",
+      "populationDensity": 2,
+      "column": -1,
+      "row": 1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.2,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "day-one-tree",
+      "title": "Old Tree",
+      "kind": "woods",
+      "populationDensity": 3,
+      "column": 1,
+      "row": 0,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 1,
+      "tableauSize": 7,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "curious-sapling",
+      "title": "Curious Sapling",
+      "kind": "woods",
+      "populationDensity": 3,
+      "column": 0,
+      "row": -2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.45,
+      "tableauSize": 13,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [],
+      "light": {
+        "color": "#d4ed9b",
+        "strength": 0.65,
+        "radius": 3,
+        "height": 7.885714285714284,
+        "flicker": 0.15
+      }
+    },
+    {
+      "id": "den-manaberries",
+      "title": "Manaberry Patch (sparse)",
+      "kind": "berry-patch",
+      "berryPatchVariant": "sparse",
+      "populationDensity": 1,
+      "traversalDifficulty": 1,
+      "travelCards": 6,
+      "opensTableauOnArrival": false,
+      "column": 0,
+      "row": 1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": true,
+      "flags": []
+    },
+    {
+      "id": "dirt--2-1",
+      "title": "Dirt",
+      "kind": "dirt",
+      "column": -2,
+      "row": 1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-impassable-mountain-2-2",
+      "kind": "impassable-mountain",
+      "title": "Impassable Mountains",
+      "column": 2,
+      "row": 2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": true,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "tile-impassable-mountain-3-2",
+      "kind": "impassable-mountain",
+      "title": "Impassable Mountains",
+      "column": 3,
+      "row": 2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": [
+        "impassable"
+      ]
+    },
+    {
+      "id": "tile-woods-1--2",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": 1,
+      "row": -2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods-1--1",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": 1,
+      "row": -1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods-0--1",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": 0,
+      "row": -1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods--1--1",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": -1,
+      "row": -1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods--1--2",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": -1,
+      "row": -2,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods--1--3",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": -1,
+      "row": -3,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods-0--3",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": 0,
+      "row": -3,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods-1--3",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": 1,
+      "row": -3,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-dirt-0-0",
+      "kind": "dirt",
+      "title": "Dirt",
+      "column": 0,
+      "row": 0,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods-1-1",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": 1,
+      "row": 1,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-dirt--1-0",
+      "kind": "dirt",
+      "title": "Dirt",
+      "column": -1,
+      "row": 0,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0,
+      "tableauSize": 0,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    },
+    {
+      "id": "tile-woods--2-0",
+      "kind": "woods",
+      "populationDensity": 3,
+      "title": "Woods",
+      "column": -2,
+      "row": 0,
+      "gridSize": {
+        "columns": 1,
+        "rows": 1
+      },
+      "resourceDensity": 0.3,
+      "tableauSize": 28,
+      "unlocked": true,
+      "threat": "none",
+      "initiallyRevealed": false,
+      "flags": []
+    }
+  ]
+}

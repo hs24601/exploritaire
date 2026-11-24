@@ -1,0 +1,68 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const { findLayoutDefects } = require('./lib/layout-check.cjs');
+(async () => {
+  fs.mkdirSync('output/forest-relief', { recursive: true });
+  const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, hasTouch: true });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    await page.goto('http://127.0.0.1:5183/tools/live-paint-lab.html');
+    const canvas = page.locator('canvas');
+    await page.locator('canvas[data-ready=true]').waitFor({ timeout: 45000 });
+    const position = async () => (await canvas.getAttribute('data-camera')).split(',').map(Number);
+    assert.equal(await canvas.getAttribute('data-trees'), '120');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'output/forest-relief/ground.png' });
+    assert.ok(fs.statSync('output/forest-relief/ground.png').size > 60000);
+    await canvas.focus(); const before = await position();
+    await page.keyboard.down('w'); await page.waitForTimeout(650); await page.keyboard.up('w');
+    assert.ok((await position())[2] < before[2] - .05, 'W travels forward');
+    const low = (await position())[1];
+    await page.keyboard.down('e'); await page.waitForTimeout(650); await page.keyboard.up('e');
+    assert.ok((await position())[1] > low + .05, 'E raises altitude');
+    await page.locator('#flight').click();
+    await page.waitForFunction(() => Number(document.querySelector('canvas').dataset.camera.split(',')[1]) > 12);
+    assert.ok((await position())[1] > 12);
+    await page.screenshot({ path: 'output/forest-relief/flight.png' });
+    const yaw = Number(await canvas.getAttribute('data-yaw'));
+    await page.mouse.move(700, 340); await page.mouse.down();
+    await page.mouse.move(950, 320, { steps: 8 }); await page.mouse.up();
+    await page.waitForTimeout(200);
+    assert.notEqual(Number(await canvas.getAttribute('data-yaw')), yaw);
+    assert.ok(Math.abs(Number(await canvas.getAttribute('data-yaw'))) <= 30.001);
+    assert.ok(Number(await canvas.getAttribute('data-max-relief-angle')) <= 30.001);
+    const panBefore = await position();
+    await page.mouse.move(700, 340); await page.mouse.down({ button: 'right' });
+    await page.mouse.move(780, 340, { steps: 5 }); await page.mouse.up({ button: 'right' });
+    assert.notDeepEqual(await position(), panBefore);
+    const zoomBefore = await position(); await page.mouse.wheel(0, -220); await page.waitForTimeout(200);
+    assert.notDeepEqual(await position(), zoomBefore);
+    const client = await page.context().newCDPSession(page);
+    const touchBefore = await position();
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 650, y: 350 }] });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 730, y: 350 }] });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(200); assert.notDeepEqual(await position(), touchBefore);
+    await page.locator('#ground').click();
+    await page.waitForFunction(() => Math.abs(Number(document.querySelector('canvas').dataset.camera.split(',')[1]) - 1.7) < .01);
+    assert.ok(Math.abs((await position())[1] - 1.7) < .01);
+    await page.locator('#density').evaluate(el => { el.value = '40'; el.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.trees === '40');
+    assert.equal(await canvas.getAttribute('data-trees'), '40');
+    await page.locator('#home').click();
+    await page.waitForFunction(() => Math.abs(Number(document.querySelector('canvas').dataset.camera.split(',')[0])) < .01);
+    assert.ok(Math.abs((await position())[0]) < .01);
+    for (const width of [1280, 1912]) {
+      await page.setViewportSize({ width, height: width === 1280 ? 720 : 914 });
+      assert.deepEqual(await findLayoutDefects(page, '#forest-controls', { parts: ':scope > label,:scope > button' }), []);
+      assert.deepEqual(await findLayoutDefects(page, '#forest-pad', { parts: 'button' }), []);
+    }
+    assert.equal(await page.locator('#forest-error').isVisible(), false);
+    assert.deepEqual(errors, []);
+    console.log('PASS: original pine forest, WASD/altitude, ground/flight, orbit/pan/zoom, touch pan, 30-degree bounds, density and desktop layouts.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

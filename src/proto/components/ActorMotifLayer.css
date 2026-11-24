@@ -1,0 +1,21 @@
+.actor-motif-flat { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.actor-motif-flat > img { width:100%; height:100%; object-fit:cover; }
+.actor-motif-plane { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; }
+.actor-motif-plane--hero { top:auto; bottom:3%; height:88%; transform:translate(calc(var(--art-shift-x,0) * 1.2%),calc(var(--art-shift-y,0) * 1.2%)); }
+.actor-motif-canvas { position:relative; display:block; height:100%; width:auto; aspect-ratio:2 / 3; max-width:100%; }
+.actor-motif-plane--mochi .actor-motif-canvas { position:absolute; top:50%; left:50%; width:100%; height:auto; min-height:100%; aspect-ratio:2/3; transform:translate(-50%,-50%); }
+.layered-card-art > .actor-motif-plane--mochi { top:auto; bottom:3%; height:88%; transform:translate(calc(var(--art-shift-x,0) * 1.2%),calc(var(--art-shift-y,0) * 1.2%)); }
+.layered-card-art > .actor-motif-plane--mochi .actor-motif-canvas { position:relative; top:auto; left:auto; width:auto; height:100%; min-height:0; aspect-ratio:2/3; transform:none; }
+.trading-card__art .actor-vine-fur-root { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.actor-motif-anchor { position:absolute; display:block; transform:translate(calc(var(--art-shift-x,0) * var(--motif-depth,1) * 1px),calc(var(--art-shift-y,0) * var(--motif-depth,1) * 1px)); }
+.trading-card__art .actor-motif-paint { display:block; width:100%; height:100%; object-fit:contain; rotate:var(--motif-rotation,0deg); }
+.trading-card__art .actor-motif-plane--mochi .actor-motif-paint { object-fit:fill; }
+.actor-motif-plane--mochi .actor-motif-anchor { transform:none; }
+.hero-flame-fur .hero-flame-fur__anchor { transform:none; }
+.trading-card__art .hero-flame-fur__sample { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+/* Same character plane, with only the earlier subtle tip movement. */
+.hero-flame-fur__sample--paint { transform:translate(calc(var(--art-shift-x,0) * var(--motif-depth,1) * .6px),calc(var(--art-shift-y,0) * var(--motif-depth,1) * .6px)); }
+.hero-flame-fur__sample--topcoat { transform:none; }
+.trading-card--foundation .hero-flame-fur__sample--paint { transform:none; }
+.trading-card--foundation .actor-motif-plane,.trading-card--foundation .actor-motif-anchor { transform:none; }
+@media(prefers-reduced-motion:reduce) { .actor-motif-plane,.actor-motif-anchor,.hero-flame-fur__sample--paint { transform:none!important; } }
