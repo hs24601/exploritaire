@@ -15,6 +15,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
   const shown = active ?? (game.lastRun?.surface === surface ? game.lastRun : null);
   const busyElsewhere = !!game.active && !active;
   const m = masteryProgress(game.mastery[surface]);
+  const twist = def.locations[game.location[surface]].twist ?? def.twist;
   const left = daylightLeft(game);
   const cost = drawCost(game);
   const ended = shown ? runEnd(shown.run) : null;
@@ -60,7 +61,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
             <div className="vg-idle">
               <Icon name={surface} size={40} />
               <p className="vg-idle-title">{def.locations[game.location[surface]].name}</p>
-              <p className="vg-idle-text">{def.twist}</p>
+              <p className="vg-idle-text">{twist}</p>
               <p className="vg-idle-text is-muted">Play cards one rank up or down onto the pile. King and Ace connect.</p>
             </div>
           )}
@@ -73,7 +74,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
         </div>
 
         <aside className="vg-panel vg-output">
-          <p className="vg-twist">{def.twist}</p>
+          <p className="vg-twist">{twist}</p>
           <table className="vg-table">
             <thead><tr><th>Output</th><th>Run</th><th>Stored</th></tr></thead>
             <tbody>

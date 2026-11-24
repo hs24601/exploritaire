@@ -15,7 +15,7 @@ export interface SurfaceDef {
   deal: (seed: number, location?: 0 | 1) => Run;
 }
 
-export interface LocationDef { name: string; note: string; masteryNeeded: number }
+export interface LocationDef { name: string; note: string; masteryNeeded: number; /** Overrides the surface twist here. */ twist?: string }
 
 const WRAP = true;
 
@@ -27,19 +27,27 @@ function baseRun(piles: Pile[], stock: Card[], fellBonus = 0): Run {
   };
 }
 
-/** Forest: 8 columns of 4 logs; each two adjacent columns are one tree (4 trees).
- *  A column pays its lumber only when it's finished; finishing both columns fells the tree for a bundle. */
-export const FOREST_COLUMNS = 8;
-export const FOREST_DEPTH = 4;
+/** Forest, Birch Stand: 7 columns of 5 logs, each log pays as it's cut; emptying a column fells it for a bundle.
+ *  (Placeholder until the reimagined felling puzzle lands.) */
+export const BIRCH_COLUMNS = 7;
+export const BIRCH_DEPTH = 5;
 export const FELL_BONUS = 2;
+/** Forest, Old Oaks: 8 columns of 4 logs; each two adjacent columns are one tree (4 trees).
+ *  A column pays its lumber only when it's finished; finishing both columns fells the tree for a bundle. */
+export const OAK_COLUMNS = 8;
+export const OAK_DEPTH = 4;
 export const OLD_OAK_FELL_BONUS = 5;
+/** Deepest forest deal, for layout. */
+export const FOREST_DEPTH = Math.max(BIRCH_DEPTH, OAK_DEPTH);
 function dealForest(seed: number, location: 0 | 1 = 0): Run {
   const ranks = shuffledDeck(rng(seed));
   let id = 0;
   const card = (rank: Rank): Card => ({ id: id++, rank, yield: 1 });
-  const piles: Pile[] = Array.from({ length: FOREST_COLUMNS }, (_, i) => ({ cards: [] as Card[], tree: i >> 1, held: 0 }));
-  for (let row = 0; row < FOREST_DEPTH; row++) for (const p of piles) p.cards.push(card(ranks.pop()!));
-  return baseRun(piles, ranks.map(card), location ? OLD_OAK_FELL_BONUS : FELL_BONUS);
+  const oaks = location === 1;
+  const piles: Pile[] = Array.from({ length: oaks ? OAK_COLUMNS : BIRCH_COLUMNS },
+    (_, i) => (oaks ? { cards: [] as Card[], tree: i >> 1, held: 0 } : { cards: [] as Card[] }));
+  for (let row = 0; row < (oaks ? OAK_DEPTH : BIRCH_DEPTH); row++) for (const p of piles) p.cards.push(card(ranks.pop()!));
+  return baseRun(piles, ranks.map(card), oaks ? OLD_OAK_FELL_BONUS : FELL_BONUS);
 }
 
 /** Berry patch: 3x3 bushes of 4. Unripe berries ripen when a neighbour is picked. */
@@ -78,8 +86,10 @@ function dealQuarry(seed: number, location: 0 | 1 = 0): Run {
 
 export const SURFACES: Record<SurfaceId, SurfaceDef> = {
   forest: { id: 'forest', name: 'Forest', skill: 'Forestry', resource: 'lumber', layout: 'columns', deal: dealForest,
-    locations: [{ name: 'Birch Stand', note: 'Light timber', masteryNeeded: 1 }, { name: 'Old Oaks', note: `Felling pays +${OLD_OAK_FELL_BONUS}`, masteryNeeded: 3 }],
-    twist: `Two columns make a tree. A column pays only once it's finished; finish both to fell the tree for +${FELL_BONUS}.` },
+    locations: [{ name: 'Birch Stand', note: 'Light timber', masteryNeeded: 1 },
+      { name: 'Old Oaks', note: 'Two-column trees', masteryNeeded: 3,
+        twist: `Two columns make a tree. A column pays only once it's finished; finish both to fell the tree for +${OLD_OAK_FELL_BONUS}.` }],
+    twist: `Clear a whole column to fell it for +${FELL_BONUS} lumber.` },
   berries: { id: 'berries', name: 'Berry Patch', skill: 'Foraging', resource: 'food', layout: 'grid', deal: dealBerries,
     locations: [{ name: 'Sunny Hedge', note: 'Sweet and easy', masteryNeeded: 1 }, { name: 'Bramble Thicket', note: 'Greener, 2 food a berry', masteryNeeded: 3 }],
     twist: 'Green berries ripen when a bush beside them is picked.' },

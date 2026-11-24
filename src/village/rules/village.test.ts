@@ -13,8 +13,12 @@ import {
 const last = <T,>(xs: T[]): T | undefined => xs[xs.length - 1];
 
 describe('golf surfaces', () => {
-  it('forest deals 8 columns of 4 (4 trees) with one card on the foundation', () => {
-    const run = SURFACES.forest.deal(1);
+  it('Birch Stand deals 7 columns of 5; Old Oaks deals 8 columns of 4 (4 trees)', () => {
+    const birch = SURFACES.forest.deal(1, 0);
+    expect(birch.piles.map(p => p.cards.length)).toEqual([5, 5, 5, 5, 5, 5, 5]);
+    expect(birch.piles.every(p => p.tree === undefined)).toBe(true);
+    expect(birch.stock).toHaveLength(52 - 35 - 1);
+    const run = SURFACES.forest.deal(1, 1);
     expect(run.piles.map(p => p.cards.length)).toEqual([4, 4, 4, 4, 4, 4, 4, 4]);
     expect(run.foundation).toHaveLength(1);
     expect(run.stock).toHaveLength(52 - 32 - 1);
@@ -31,7 +35,7 @@ describe('golf surfaces', () => {
   });
 
   it('a forest column pays only when finished, and finishing both columns fells the tree', () => {
-    const run = SURFACES.forest.deal(5);
+    const run = SURFACES.forest.deal(5, 1);
     expect(run.piles).toHaveLength(8);
     expect(run.piles.map(p => p.tree)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
     const col = (ranks: number[], held = 0): Pile => ({ cards: ranks.map((r, k) => ({ id: 200 + r * 10 + k, rank: r as Rank, yield: 1 })), tree: 0, held });
@@ -49,8 +53,16 @@ describe('golf surfaces', () => {
     expect(r.earned).toBe(3 + run.fellBonus);
   });
 
-  it('a half-cut column pays nothing if the run ends', () => {
-    let r = SURFACES.forest.deal(5);
+  it('Birch Stand pays each log as it is cut, and a cleared column fells', () => {
+    let run = SURFACES.forest.deal(5, 0);
+    run = { ...run, piles: [{ cards: [{ id: 99, rank: 5, yield: 1 }] }, ...run.piles.slice(1)], foundation: [{ id: 98, rank: 4, yield: 1 }] };
+    const after = play(run, 0);
+    expect(after.felled).toBe(1);
+    expect(after.earned).toBe(1 + run.fellBonus);
+  });
+
+  it('an Old Oaks half-cut column pays nothing if the run ends', () => {
+    let r = SURFACES.forest.deal(5, 1);
     const pile = r.piles[0];
     const t = pile.cards[pile.cards.length - 1].rank;
     r = { ...r, foundation: [{ id: 99, rank: ((t % 13) + 1) as 1, yield: 1 }] };
@@ -260,7 +272,7 @@ describe('building on the map', () => {
       const i = legalPlays(run)[0];
       // Leave one card in the column and clear its partner, so this play fells the tree.
       const tree = run.piles[i].tree;
-      const piles = run.piles.map((p, k) => (k === i ? { ...p, cards: p.cards.slice(-1) } : p.tree === tree ? { ...p, cards: [] } : p));
+      const piles = run.piles.map((p, k) => (k === i ? { ...p, cards: p.cards.slice(-1) } : tree !== undefined && p.tree === tree ? { ...p, cards: [] } : p));
       g = { ...g, active: { ...g.active!, run: { ...run, piles } } };
       return reduce(g, { type: 'play', pile: i });
     };

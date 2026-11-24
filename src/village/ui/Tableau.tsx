@@ -2,7 +2,7 @@
 // Cards are dragged (or tapped) onto the foundation. No legal-move highlights.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { canPlay, foundationTop, top, type Run } from '../rules/golf';
-import { FOREST_DEPTH, QUARRY_DEPTH, type SurfaceId } from '../rules/surfaces';
+import { BIRCH_DEPTH, OAK_DEPTH, QUARRY_DEPTH, type SurfaceId } from '../rules/surfaces';
 import { durationLabel } from '../rules/daylight';
 import { useDrag } from './drag';
 import { PlayingCard } from './PlayingCard';
@@ -39,14 +39,14 @@ function useBox(ref: React.RefObject<HTMLElement | null>) {
 }
 
 /** Card width, and whether the stock/foundation row sits beside the tableau (short, wide boxes). */
-function cardLayout(layout: Props['layout'], piles: number, depth: number, w: number, h: number): { cw: number; side: boolean } {
+function cardLayout(layout: Props['layout'], piles: number, depth: number, w: number, h: number, paired: boolean): { cw: number; side: boolean } {
   if (!w || !h) return { cw: 0, side: false };
   const clamp = (x: number) => Math.max(40, Math.min(132, Math.floor(x)));
   const cols = layout === 'grid' ? 3 : piles;
   const tall = layout === 'grid' ? 3 * RATIO + 0.24 : RATIO * (1 + (depth - 1) * FAN);
-  const rowGaps = (layout === 'grid' ? 2 : 0) * GAP + (layout === 'columns' ? STUMP_H : 0);
+  const rowGaps = (layout === 'grid' ? 2 : 0) * GAP + (paired ? STUMP_H : 0);
   const gridCap = layout === 'grid' ? 0.72 : 1;
-  const gaps = layout === 'columns' ? (cols / 2) * TRUNK_GAP + (cols / 2 - 1) * TREE_GAP : (cols - 1) * GAP;
+  const gaps = paired ? (cols / 2) * TRUNK_GAP + (cols / 2 - 1) * TREE_GAP : (cols - 1) * GAP;
   // Stacked: play row under the tableau.
   const stackW = (w - gaps) / cols * gridCap;
   // Small cards fan by a fixed 26px (see `step`), so their height budget is linear, not proportional.
@@ -75,8 +75,9 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
     return () => clearTimeout(t);
   }, [shake]);
 
-  const maxDepth = layout === 'grid' ? 4 : layout === 'columns' ? FOREST_DEPTH : QUARRY_DEPTH;
-  const { cw: w, side } = cardLayout(layout, run.piles.length, maxDepth, box.w, box.h);
+  const paired = run.piles.some(p => p.tree !== undefined);
+  const maxDepth = layout === 'grid' ? 4 : layout === 'columns' ? (paired ? OAK_DEPTH : BIRCH_DEPTH) : QUARRY_DEPTH;
+  const { cw: w, side } = cardLayout(layout, run.piles.length, maxDepth, box.w, box.h, paired);
   const h = Math.round(w * RATIO);
   const size: CSSProperties = { width: w, height: h };
   // Fan step: at least enough to show each covered card's rank (16px text) on small cards.
@@ -132,7 +133,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
 
   // Forest: pair adjacent columns into trees, with a stump label for lumber cut but not yet paid.
   const trees: number[][] = [];
-  if (layout === 'columns') run.piles.forEach((p, i) => { const t = p.tree ?? i; (trees[t] ??= []).push(i); });
+  if (paired) run.piles.forEach((p, i) => { const t = p.tree ?? i; (trees[t] ??= []).push(i); });
   const treeView = (cols: number[], t: number) => {
     const held = cols.reduce((n, i) => n + (run.piles[i].cards.length ? run.piles[i].held ?? 0 : 0), 0);
     const standing = cols.filter(i => run.piles[i].cards.length > 0).length;
@@ -151,8 +152,8 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
     <div className={`vg-board is-${layout}${side ? ' is-side' : ''}`} ref={ref}>
       {w > 0 && (
         <>
-          <div className="vg-tableau" style={layout === 'grid' ? { gap: GAP, gridTemplateColumns: `repeat(3, ${w}px)` } : { gap: layout === 'columns' ? TREE_GAP : GAP }}>
-            {layout === 'columns' ? trees.map(treeView) : run.piles.map((_, i) => pileView(i))}
+          <div className="vg-tableau" style={layout === 'grid' ? { gap: GAP, gridTemplateColumns: `repeat(3, ${w}px)` } : { gap: paired ? TREE_GAP : GAP }}>
+            {paired ? trees.map(treeView) : run.piles.map((_, i) => pileView(i))}
           </div>
           <div className="vg-playrow">
             <button type="button" className="vg-stock" style={size} onClick={onDraw} disabled={!canDraw}

@@ -72,3 +72,5 @@ What this means:
 
 - **Leaving early is now a loss in the forest**, which is the point of the rule: you commit to finishing columns. It's the only surface where staying beats leaving.
 - **The forest earns about 25% less per day** at +2 a tree. Raising the fell bonus closes the gap: +4 gives 94 a day, +5 gives 101, +6 gives 108. If lumber feels slow in play, +5 (with Old Oaks at +8) is the parity setting.
+
+**Update, same day:** Eric moved the paired-column puzzle to **Old Oaks** (fell bonus +5, which is the parity setting above, about 101 a day). **Birch Stand** is back to the original 7 × 5 per-card forest (+2 a column, about 111 a day) as a placeholder until a reimagined felling puzzle replaces it.
