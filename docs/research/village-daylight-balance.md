@@ -74,3 +74,22 @@ What this means:
 - **The forest earns about 25% less per day** at +2 a tree. Raising the fell bonus closes the gap: +4 gives 94 a day, +5 gives 101, +6 gives 108. If lumber feels slow in play, +5 (with Old Oaks at +8) is the parity setting.
 
 **Update, same day:** Eric moved the paired-column puzzle to **Old Oaks** (fell bonus +5, which is the parity setting above, about 101 a day). **Birch Stand** is back to the original 7 × 5 per-card forest (+2 a column, about 111 a day) as a placeholder until a reimagined felling puzzle replaces it.
+
+## Birch Stand: fall direction (2026-11-24)
+
+Eric picked "fall direction" for the new Birch Stand puzzle. There are 7 birches, each a trunk of **3 logs** under a face-up **crown of 2 cards**. Each log pays as it's cut. Clearing a trunk stops play until you choose which way the birch falls (the choice costs no daylight). The tree is felled for **+2**, and its crown lands face up on top of the standing neighbour on that side. That gives you more cards to chain and more lumber, but it buries that tree's progress. A tree that falls toward an edge or a cleared stump drops its crown in the clearing, and the crown is lost. A tree with no standing neighbour falls at once. Landed crown cards are drawn as mossy branch cards.
+
+The deal uses 35 tableau cards (21 trunk and 14 crown), 1 foundation and 16 stock, the same totals as the old 7 × 5 forest.
+
+| Birch Stand, wrap on | Plays | Draws | Earned | Cleared | Min/unit |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| casual | 22.1 | 15.9 | 32.1 | 7% | 9.1 |
+| planner | 22.6 | 15.7 | 33.2 | 12% | 8.6 |
+
+One day on Birch Stand earns **104** lumber if you play each deal out and **128** if you walk off when it thins, which is in line with berries and stone. Other shapes I tried:
+
+- 4 logs + 2 crown (42 tableau cards, 9 stock): 137 a day, and a run never cleared.
+- 4 + 1: 113 a day.
+- 3 + 1: 97 a day.
+
+The fall choice is a small edge for the planner bot (+3% a run), so most of the skill is still in the chain. If the choice feels too light in play, the next lever is a bigger crown or paying crown cards double.

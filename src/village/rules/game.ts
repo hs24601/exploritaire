@@ -1,6 +1,6 @@
 // Whole-game reducer for village.html: day clock, active surface run, village.
 import { DAYLIGHT } from './daylight';
-import { draw, play, runEnd, type Run } from './golf';
+import { draw, fall, play, runEnd, type Run, type Side } from './golf';
 import { SURFACES, type SurfaceId } from './surfaces';
 import { MAP_TILES, tileIndex } from './map';
 import {
@@ -57,6 +57,8 @@ export type Action =
   | { type: 'start'; surface: SurfaceId }
   | { type: 'play'; pile: number }
   | { type: 'draw' }
+  /** Birch Stand: choose which way a cleared birch falls. */
+  | { type: 'fall'; side: Side }
   | { type: 'leave' }
   | { type: 'build'; building: BuildingId; tile: number }
   | { type: 'demolish'; tile: number }
@@ -135,25 +137,28 @@ export function reduce(s: GameState, a: Action): GameState {
       if (daylightLeft(s) <= DAYLIGHT.startMinutes) return s;
       return deal(s, a.surface);
     }
-    case 'play': {
+    case 'play':
+    case 'fall': {
       const act = s.active;
       if (!act) return s;
       const before = act.run;
-      let run = play(before, a.pile);
+      const run = a.type === 'play' ? play(before, a.pile) : fall(before, a.side);
       if (run === before) return s;
       let units = run.earned - before.earned;
       let perkBonus = act.perkBonus;
       let siteBonus = act.siteBonus ?? 0;
       const felled = run.felled > before.felled;
       if (act.surface === 'forest' && felled && hasResident(s.village, 'banks')) { units += 2; perkBonus += 2; }
-      if (act.surface === 'berries' && run.chain % 5 === 0 && hasResident(s.village, 'mochi')) { units += 1; perkBonus += 1; }
+      if (a.type === 'play' && act.surface === 'berries' && run.chain % 5 === 0 && hasResident(s.village, 'mochi')) { units += 1; perkBonus += 1; }
       if (act.surface === 'forest' && felled && hasSiteBonus(s.village.plots, 'woodshed')) { units += 1; siteBonus += 1; }
       const landed = run.foundation[run.foundation.length - 1];
-      if (act.surface === 'quarry' && landed.yield >= DEEP_ROCK_YIELD && hasSiteBonus(s.village.plots, 'lantern')) { units += 1; siteBonus += 1; }
+      if (a.type === 'play' && act.surface === 'quarry' && landed.yield >= DEEP_ROCK_YIELD && hasSiteBonus(s.village.plots, 'lantern')) { units += 1; siteBonus += 1; }
       let next = credit(s, act.surface, units);
-      next = { ...next, mastery: { ...next.mastery, [act.surface]: next.mastery[act.surface] + 1 },
-        active: { ...act, run, perkBonus, siteBonus, minutes: act.minutes + DAYLIGHT.playMinutes } };
-      next = spend(next, DAYLIGHT.playMinutes);
+      // Choosing a fall is free: only the play that cleared the trunk cost daylight.
+      const minutes = a.type === 'play' ? DAYLIGHT.playMinutes : 0;
+      next = { ...next, mastery: a.type === 'play' ? { ...next.mastery, [act.surface]: next.mastery[act.surface] + 1 } : next.mastery,
+        active: { ...act, run, perkBonus, siteBonus, minutes: act.minutes + minutes } };
+      if (minutes) next = spend(next, minutes);
       if (next.active && runEnd(next.active.run)) next = finishRun(next);
       return next;
     }

@@ -31,7 +31,7 @@ export function PlayingCard({ card, surface, style, className = '', showYield }:
   }
   const label = rankLabel(card.rank);
   return (
-    <div className={`vg-card is-${surface}${card.unripe ? ' is-unripe' : ''} ${className}`}
+    <div className={`vg-card is-${surface}${card.unripe ? ' is-unripe' : ''}${card.branch ? ' is-branch' : ''} ${className}`}
       style={surface === 'forest' ? { ...style, '--bark-x': `${(card.id * 37) % 100}%` } as CSSProperties : style}
       aria-label={`${label}${card.unripe ? ', unripe' : ''}`} data-rank={card.rank}>
       <span className="vg-card-rank">{label}</span>

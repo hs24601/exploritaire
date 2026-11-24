@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DAYLIGHT } from './daylight';
 import { migrate, newGame, reduce, type Action, type GameState } from './game';
-import { type Pile, type Rank, type Run, canPlay, draw, heldLumber, legalPlays, play, rng, runEnd } from './golf';
+import { type Pile, type Rank, type Run, canPlay, draw, fall, heldLumber, tableauLeft, legalPlays, play, rng, runEnd } from './golf';
 import { FEATURES, GATE, MAP_COLS, MAP_ROWS, fogged, neighboursOf, tileIndex } from './map';
-import { planner } from './players';
-import { SURFACES } from './surfaces';
+import { planner, step } from './players';
+import { BIRCH_CROWN, BIRCH_DEPTH, SURFACES } from './surfaces';
 import {
   BUILDINGS, REFUND_RATE, activeCombos, appeal, demolishBlocker, nightfall, newVillage, placeBlocker, placementPreview, rank, refundFor,
   siteBonuses, welcomeBlocker, type BuildingId, type VillageState,
@@ -13,11 +13,11 @@ import {
 const last = <T,>(xs: T[]): T | undefined => xs[xs.length - 1];
 
 describe('golf surfaces', () => {
-  it('Birch Stand deals 7 columns of 5; Old Oaks deals 8 columns of 4 (4 trees)', () => {
+  it('Birch Stand deals 7 crowned birches; Old Oaks deals 8 columns of 4 (4 trees)', () => {
     const birch = SURFACES.forest.deal(1, 0);
-    expect(birch.piles.map(p => p.cards.length)).toEqual([5, 5, 5, 5, 5, 5, 5]);
+    expect(birch.piles.map(p => p.cards.length)).toEqual(Array(7).fill(BIRCH_DEPTH));
     expect(birch.piles.every(p => p.tree === undefined)).toBe(true);
-    expect(birch.stock).toHaveLength(52 - 35 - 1);
+    expect(birch.stock).toHaveLength(52 - 7 * (BIRCH_DEPTH + BIRCH_CROWN) - 1);
     const run = SURFACES.forest.deal(1, 1);
     expect(run.piles.map(p => p.cards.length)).toEqual([4, 4, 4, 4, 4, 4, 4, 4]);
     expect(run.foundation).toHaveLength(1);
@@ -53,12 +53,33 @@ describe('golf surfaces', () => {
     expect(r.earned).toBe(3 + run.fellBonus);
   });
 
-  it('Birch Stand pays each log as it is cut, and a cleared column fells', () => {
-    let run = SURFACES.forest.deal(5, 0);
-    run = { ...run, piles: [{ cards: [{ id: 99, rank: 5, yield: 1 }] }, ...run.piles.slice(1)], foundation: [{ id: 98, rank: 4, yield: 1 }] };
-    const after = play(run, 0);
-    expect(after.felled).toBe(1);
-    expect(after.earned).toBe(1 + run.fellBonus);
+  it('a cleared birch falls the chosen way and its crown lands on that neighbour', () => {
+    const base = SURFACES.forest.deal(5, 0);
+    expect(base.piles.every(p => p.crown?.length === BIRCH_CROWN)).toBe(true);
+    const crown = base.piles[1].crown!;
+    const run: Run = { ...base, piles: [base.piles[0], { ...base.piles[1], cards: [{ id: 99, rank: 5, yield: 1 }] }, ...base.piles.slice(2)],
+      foundation: [{ id: 98, rank: 4, yield: 1 }] };
+    const cut = play(run, 1);
+    expect(cut.earned).toBe(1); // the log pays as it's cut
+    expect(cut.pendingFall).toBe(1);
+    expect(legalPlays(cut)).toHaveLength(0); // nothing moves until the tree is down
+    expect(runEnd(cut)).toBeNull();
+    const right = fall(cut, 1);
+    expect(right.felled).toBe(1);
+    expect(right.earned).toBe(1 + run.fellBonus);
+    expect(right.piles[2].cards.slice(-BIRCH_CROWN)).toEqual(crown);
+    expect(right.piles[2].cards).toHaveLength(run.piles[2].cards.length + BIRCH_CROWN);
+    expect(right.piles[1].crown).toEqual([]);
+  });
+
+  it('a birch with no standing neighbour falls into the clearing at once', () => {
+    const base = SURFACES.forest.deal(5, 0);
+    const run: Run = { ...base, piles: [{ ...base.piles[0], cards: [{ id: 99, rank: 5, yield: 1 }] }, { ...base.piles[1], cards: [] }, ...base.piles.slice(2)],
+      foundation: [{ id: 98, rank: 4, yield: 1 }] };
+    const cut = play(run, 0);
+    expect(cut.pendingFall ?? null).toBeNull();
+    expect(cut.felled).toBe(1);
+    expect(tableauLeft(cut)).toBe(tableauLeft(run) - 1);
   });
 
   it('an Old Oaks half-cut column pays nothing if the run ends', () => {
@@ -97,7 +118,7 @@ describe('golf surfaces', () => {
     for (let s = 1; s < 40; s++) for (const id of ['forest', 'berries', 'quarry'] as const) {
       let r = SURFACES[id].deal(s);
       const p = planner(3);
-      for (let k = 0; k < 400 && !runEnd(r); k++) { const m = p(r); r = m === 'draw' ? draw(r) : play(r, m); }
+      for (let k = 0; k < 400 && !runEnd(r); k++) r = step(r, p(r));
       expect(runEnd(r)).not.toBeNull();
       if (runEnd(r) === 'stuck') expect(legalPlays(r)).toHaveLength(0);
     }
@@ -274,7 +295,9 @@ describe('building on the map', () => {
       const tree = run.piles[i].tree;
       const piles = run.piles.map((p, k) => (k === i ? { ...p, cards: p.cards.slice(-1) } : tree !== undefined && p.tree === tree ? { ...p, cards: [] } : p));
       g = { ...g, active: { ...g.active!, run: { ...run, piles } } };
-      return reduce(g, { type: 'play', pile: i });
+      g = reduce(g, { type: 'play', pile: i });
+      // Birch Stand: the cleared birch waits for a fall direction.
+      return g.active?.run.pendingFall != null ? reduce(g, { type: 'fall', side: i > 0 ? -1 : 1 }) : g;
     };
     const plain = fell(newGame(seed));
     const shed = fell(place2(newGame(seed), { '1,2': 'woodshed' }));
@@ -369,7 +392,7 @@ function playSlice(seed: number, maxDays = 20): GameState {
     let draws = 0;
     while (g.active) {
       const m = p(g.active.run);
-      if (m === 'draw') { if (++draws > 12 + Math.floor(rand() * 3)) { act({ type: 'leave' }); break; } act({ type: 'draw' }); } else act({ type: 'play', pile: m });
+      if (m === 'draw') { if (++draws > 12 + Math.floor(rand() * 3)) { act({ type: 'leave' }); break; } act({ type: 'draw' }); } else if (m === 'left' || m === 'right') act({ type: 'fall', side: m === 'left' ? -1 : 1 }); else act({ type: 'play', pile: m });
     }
     while (order[next] && g.rankReached >= BUILDINGS[order[next]].rank) {
       const before = g.village.plots.slice();

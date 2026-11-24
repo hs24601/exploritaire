@@ -27,10 +27,12 @@ function baseRun(piles: Pile[], stock: Card[], fellBonus = 0): Run {
   };
 }
 
-/** Forest, Birch Stand: 7 columns of 5 logs, each log pays as it's cut; emptying a column fells it for a bundle.
- *  (Placeholder until the reimagined felling puzzle lands.) */
+/** Forest, Birch Stand: 7 birches, a trunk of BIRCH_DEPTH logs under a face-up crown of BIRCH_CROWN cards.
+ *  Each log pays as it's cut. Clearing a trunk fells the birch (+FELL_BONUS) left or right, and its crown
+ *  lands on the neighbour's column on that side: more cards to chain, but it buries that tree's progress. */
 export const BIRCH_COLUMNS = 7;
-export const BIRCH_DEPTH = 5;
+export const BIRCH_DEPTH = 3;
+export const BIRCH_CROWN = 2;
 export const FELL_BONUS = 2;
 /** Forest, Old Oaks: 8 columns of 4 logs; each two adjacent columns are one tree (4 trees).
  *  A column pays its lumber only when it's finished; finishing both columns fells the tree for a bundle. */
@@ -45,8 +47,9 @@ function dealForest(seed: number, location: 0 | 1 = 0): Run {
   const card = (rank: Rank): Card => ({ id: id++, rank, yield: 1 });
   const oaks = location === 1;
   const piles: Pile[] = Array.from({ length: oaks ? OAK_COLUMNS : BIRCH_COLUMNS },
-    (_, i) => (oaks ? { cards: [] as Card[], tree: i >> 1, held: 0 } : { cards: [] as Card[] }));
+    (_, i) => (oaks ? { cards: [] as Card[], tree: i >> 1, held: 0 } : { cards: [] as Card[], crown: [] as Card[] }));
   for (let row = 0; row < (oaks ? OAK_DEPTH : BIRCH_DEPTH); row++) for (const p of piles) p.cards.push(card(ranks.pop()!));
+  if (!oaks) for (let k = 0; k < BIRCH_CROWN; k++) for (const p of piles) p.crown!.push({ ...card(ranks.pop()!), branch: true });
   return baseRun(piles, ranks.map(card), oaks ? OLD_OAK_FELL_BONUS : FELL_BONUS);
 }
 
@@ -89,7 +92,7 @@ export const SURFACES: Record<SurfaceId, SurfaceDef> = {
     locations: [{ name: 'Birch Stand', note: 'Light timber', masteryNeeded: 1 },
       { name: 'Old Oaks', note: 'Two-column trees', masteryNeeded: 3,
         twist: `Two columns make a tree. A column pays only once it's finished; finish both to fell the tree for +${OLD_OAK_FELL_BONUS}.` }],
-    twist: `Clear a whole column to fell it for +${FELL_BONUS} lumber.` },
+    twist: `Clear a trunk to fell the birch for +${FELL_BONUS}. Choose which way it falls: its crown lands on the tree beside it.` },
   berries: { id: 'berries', name: 'Berry Patch', skill: 'Foraging', resource: 'food', layout: 'grid', deal: dealBerries,
     locations: [{ name: 'Sunny Hedge', note: 'Sweet and easy', masteryNeeded: 1 }, { name: 'Bramble Thicket', note: 'Greener, 2 food a berry', masteryNeeded: 3 }],
     twist: 'Green berries ripen when a bush beside them is picked.' },

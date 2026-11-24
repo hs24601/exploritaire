@@ -1,11 +1,13 @@
 // Daylight balance pass for village.html surfaces.
 // Run: npx vite-node tools/village-daylight-sim.ts [runs]
 import { rng } from '../src/village/rules/golf';
-import { casual, planner, playOut, type RunStats } from '../src/village/rules/players';
+import { casual, planner, playOut, step, type RunStats } from '../src/village/rules/players';
 import { SURFACE_ORDER, SURFACES } from '../src/village/rules/surfaces';
 import { DAYLIGHT } from '../src/village/rules/daylight';
 
 const N = Number(process.argv[2] ?? 400);
+/** Location index to deal (0 = first location, 1 = second). */
+const LOC = Number(process.argv[3] ?? 0) as 0 | 1;
 const pct = (xs: number[], p: number) => { const s = xs.slice().sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
@@ -15,7 +17,7 @@ for (const wrap of [true, false]) {
     for (const [label, mk] of [['casual', (s: number) => casual(rng(s * 7 + 1))], ['planner', () => planner(6)]] as const) {
       const stats: RunStats[] = [];
       for (let s = 1; s <= N; s++) {
-        const run = SURFACES[id].deal(s);
+        const run = SURFACES[id].deal(s, LOC);
         run.wrap = wrap;
         stats.push(playOut(run, mk(s)));
       }
@@ -38,7 +40,7 @@ for (const id of SURFACE_ORDER) {
       let minutes = 0, units = 0, runs = 0, seed = d * 1000;
       const p = planner(5);
       while (DAYLIGHT.dayMinutes - minutes > DAYLIGHT.startMinutes) {
-        let r = SURFACES[id].deal(seed++); minutes += DAYLIGHT.startMinutes; runs++;
+        let r = SURFACES[id].deal(seed++, LOC); minutes += DAYLIGHT.startMinutes; runs++;
         const sinceDraw: number[] = []; let mark = 0;
         while (!runEnd(r) && minutes < DAYLIGHT.dayMinutes) {
           const m = p(r);
@@ -47,7 +49,7 @@ for (const id of SURFACE_ORDER) {
             if (leaver && sinceDraw.length >= 4 && sinceDraw.slice(-3).every(x => x < 2)) break;
             if (DAYLIGHT.dayMinutes - minutes < DAYLIGHT.drawMinutes) break;
             r = draw(r); minutes += DAYLIGHT.drawMinutes;
-          } else { r = play(r, m); minutes += DAYLIGHT.playMinutes; }
+          } else if (m === 'left' || m === 'right') { r = step(r, m); } else { r = play(r, m); minutes += DAYLIGHT.playMinutes; }
         }
         units += r.earned;
         // Dealing is free now (no walking), so a deal that can't move before dusk ends the day.
