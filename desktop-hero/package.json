@@ -1,0 +1,17 @@
+{
+  "name": "desktop-hero",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Hero as a Windows desktop companion: walks the taskbar, perches on windows, digs into apps.",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "helper": "node src/helper.js --force",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^45.4.1"
+  }
+}
