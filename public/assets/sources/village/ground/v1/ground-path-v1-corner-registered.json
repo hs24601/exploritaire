@@ -1,0 +1,14 @@
+{
+  "name": "ground-path-v1-corner-registered",
+  "group": "ground",
+  "w": 160,
+  "h": 160,
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/Users/ericm/OneDrive/Documents/ChatGPT/Exploritaire 2/output/path-corner-layout-guide.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "prompt": "Use case: sketch-to-render. Image 1 is a STRICT GEOMETRY AND ALPHA guide for a path corner tile. Paint exactly this L-shaped path footprint: enters TOP edge at x=50% (width 36%), runs vertically to the CENTER (50%,50%), turns right and exits RIGHT edge at y=50% (same width36%). Preserve exact endpoint locations and transparent quadrants. DO NOT move the bend to a canvas corner. Image 2 actual Hero painting is PRIMARY watercolor STYLE ONLY; image 3 Scratch supports soft washes. Repaint the solid tan interior as warm muted ochre packed earth with a few BIG soft merged wet watercolor washes and softly irregular pigment edges. No plants, berries, stones, animals, shadows, ground backing, scenery, paper, text or border. Genuine alpha outside path. Square canvas. Keep path geometry/registration of image1, not its flat vector rendering.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-8cfa4e0a-a913-48b6-90cc-56a6689cc626.png"
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-2871658b-ff2e-4d93-a156-fbdfe14acf70.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "feature-quarry-v1-deep",
+  "w": 320,
+  "h": 320,
+  "group": "features",
+  "subject": "Deep Seam, deep grey-blue #a9bbd0 quarry pit with dark recessed opening, large simple stepped ledges and rubble; warm tiny lantern illuminates pit mouth with pick leaning on wooden cart.",
+  "prompt": "Use case: precise-object-edit. Image 1 existing quarry is composition/edit target, images 2 Hero and 3 Scratch guide paint style only. Keep exact canvas, overhead camera, outer silhouette, ledge placement, cart and pick position. Change quarry to Deep Seam: central pit descends farther into dark smoky slate blue, add small warm gold lantern by the pit mouth, ledge interiors darker. Remove blue berries at lower-left, replace with plain broad sage moss. Maintain big softly merging wet watercolor masses, grouped values, no fine texture, real alpha, no paper/UI/text/border or external cast shadow.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-014df669-6eb5-43f6-8c75-75e869197986.png"
+}

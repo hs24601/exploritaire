@@ -860,6 +860,7 @@ export default defineConfig({
         ux:         path.resolve(__dirname, 'ux.html'),
         exploritaire: path.resolve(__dirname, 'exploritaire.html'),
         hearth: path.resolve(__dirname, 'hearth.html'),
+        village: path.resolve(__dirname, 'village.html'),
         musicaltableaus: path.resolve(__dirname, '117.html'),
         snowflakeSticker: path.resolve(__dirname, 'snowflake-sticker.html'),
         grid3x3: path.resolve(__dirname, '3xgrid.html'),

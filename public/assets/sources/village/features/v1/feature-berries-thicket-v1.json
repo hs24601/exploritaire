@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "feature-berries-thicket-v1",
+  "w": 320,
+  "h": 320,
+  "group": "features",
+  "subject": "Bramble Thicket: dense low thorny berry hedge with mostly pale green fruit, broad merged foliage clumps with sparse thorn accents; woven basket half full visible at front-left.",
+  "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Bramble Thicket: dense low thorny berry hedge with mostly pale green fruit, broad merged foliage clumps with sparse thorn accents; woven basket half full visible at front-left. Canvas 320:320; master at least 640x640. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-084d9580-7854-428e-abc0-0062440072ad.png"
+}

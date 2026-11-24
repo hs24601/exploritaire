@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "card-back-forest-v1-corrected",
+  "group": "cards",
+  "w": 180,
+  "h": 252,
+  "subject": "Deep dark green, subtle broad leaf and wood-grain pattern",
+  "extra": "Full bleed portrait 5:7 canvas, dark enough for white overlaid stock-count text, calm center, no rank/text/numerals/border/frame/card mockup. Paint surface only, opaque throughout rectangular canvas.",
+  "refs": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "prompt": "Use case: stylized-concept. Paint a FLAT FULL-BLEED RECTANGULAR TEXTURE, portrait 5:7. very DARK DEEP FOREST GREEN (#193c2d), subtle quiet loose leaf/wood-grain marks. This is the background SURFACE of a playing-card back, NOT a fruit or object illustration. OPAQUE paint must fill EVERY pixel to all four canvas edges. Overall very low contrast, center calm/dark enough for bright white stock-count text. Absolutely NO focal object, berries, fruit, branches, stones, animals, scenery, detached cutouts, transparent holes, border, lettering, symbols or mockup. References: actual Hero image 1 is PRIMARY broad hand-painted watercolor style only, Scratch image 2 supports soft merged wet washes only. Copy NO reference subjects or colors. Big diluted softly merging wet-on-wet pigment masses, a few broad soft pattern marks, no digital gradients or paper-noise filter. Render only dark patterned rectangular surface at least 360x504 pixels.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-5cc7a7a0-ec6c-496f-ac9a-0954ac5270dd.png"
+}

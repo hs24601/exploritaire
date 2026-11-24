@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "feature-berries-v1-ripe",
+  "w": 320,
+  "h": 320,
+  "group": "features",
+  "subject": "Low raspberry-red berry bushes arranged in nine distinct rounded clumps in a 3 by 3 layout. Raspberry-red stemless fruit, green #74c487 foliage, berry #e07aab accents, woven basket half full in front-left clearing.",
+  "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Low raspberry-red berry bushes arranged in nine distinct rounded clumps in a 3 by 3 layout. Raspberry-red stemless fruit, green #74c487 foliage, berry #e07aab accents, woven basket half full in front-left clearing. Square canvas, 2 by 2 tile footprint, master at least 640x640. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-41858009-ad33-421d-9900-f595a8df2b82.png"
+}

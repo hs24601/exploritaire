@@ -58,6 +58,7 @@ export function createWoodsSpellTest(o:Options){
  let lastPaintPhase='hollow';
  const fireballEffect=createFireballEffect(asset('spells/fireball/shader-v1/'));
  let fireballTuning=configureFireballTuning(o.fireballTuning??{}),fireballHit=false,skyOrigin={x:.78,y:.25};
+ let externalMeteo:{impact:()=>void;done:()=>void}|undefined;
  let meteor:{from:THREE.PerspectiveCamera;sky:THREE.Vector3;start:THREE.Vector3;target:THREE.Vector3;head:THREE.Vector3;started:boolean}|undefined;
  const meteorFrame=()=>meteorCastFrame(castAge,fireballTuning.flightDuration,o.reduced);
  const actorOutline=createWorldActorOutline([o.hero,o.enemy]);
@@ -131,7 +132,7 @@ export function createWoodsSpellTest(o:Options){
  }
  function open(){if(!o.enabled()||o.paused()||phase!=='closed')return;o.freeze();saved={position:o.camera.position.clone(),quaternion:o.camera.quaternion.clone(),up:o.camera.up.clone(),lookAt:o.lookAt.clone(),fov:o.camera.fov};chosen='meteo';receipts=0;skyProgress=0;phase='hand';selectedEntity=undefined;pinnedFace?.dispose();pinnedFace=undefined;changeHand();lastHint='';status.textContent='';lastCast=null;ripple=undefined;audio.wake();lockedTarget=undefined;paint();}
  function cancelDrag(){drag?.ghost.remove();drag=undefined;refreshPreview();refreshTargets();}
- function leave(){if(phase==='closed'||phase==='returning')return;auto.stop();fireballEffect.stop();meteor=undefined;cancelDrag();armed=undefined;pinnedFace?.dispose();pinnedFace=undefined;selectedEntity=undefined;grid?.dispose();grid=undefined;board.replaceChildren();phase='returning';returnProgress=0;returnFrom=o.camera.clone();paint();}
+ function leave(){if(phase==='closed'||phase==='returning')return;if(externalMeteo&&!fireballHit){fireballHit=true;externalMeteo.impact();}auto.stop();fireballEffect.stop();meteor=undefined;cancelDrag();armed=undefined;pinnedFace?.dispose();pinnedFace=undefined;selectedEntity=undefined;grid?.dispose();grid=undefined;board.replaceChildren();phase='returning';returnProgress=0;returnFrom=o.camera.clone();paint();}
  toggle.onclick=open;close.onclick=leave;
  function startCharge(id:WoodsSpell,target:SpellActor){
   if(phase!=='hand'||o.paused()||!spellCanTarget(id,target))return;
@@ -257,6 +258,10 @@ export function createWoodsSpellTest(o:Options){
   autoButton.disabled=paintTransfer.busy||phase!=='charging'||grid.state.phase!=='play';autoButton.setAttribute('aria-pressed',String(auto.mode!=='idle'));
  }
  return {
+  playMeteo(count:number,impact:()=>void,done:()=>void){
+   if(phase!=='closed'||!o.enabled()||o.paused())return false;
+   open();externalMeteo={impact,done};root.dataset.externalMeteo='';close.textContent='Skip animation';receipts=count;etching.reset();etching.receipt(count);chosen='meteo';lockedTarget='khadroot';phase='charging';cast('meteo','khadroot');return true;
+  },
   configureFireball(patch:Partial<FireballTuning>){fireballTuning=configureFireballTuning(patch,fireballTuning);return {...fireballTuning};},
   get active(){return phase!=='closed';},
   get opaque(){return fade>=1;},
@@ -275,7 +280,7 @@ export function createWoodsSpellTest(o:Options){
     if(chosen==='meteo'&&meteor){const frame=meteorFrame();
      if(['meteor','impact','settle'].includes(frame.stage)&&!meteor.started){meteor.started=true;fireballEffect.start(skyOrigin,{x:.5,y:.5},fireballPowerProfile(receipts,fireballTuning),o.reduced);}
      if(meteor.started)fireballEffect.update(dt,fireballPowerProfile(receipts,fireballTuning));
-     if(!fireballHit&&['impact','settle','done'].includes(frame.stage)){fireballHit=true;hp=lastCast!.hp;o.impact();status.textContent=`Meteo: ${lastCast!.power} damage · Khadroot ${hp.khadroot}/10`;}
+     if(!fireballHit&&['impact','settle','done'].includes(frame.stage)){fireballHit=true;if(externalMeteo)externalMeteo.impact();else{hp=lastCast!.hp;o.impact();}status.textContent=externalMeteo?'Meteo impacts.':`Meteo: ${lastCast!.power} damage · Khadroot ${hp.khadroot}/10`;}
      constellation.style.opacity=String(frame.stars);
      if(frame.stage==='done')leave();
     }else if(castAge>1.25){targets.hero.classList.remove('is-hit');targets.khadroot.classList.remove('is-hit');leave();}
@@ -292,7 +297,7 @@ export function createWoodsSpellTest(o:Options){
     const shot=o.camera.clone();shot.up.set(0,1,0);shot.lookAt(aim);o.camera.quaternion.slerpQuaternions(meteor.from.quaternion,shot.quaternion,smooth(frame.pan));o.camera.fov=THREE.MathUtils.lerp(meteor.from.fov,58,smooth(frame.pan)*(1-frame.flight));o.camera.updateProjectionMatrix();o.lookAt.copy(aim);return true;
    }
    if(['targeting','casting'].includes(phase)&&returnFrom){const p=targetProgress*targetProgress*(3-2*targetProgress);o.camera.position.lerpVectors(returnFrom.position,saved.position,p);o.camera.quaternion.slerpQuaternions(returnFrom.quaternion,saved.quaternion,p);o.camera.fov=THREE.MathUtils.lerp(returnFrom.fov,saved.fov,p);o.camera.updateProjectionMatrix();o.lookAt.copy(saved.lookAt);return true;}
-   if(phase==='returning'&&returnFrom){const p=returnProgress*returnProgress*(3-2*returnProgress);o.camera.position.lerpVectors(returnFrom.position,saved.position,p);o.camera.quaternion.slerpQuaternions(returnFrom.quaternion,saved.quaternion,p);o.camera.fov=THREE.MathUtils.lerp(returnFrom.fov,saved.fov,p);o.camera.updateProjectionMatrix();o.lookAt.copy(saved.lookAt);if(returnProgress===1){phase='closed';fade=0;saved=undefined;paint();}return true;}
+   if(phase==='returning'&&returnFrom){const p=returnProgress*returnProgress*(3-2*returnProgress);o.camera.position.lerpVectors(returnFrom.position,saved.position,p);o.camera.quaternion.slerpQuaternions(returnFrom.quaternion,saved.quaternion,p);o.camera.fov=THREE.MathUtils.lerp(returnFrom.fov,saved.fov,p);o.camera.updateProjectionMatrix();o.lookAt.copy(saved.lookAt);if(returnProgress===1){phase='closed';fade=0;saved=undefined;paint();const completed=externalMeteo;externalMeteo=undefined;delete root.dataset.externalMeteo;close.textContent='Return to Woods';completed?.done();}return true;}
    const p=skyProgress*skyProgress*(3-2*skyProgress),end=saved.position.clone().add(new THREE.Vector3(0,6,-1));
    o.camera.position.lerpVectors(saved.position,end,p);const skyCamera=o.camera.clone();skyCamera.up.set(0,1,0);skyCamera.lookAt(o.camera.position.clone().add(new THREE.Vector3(.02,.98,-.12)));
    o.camera.quaternion.slerpQuaternions(saved.quaternion,skyCamera.quaternion,p);o.camera.fov=THREE.MathUtils.lerp(saved.fov,60,p);o.camera.updateProjectionMatrix();o.lookAt.copy(o.camera.position).add(o.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(20));return true;

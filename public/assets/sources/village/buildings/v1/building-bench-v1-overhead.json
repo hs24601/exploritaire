@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "building-bench-v1-overhead",
+  "group": "buildings",
+  "w": 160,
+  "h": 160,
+  "subject": "Split-log bench with folded muted-color blanket. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate.",
+  "extra": "",
+  "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Split-log bench with folded muted-color blanket. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-91c5611d-8c46-4d3a-a953-e084d5291aa3.png"
+}

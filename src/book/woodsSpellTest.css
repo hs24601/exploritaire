@@ -181,3 +181,7 @@ body.castle-world .woods-spells[data-phase=casting] .woods-spell-constellation{l
   background: linear-gradient(155deg, #161e2d, #111824);
   box-shadow: none;
 }
+
+.woods-spells[data-external-meteo] .woods-spell-target,.woods-spells[data-external-meteo] .woods-spell-heading,.woods-spells[data-external-meteo] .woods-spell-instruction{display:none}
+
+.woods-spells[data-external-meteo] .woods-spell-power{display:none}

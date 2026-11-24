@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "ground-path-v1-t",
+  "group": "ground",
+  "w": 160,
+  "h": 160,
+  "subject": "Packed-earth footpath north-east-west T junction, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges.",
+  "extra": "Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
+  "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Packed-earth footpath north-east-west T junction, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-f1525756-2ff3-46a9-85ce-5d9f67934283.png"
+}

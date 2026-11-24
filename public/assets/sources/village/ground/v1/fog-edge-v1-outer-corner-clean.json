@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "fog-edge-v1-outer-corner-clean",
+  "group": "ground",
+  "w": 160,
+  "h": 160,
+  "subject": "Painted pale blue-grey mist map fog, mist outside a rounded unexplored upper-left corner, transparent lower-right.",
+  "extra": "Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles.",
+  "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Painted pale blue-grey mist map fog, mist outside a rounded unexplored upper-left corner, transparent lower-right. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-f7675a9c-5dbf-43e2-b82e-79c1ca02b1b3.png"
+}

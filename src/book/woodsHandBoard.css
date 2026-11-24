@@ -10,7 +10,22 @@
 .woods-hb-frame{position:absolute;pointer-events:none;border-radius:16px;transition:filter .15s}
 .woods-hb-frame--over{background:radial-gradient(closest-side,rgba(255,200,110,.35),rgba(255,160,60,0))}
 
-.woods-hb-plate{position:absolute;translate:-50% 0;display:grid;grid-template-columns:auto auto;gap:2px 10px;align-items:center;padding:6px 12px;border-radius:10px;background:rgba(10,16,26,.8);border:1px solid rgba(185,205,235,.35);white-space:nowrap;pointer-events:none}
+.woods-hb-plate{position:absolute;translate:-50% 0;display:grid;gap:4px;width:max-content;min-width:116px;padding:5px 8px;border-radius:12px;background:linear-gradient(145deg,#282621ed,#151b21ed);border:1px solid #d7bd874d;box-shadow:0 3px 10px #0004;white-space:nowrap;pointer-events:none}
+.woods-hb-status-head{display:flex;align-items:center;gap:8px;font-size:16px;line-height:20px}
+.woods-hb-hp-value{margin-left:auto;font-variant-numeric:tabular-nums}
+.woods-hb-meters{display:grid;gap:2px;padding:3px;border-radius:8px;background:#090e13a6;box-shadow:inset 0 1px 3px #0006}
+.woods-hb-plate .woods-hb-meters meter{display:block;appearance:none;width:100%;height:7px;border:0;border-radius:5px;overflow:hidden;background:#41443e}
+.woods-hb-meters meter::-webkit-meter-bar{height:100%;border:0;border-radius:5px;background:#41443e}
+.woods-hb-meters meter::-webkit-meter-optimum-value{border-radius:5px;background:linear-gradient(90deg,#6c9474,#bbd59a)}
+.woods-hb-plate .woods-hb-meters .woods-hb-stagger-meter{height:4px}
+.woods-hb-meters .woods-hb-stagger-meter::-webkit-meter-optimum-value{background:linear-gradient(90deg,#ba8e56,#f3d29b)}
+.woods-hb-plate--staggered .woods-hb-meters{box-shadow:0 0 6px #f3d29b80}
+.woods-hb-weaknesses{display:flex;gap:4px}
+.woods-hb-weakness{display:grid;place-items:center;width:18px;height:20px;color:#ffe1a1;pointer-events:auto}
+.woods-hb-weakness[data-element=fire]{color:#ffad79}
+.woods-hb-weakness svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.woods-hb-weakness[data-element=fire] svg{fill:currentColor;stroke:none}
+.woods-hb-break-label{color:#f3d29b!important;text-align:center}
 .woods-hb-plate strong{font-weight:600}
 .woods-hb-plate span{font-size:16px;color:#c9bfa8;justify-self:end}
 .woods-hb-plate meter{grid-column:1/-1;width:128px;height:10px}
@@ -186,8 +201,11 @@
 .woods-hb-fan-card.woods-hb-holo{width:min(100%,132px);align-self:start}
 .woods-hb-card--spell.woods-hb-holo{height:auto;aspect-ratio:63 / 88}
 .woods-hb-lane:is([data-state=spell],[data-state=swipes]){width:auto;padding:0;background:none;border:0;box-shadow:none;pointer-events:none;right:auto}
-.woods-hb-lane--mochi:is([data-state=spell],[data-state=swipes]){left:auto;right:8px}
-.woods-hb-active-card{width:clamp(100px,14vw,132px);pointer-events:auto}
+.woods-hb-player-dock{position:absolute;left:12px;display:flex;align-items:flex-end;gap:10px;pointer-events:none}
+.woods-hb-player-dock .woods-hb-lane{position:relative;inset:auto;width:auto}
+.woods-hb-enemy-dock{position:absolute;top:12px;right:12px;display:flex;align-items:flex-start;justify-content:flex-end;gap:10px;pointer-events:none}
+.woods-hb-enemy-dock .woods-hb-enemy-cast{margin:0}
+.woods-hb-active-card{width:clamp(112px,14vw,148px);pointer-events:auto}
 .woods-hb-active-card .woods-hb-holo-title{inset-inline-end:29%}
 .woods-hb-active-card .woods-hb-lane-cancel{position:absolute;right:3px;top:3px;width:27px;height:27px}
 .woods-hb-active-card .woods-hb-lane-cards{position:absolute;inset-inline:7%;bottom:29%;gap:3px}
@@ -214,4 +232,51 @@
 .woods-hb-inspection-phases li[aria-current=step]{color:#ffd48d}
 .woods-hb-inspection-phases .woods-hb-enemy-slot{width:100%;box-sizing:border-box}
 .woods-hb-inspection{pointer-events:auto}
+.woods-hb-actor{position:absolute;z-index:1;min-width:44px;min-height:44px;border:0;padding:0;background:transparent;pointer-events:auto;cursor:pointer;touch-action:manipulation}
+.woods-hb .woods-hb-actor,.woods-hb .woods-hb-actor:is(:hover,:active,:focus){appearance:none;background:transparent;border:0;box-shadow:none}
+.woods-hb-actor:disabled{pointer-events:none;cursor:default}
+.woods-hb-actor:focus-visible{outline:2px solid #ffe5a6;outline-offset:4px;border-radius:30%}
+.woods-hb-player-dock,.woods-hb-enemy-dock,.woods-hb-plate,.woods-hb-tray{z-index:2}
+.woods-hb-tray:has(.woods-hb-board[hidden]){width:auto;min-width:0;grid-template-columns:auto;grid-template-areas:"side";right:auto;left:50%;translate:-50% 0;padding:8px 12px}
+.woods-hb-tray:has(.woods-hb-board[hidden]) .woods-hb-layout:not(.woods-hb-camera-control){display:none}
+.woods-hb-fan{left:12px;right:auto;width:min(460px,calc(100vw - 24px));box-sizing:border-box;bottom:var(--tray-space,92px);padding:12px;background:#101922ed;border-color:#d7bd8759}
+.woods-hb-fan-tabs{align-items:center;justify-content:space-between}
+.woods-hb-fan-list{display:flex;justify-content:center;align-items:flex-end;gap:8px;padding:8px 4px 14px}
+.woods-hb-fan-card.woods-hb-holo{flex:0 1 132px;width:132px;min-width:0;transform-origin:50% 100%}
+.woods-hb-fan .woods-hb-holo-title,.woods-hb-fan .woods-hb-holo-detail{font-size:16px}
+.woods-hb-fan .woods-hb-holo-goals{bottom:28%;font-size:16px}
+.woods-hb-fan .woods-hb-holo-wildfire{bottom:50%;font-size:16px}
+.woods-hb-energy{display:flex;align-items:center;justify-content:center;padding:5px 10px;border:1px solid #d7bd8760;border-radius:20px;background:#302a20;color:#ffe5a6;font:600 16px/1.2 system-ui,sans-serif;white-space:nowrap;min-height:28px;box-sizing:border-box}
+.woods-hb-energy[aria-valuenow="0"]{color:#b8aea0;background:#24262a}
+.woods-hb-energy-cost{position:absolute;right:4px;top:4px;padding:2px 4px;border-radius:8px;background:#172027ed;color:#ffe5a6;font:600 16px/1.2 system-ui,sans-serif;z-index:1}
+.woods-hb-fan-card .woods-hb-holo-title{inset-inline-end:36%}
+.woods-hb-fan-card:disabled{filter:saturate(.5);opacity:.62}
+.woods-hb-fan-card:first-child{rotate:-6deg;translate:0 5px}
+.woods-hb-fan-card:last-child{rotate:6deg;translate:0 5px}
+.woods-hb-fan-card:focus-visible,.woods-hb-fan-card:hover:not(:disabled){translate:0 -5px}
+.woods-hb-utility-prompt{position:absolute;z-index:4;top:12px;left:12px;max-width:min(480px,calc(100vw - 24px));box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;border:1px solid #d7bd8770;border-radius:12px;background:#101922f2;pointer-events:auto;font-size:16px}
+.woods-hb-card--stolen{--hb-w:44px;--hb-h:calc(44px * 88 / 63);font-size:24px}
+.woods-hb-card--dig{z-index:3;box-shadow:0 0 0 2px #ffe5a6,0 0 12px #ffe5a680}
 .woods-hb-holo .woods-hb-pips{gap:3px}.woods-hb-holo .woods-hb-pips i{width:7px;height:7px}
+
+/* Confined artwork at rest; hover expands only the artwork, never the card geometry. */
+.woods-hb-holo{overflow:visible}
+.woods-hb-holo .woods-hb-holo-art{inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;transform:none;clip-path:inset(0 round 9px);transition:clip-path .18s ease,transform .18s ease}
+.woods-hb-holo-sheen{border-radius:inherit}
+@media(hover:hover) and (pointer:fine){
+ .woods-hb-holo:hover .woods-hb-holo-art{transform:scaleX(1.2);clip-path:inset(0 -10% round 9px)}
+}
+.woods-hb-plate--kin{pointer-events:auto;cursor:pointer}
+.woods-hb-plate--kin:focus-visible{outline:2px solid #ffe5a6;outline-offset:3px}
+.woods-hb-active-card .woods-hb-phase-targets{display:grid;bottom:22%;justify-content:center;grid-template-columns:repeat(3,minmax(0,28px));padding:4px;border-radius:7px;background:#080d16f2;inset-inline:4%;gap:3px}
+.woods-hb-active-card .woods-hb-phase-targets .woods-hb-card--live{width:100%;font-size:16px;border:2px dashed #fff1c7;color:#fff3d5;background:#172131;box-shadow:none}
+.woods-hb-active-card .woods-hb-phase-targets .woods-hb-card--met{border:2px solid #b9e9ac;background:#305236;color:#fff;box-shadow:inset 0 0 0 1px #102914}
+.woods-hb-active-card .woods-hb-phase-targets .woods-hb-card--met::after{content:'✓';position:absolute;right:-2px;top:-9px;font:bold 16px/1 system-ui;background:#d7f8c7;color:#15391e;border-radius:50%;padding:1px}
+.woods-hb-enemy-cast .woods-hb-enemy-slot{font-size:16px;color:#fff1d3;border:2px dashed #ffe0a1;background:#16202df5}
+.woods-hb-enemy-cast .woods-hb-enemy-slot[data-on]{border-style:solid;border-color:#d6f5ad;background:#36512a;color:#fff}
+.woods-hb-phase-fill{animation:woods-hb-phase-fill .7s ease-out}
+@keyframes woods-hb-phase-fill{0%{filter:brightness(2);box-shadow:0 0 0 2px #fff4c5,0 0 22px #ffe29d}45%{box-shadow:0 0 0 5px #ffe29d88,0 0 14px #ffe29d}100%{filter:none}}
+.woods-hb-side{display:grid;grid-template-columns:repeat(2,max-content);gap:8px}.woods-hb-tray:has(.woods-hb-board[hidden]) .woods-hb-side{display:flex;flex-direction:row;max-width:calc(100vw - 64px);justify-content:center}@media(max-width:1099px){.woods-hb-side{display:flex;flex-direction:row;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.woods-hb-phase-fill{animation:none}.woods-hb-holo .woods-hb-holo-art{transition:none}}
+
+.woods-hb-energy{flex-direction:column;gap:2px;align-items:flex-start}

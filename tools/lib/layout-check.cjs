@@ -1,8 +1,10 @@
 // Shared UI layout check for Playwright tools: finds parts that collide with
 // each other or the frame's corner studs, escape their container, clip their
 // own text, or render text below the 16px floor (GAME.md).
-async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSize = 16 }) {
-  return page.evaluate(({ root, parts, cornerInset, minFontSize }) => {
+// forbidScroll (GAME.md, 2026-11-24): any element under root that scrolls, or a page that
+// scrolls, is a defect.
+async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSize = 16, forbidScroll = false }) {
+  return page.evaluate(({ root, parts, cornerInset, minFontSize, forbidScroll }) => {
     const host = document.querySelector(root);
     if (!host) return [`${root}: not found`];
     const visible = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.clip !== 'rect(0px, 0px, 0px, 0px)'; };
@@ -30,10 +32,18 @@ async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSi
         if (corners.some(c => overlap(c, r))) defects.push(`${name(el)} covers a corner stud`);
       }
     }
+    // Compare only what is actually painted: clip each box to the scroll containers around it,
+    // so content scrolled under a fixed bar doesn't count as a collision.
+    const scrollers = [...items, host].filter(node => /(auto|scroll|hidden)/.test(getComputedStyle(node).overflowY + getComputedStyle(node).overflowX) && node !== host);
+    const shown = (el) => {
+      let r = box(el); r = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+      for (const s of scrollers) if (s !== el && s.contains(el)) { const c = box(s); r = { left: Math.max(r.left, c.left), top: Math.max(r.top, c.top), right: Math.min(r.right, c.right), bottom: Math.min(r.bottom, c.bottom) }; }
+      return r;
+    };
     for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
       const [a, b] = [items[i], items[j]];
       if (a.contains(b) || b.contains(a)) continue;
-      if (overlap(box(a), box(b))) defects.push(`${name(a)} overlaps ${name(b)}`);
+      if (overlap(shown(a), shown(b))) defects.push(`${name(a)} overlaps ${name(b)}`);
     }
     const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -42,7 +52,16 @@ async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSi
       const size = parseFloat(getComputedStyle(el).fontSize);
       if (size < minFontSize) defects.push(`${name(el)} text "${node.textContent.trim().slice(0, 20)}" is ${size}px`);
     }
+    if (forbidScroll) {
+      const doc = document.scrollingElement || document.documentElement;
+      if (doc.scrollHeight > window.innerHeight + 1 || doc.scrollWidth > window.innerWidth + 1) defects.push('page scrolls');
+      for (const el of [host, ...host.querySelectorAll('*')]) {
+        const st = getComputedStyle(el);
+        const canScroll = /(auto|scroll)/.test(st.overflowY + st.overflowX);
+        if (canScroll && visible(el) && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)) defects.push(`${name(el)} scrolls`);
+      }
+    }
     return [...new Set(defects)];
-  }, { root, parts, cornerInset, minFontSize });
+  }, { root, parts, cornerInset, minFontSize, forbidScroll });
 }
 module.exports = { findLayoutDefects };

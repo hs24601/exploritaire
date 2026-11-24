@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "building-rack-v1",
+  "group": "buildings",
+  "w": 160,
+  "h": 160,
+  "subject": "Wooden drying frame with berries drying on strings. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate.",
+  "extra": "",
+  "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Wooden drying frame with berries drying on strings. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-fd860e90-9779-491a-b067-396881f55cb6.png"
+}

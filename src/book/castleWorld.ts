@@ -844,6 +844,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
     if(inMeadow&&activePair?.id==='woods'&&spellTest?.opaque){renderer.clear();spellTest.render(renderer,combatWoods!.scene);return;}
     if(!(mode==='flight'&&believeArrival?.render(scene,camera,flightTime)))renderer.render(inMeadow ? meadow!.scene : scene,camera);
     if(inMeadow&&activePair?.id==='woods')spellTest?.render(renderer,combatWoods!.scene);
+    handBoard?.render(renderer);
   }
   function arrive() {
     believeArrival?.finish();
@@ -1683,7 +1684,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
     freeze:()=>{keys.clear();groundsGestures.clear();navigation?.clear();clearMeadowRoute();platform?.cancelSprint(true);jumpPressed=divePressed=false;},
     impact:()=>combatWoods.spellImpact(portalClock)});
   // ?combat: Hand + Board against the framed Khadroot foundation (UX layer only).
-  if(portals&&combatWoods&&directCombat)handBoard=createWoodsHandBoard({camera,hero:heroMesh,khadroot:combatWoods.khadroot,reduced,
+  if(portals&&combatWoods&&directCombat)handBoard=createWoodsHandBoard({playMeteo:(receipts,impact,done)=>spellTest?.playMeteo(receipts,impact,done)??false,occluders:meadow?.cameraOccluders,canvas,camera,hero:heroMesh,khadroot:combatWoods.khadroot,reduced,
     enabled:()=>mode==='play'&&inMeadow&&activePair?.id==='woods'&&!crossing&&!spellTest?.active&&!portalControls?.paused,
     paused:()=>!!portalControls?.paused});
   renderer.shadowMap.needsUpdate = true;               // the stonework never moves: one shadow pass

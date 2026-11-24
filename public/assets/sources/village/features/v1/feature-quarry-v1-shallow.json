@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "feature-quarry-v1-shallow",
+  "w": 320,
+  "h": 320,
+  "group": "features",
+  "subject": "Rubble Pit, shallow grey-blue #a9bbd0 stone quarry cut into low hillside, large simple stepped stone ledges and rubble, central pit mouth with pick leaning on small wooden cart.",
+  "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Rubble Pit, shallow grey-blue #a9bbd0 stone quarry cut into low hillside, large simple stepped stone ledges and rubble, central pit mouth with pick leaning on small wooden cart. Square canvas, 2x2 tile footprint, master at least 640x640. Emphasize top surfaces of recessed concentric stepped ledges, large readable cart and pick. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-2871658b-ff2e-4d93-a156-fbdfe14acf70.png"
+}

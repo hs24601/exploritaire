@@ -1,0 +1,21 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "kin-cir-portrait-hungry-v1-corrected",
+  "group": "kin",
+  "w": 256,
+  "h": 256,
+  "subject": "CIR is a PHOENIX BIRD, NOT A CAT OR DOG. Head and shoulders frontal phoenix portrait, pointed hooked beak, avian amber eyes, gold-orange swept feather crest and cream-white hot breast. Tired hungry lowered eyelids and drooping feather crest. Face/beak exactly centered, eye-level frontal with no head yaw. Both eyes visible. No mammalian ears, fur, nose, muzzle or whiskers.",
+  "extra": "Square canvas for circular crop, preserve 6% margin, genuine transparent background. Reference image 1 is actual Cir phoenix IDENTITY, image 2 actual Hero berry primary WATERCOLOR STYLE ONLY, image 3 Scratch soft wash reference only. Do not paint Hero or Scratch.",
+  "refs": [
+    "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "prompt": "Use case: stylized-concept. CIR is a PHOENIX BIRD, NOT A CAT OR DOG. Head and shoulders frontal phoenix portrait, pointed hooked beak, avian amber eyes, gold-orange swept feather crest and cream-white hot breast. Tired hungry lowered eyelids and drooping feather crest. Face/beak exactly centered, eye-level frontal with no head yaw. Both eyes visible. No mammalian ears, fur, nose, muzzle or whiskers. Square canvas for circular crop, preserve 6% margin, genuine transparent background. Reference image 1 is actual Cir phoenix IDENTITY, image 2 actual Hero berry primary WATERCOLOR STYLE ONLY, image 3 Scratch soft wash reference only. Do not paint Hero or Scratch. Big softly merged wet-on-wet watercolor masses, broad soft rounded brush dabs, grouped values, restrained readable face, no fine feather marks or glossy eyes, no paper rectangle, text, border or shadow.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-4f7f07b2-165a-4c0f-b183-6b64cb26e657.png"
+}

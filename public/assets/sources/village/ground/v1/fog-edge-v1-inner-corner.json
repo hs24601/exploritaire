@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "fog-edge-v1-inner-corner",
+  "group": "ground",
+  "w": 160,
+  "h": 160,
+  "subject": "Painted pale blue-grey mist map fog, mist filling upper-left concave corner with softly fading boundary.",
+  "extra": "Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles.",
+  "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Painted pale blue-grey mist map fog, mist filling upper-left concave corner with softly fading boundary. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-1f8383a4-c18a-4600-9706-59d993fa33df.png"
+}

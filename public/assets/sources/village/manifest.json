@@ -1,0 +1,600 @@
+{
+  "tool": "built-in image_gen",
+  "standard": "ART.md actual Hero berry primary style, Scratch soft washes; approved kin identity references",
+  "assets": [
+    {
+      "id": "feature-forest-v1-full",
+      "group": "features",
+      "width": 480,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-forest-v1-full.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-forest-v1-full@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-forest-v1-full-overhead.json",
+      "selectedVariant": "feature-forest-v1-full-overhead"
+    },
+    {
+      "id": "feature-forest-v1-thinned",
+      "group": "features",
+      "width": 480,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-forest-v1-thinned.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-forest-v1-thinned@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-forest-v1-thinned-overhead.json",
+      "selectedVariant": "feature-forest-v1-thinned-overhead"
+    },
+    {
+      "id": "feature-berries-v1-ripe",
+      "group": "features",
+      "width": 320,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-berries-v1-ripe.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-berries-v1-ripe@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-berries-v1-ripe.json"
+    },
+    {
+      "id": "feature-berries-v1-green",
+      "group": "features",
+      "width": 320,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-berries-v1-green.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-berries-v1-green@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-berries-v1-green.json"
+    },
+    {
+      "id": "feature-berries-v1-picked",
+      "group": "features",
+      "width": 320,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-berries-v1-picked.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-berries-v1-picked@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-berries-v1-picked.json"
+    },
+    {
+      "id": "feature-quarry-v1-shallow",
+      "group": "features",
+      "width": 320,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-quarry-v1-shallow.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-quarry-v1-shallow@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-quarry-v1-shallow.json"
+    },
+    {
+      "id": "feature-quarry-v1-deep",
+      "group": "features",
+      "width": 320,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-quarry-v1-deep.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-quarry-v1-deep@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-quarry-v1-deep.json"
+    },
+    {
+      "id": "feature-forest-oaks-v1",
+      "group": "features",
+      "width": 480,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-forest-oaks-v1.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-forest-oaks-v1@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-forest-oaks-v1-overhead.json",
+      "selectedVariant": "feature-forest-oaks-v1-overhead"
+    },
+    {
+      "id": "feature-berries-thicket-v1",
+      "group": "features",
+      "width": 320,
+      "height": 320,
+      "runtime": "public/assets/runtime/village/features/v1/feature-berries-thicket-v1.png",
+      "runtime2x": "public/assets/runtime/village/features/v1/feature-berries-thicket-v1@2x.png",
+      "source": "public/assets/sources/village/features/v1/feature-berries-thicket-v1.json"
+    },
+    {
+      "id": "ground-meadow-tile-v1-a",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-meadow-tile-v1-a.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-meadow-tile-v1-a@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-meadow-tile-v1-a.json"
+    },
+    {
+      "id": "ground-meadow-tile-v1-b",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-meadow-tile-v1-b.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-meadow-tile-v1-b@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-meadow-tile-v1-b.json"
+    },
+    {
+      "id": "ground-meadow-tile-v1-c",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-meadow-tile-v1-c.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-meadow-tile-v1-c@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-meadow-tile-v1-c.json"
+    },
+    {
+      "id": "ground-path-v1-straight",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-path-v1-straight.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-path-v1-straight@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-path-v1-straight-clean.json",
+      "selectedVariant": "ground-path-v1-straight-clean"
+    },
+    {
+      "id": "ground-path-v1-corner",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-path-v1-corner.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-path-v1-corner@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-path-v1-corner-registered.json",
+      "selectedVariant": "ground-path-v1-corner-registered"
+    },
+    {
+      "id": "ground-path-v1-t",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-path-v1-t.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-path-v1-t@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-path-v1-t.json"
+    },
+    {
+      "id": "ground-path-v1-cross",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-path-v1-cross.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-path-v1-cross@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-path-v1-cross-clean.json",
+      "selectedVariant": "ground-path-v1-cross-clean"
+    },
+    {
+      "id": "ground-path-v1-end",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/ground-path-v1-end.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/ground-path-v1-end@2x.png",
+      "source": "public/assets/sources/village/ground/v1/ground-path-v1-end-clean.json",
+      "selectedVariant": "ground-path-v1-end-clean"
+    },
+    {
+      "id": "fog-edge-v1-edge",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/fog-edge-v1-edge.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/fog-edge-v1-edge@2x.png",
+      "source": "public/assets/sources/village/ground/v1/fog-edge-v1-edge-clean.json",
+      "selectedVariant": "fog-edge-v1-edge-clean"
+    },
+    {
+      "id": "fog-edge-v1-outer-corner",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/fog-edge-v1-outer-corner.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/fog-edge-v1-outer-corner@2x.png",
+      "source": "public/assets/sources/village/ground/v1/fog-edge-v1-outer-corner-clean.json",
+      "selectedVariant": "fog-edge-v1-outer-corner-clean"
+    },
+    {
+      "id": "fog-edge-v1-inner-corner",
+      "group": "ground",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/ground/v1/fog-edge-v1-inner-corner.png",
+      "runtime2x": "public/assets/runtime/village/ground/v1/fog-edge-v1-inner-corner@2x.png",
+      "source": "public/assets/sources/village/ground/v1/fog-edge-v1-inner-corner-clean.json",
+      "selectedVariant": "fog-edge-v1-inner-corner-clean"
+    },
+    {
+      "id": "gate-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/gate-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/gate-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/gate-v1-overhead.json",
+      "selectedVariant": "gate-v1-overhead"
+    },
+    {
+      "id": "building-leanto-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-leanto-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-leanto-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-leanto-v1-overhead.json",
+      "selectedVariant": "building-leanto-v1-overhead"
+    },
+    {
+      "id": "building-burrow-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-burrow-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-burrow-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-burrow-v1-overhead.json",
+      "selectedVariant": "building-burrow-v1-overhead"
+    },
+    {
+      "id": "building-campfire-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-campfire-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-campfire-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-campfire-v1-overhead.json",
+      "selectedVariant": "building-campfire-v1-overhead"
+    },
+    {
+      "id": "building-bench-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-bench-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-bench-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-bench-v1-overhead.json",
+      "selectedVariant": "building-bench-v1-overhead"
+    },
+    {
+      "id": "building-stall-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-stall-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-stall-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-stall-v1-overhead.json",
+      "selectedVariant": "building-stall-v1-overhead"
+    },
+    {
+      "id": "building-rack-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-rack-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-rack-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-rack-v1-overhead.json",
+      "selectedVariant": "building-rack-v1-overhead"
+    },
+    {
+      "id": "building-lantern-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-lantern-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-lantern-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-lantern-v1-overhead.json",
+      "selectedVariant": "building-lantern-v1-overhead"
+    },
+    {
+      "id": "building-lantern-lit-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-lantern-lit-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-lantern-lit-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-lantern-lit-v1-overhead.json",
+      "selectedVariant": "building-lantern-lit-v1-overhead"
+    },
+    {
+      "id": "building-well-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-well-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-well-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-well-v1-overhead.json",
+      "selectedVariant": "building-well-v1-overhead"
+    },
+    {
+      "id": "building-woodshed-v1",
+      "group": "buildings",
+      "width": 160,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/buildings/v1/building-woodshed-v1.png",
+      "runtime2x": "public/assets/runtime/village/buildings/v1/building-woodshed-v1@2x.png",
+      "source": "public/assets/sources/village/buildings/v1/building-woodshed-v1-overhead.json",
+      "selectedVariant": "building-woodshed-v1-overhead"
+    },
+    {
+      "id": "kin-mochi-portrait-v1",
+      "group": "kin",
+      "width": 256,
+      "height": 256,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-mochi-portrait-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-mochi-portrait-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-mochi-portrait-v1.json"
+    },
+    {
+      "id": "kin-mochi-portrait-hungry-v1",
+      "group": "kin",
+      "width": 256,
+      "height": 256,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-mochi-portrait-hungry-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-mochi-portrait-hungry-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-mochi-portrait-hungry-v1.json"
+    },
+    {
+      "id": "kin-mochi-standee-v1",
+      "group": "kin",
+      "width": 96,
+      "height": 128,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-mochi-standee-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-mochi-standee-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-mochi-standee-v1.json"
+    },
+    {
+      "id": "kin-banks-portrait-v1",
+      "group": "kin",
+      "width": 256,
+      "height": 256,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-banks-portrait-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-banks-portrait-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-banks-portrait-v1.json"
+    },
+    {
+      "id": "kin-banks-portrait-hungry-v1",
+      "group": "kin",
+      "width": 256,
+      "height": 256,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-banks-portrait-hungry-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-banks-portrait-hungry-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-banks-portrait-hungry-v1.json"
+    },
+    {
+      "id": "kin-banks-standee-v1",
+      "group": "kin",
+      "width": 96,
+      "height": 128,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-banks-standee-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-banks-standee-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-banks-standee-v1.json"
+    },
+    {
+      "id": "kin-cir-portrait-v1",
+      "group": "kin",
+      "width": 256,
+      "height": 256,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-cir-portrait-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-cir-portrait-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-cir-portrait-v1-corrected.json",
+      "selectedVariant": "kin-cir-portrait-v1-corrected"
+    },
+    {
+      "id": "kin-cir-portrait-hungry-v1",
+      "group": "kin",
+      "width": 256,
+      "height": 256,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-cir-portrait-hungry-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-cir-portrait-hungry-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-cir-portrait-hungry-v1-corrected.json",
+      "selectedVariant": "kin-cir-portrait-hungry-v1-corrected"
+    },
+    {
+      "id": "kin-cir-standee-v1",
+      "group": "kin",
+      "width": 96,
+      "height": 128,
+      "runtime": "public/assets/runtime/village/kin/v1/kin-cir-standee-v1.png",
+      "runtime2x": "public/assets/runtime/village/kin/v1/kin-cir-standee-v1@2x.png",
+      "source": "public/assets/sources/village/kin/v1/kin-cir-standee-v1.json"
+    },
+    {
+      "id": "card-glyph-lumber-v1",
+      "group": "cards",
+      "width": 96,
+      "height": 96,
+      "runtime": "public/assets/runtime/village/cards/v1/card-glyph-lumber-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-glyph-lumber-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-glyph-lumber-v1.json"
+    },
+    {
+      "id": "card-glyph-berry-v1",
+      "group": "cards",
+      "width": 96,
+      "height": 96,
+      "runtime": "public/assets/runtime/village/cards/v1/card-glyph-berry-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-glyph-berry-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-glyph-berry-v1.json"
+    },
+    {
+      "id": "card-glyph-berry-unripe-v1",
+      "group": "cards",
+      "width": 96,
+      "height": 96,
+      "runtime": "public/assets/runtime/village/cards/v1/card-glyph-berry-unripe-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-glyph-berry-unripe-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-glyph-berry-unripe-v1.json"
+    },
+    {
+      "id": "card-glyph-stone-v1",
+      "group": "cards",
+      "width": 96,
+      "height": 96,
+      "runtime": "public/assets/runtime/village/cards/v1/card-glyph-stone-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-glyph-stone-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-glyph-stone-v1.json"
+    },
+    {
+      "id": "card-glyph-ore-v1",
+      "group": "cards",
+      "width": 96,
+      "height": 96,
+      "runtime": "public/assets/runtime/village/cards/v1/card-glyph-ore-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-glyph-ore-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-glyph-ore-v1.json"
+    },
+    {
+      "id": "card-back-forest-v1",
+      "group": "cards",
+      "width": 180,
+      "height": 252,
+      "runtime": "public/assets/runtime/village/cards/v1/card-back-forest-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-back-forest-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-back-forest-v1-corrected.json",
+      "selectedVariant": "card-back-forest-v1-corrected"
+    },
+    {
+      "id": "card-back-berries-v1",
+      "group": "cards",
+      "width": 180,
+      "height": 252,
+      "runtime": "public/assets/runtime/village/cards/v1/card-back-berries-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-back-berries-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-back-berries-v1-corrected.json",
+      "selectedVariant": "card-back-berries-v1-corrected"
+    },
+    {
+      "id": "card-back-quarry-v1",
+      "group": "cards",
+      "width": 180,
+      "height": 252,
+      "runtime": "public/assets/runtime/village/cards/v1/card-back-quarry-v1.png",
+      "runtime2x": "public/assets/runtime/village/cards/v1/card-back-quarry-v1@2x.png",
+      "source": "public/assets/sources/village/cards/v1/card-back-quarry-v1-corrected.json",
+      "selectedVariant": "card-back-quarry-v1-corrected"
+    },
+    {
+      "id": "location-birch-stand-v1",
+      "group": "locations",
+      "width": 336,
+      "height": 120,
+      "runtime": "public/assets/runtime/village/locations/v1/location-birch-stand-v1.png",
+      "runtime2x": "public/assets/runtime/village/locations/v1/location-birch-stand-v1@2x.png",
+      "source": "public/assets/sources/village/locations/v1/location-birch-stand-v1.json"
+    },
+    {
+      "id": "location-old-oaks-v1",
+      "group": "locations",
+      "width": 336,
+      "height": 120,
+      "runtime": "public/assets/runtime/village/locations/v1/location-old-oaks-v1.png",
+      "runtime2x": "public/assets/runtime/village/locations/v1/location-old-oaks-v1@2x.png",
+      "source": "public/assets/sources/village/locations/v1/location-old-oaks-v1.json"
+    },
+    {
+      "id": "location-sunny-hedge-v1",
+      "group": "locations",
+      "width": 336,
+      "height": 120,
+      "runtime": "public/assets/runtime/village/locations/v1/location-sunny-hedge-v1.png",
+      "runtime2x": "public/assets/runtime/village/locations/v1/location-sunny-hedge-v1@2x.png",
+      "source": "public/assets/sources/village/locations/v1/location-sunny-hedge-v1.json"
+    },
+    {
+      "id": "location-bramble-thicket-v1",
+      "group": "locations",
+      "width": 336,
+      "height": 120,
+      "runtime": "public/assets/runtime/village/locations/v1/location-bramble-thicket-v1.png",
+      "runtime2x": "public/assets/runtime/village/locations/v1/location-bramble-thicket-v1@2x.png",
+      "source": "public/assets/sources/village/locations/v1/location-bramble-thicket-v1.json"
+    },
+    {
+      "id": "location-rubble-pit-v1",
+      "group": "locations",
+      "width": 336,
+      "height": 120,
+      "runtime": "public/assets/runtime/village/locations/v1/location-rubble-pit-v1.png",
+      "runtime2x": "public/assets/runtime/village/locations/v1/location-rubble-pit-v1@2x.png",
+      "source": "public/assets/sources/village/locations/v1/location-rubble-pit-v1.json"
+    },
+    {
+      "id": "location-deep-seam-v1",
+      "group": "locations",
+      "width": 336,
+      "height": 120,
+      "runtime": "public/assets/runtime/village/locations/v1/location-deep-seam-v1.png",
+      "runtime2x": "public/assets/runtime/village/locations/v1/location-deep-seam-v1@2x.png",
+      "source": "public/assets/sources/village/locations/v1/location-deep-seam-v1.json"
+    },
+    {
+      "id": "hud-icon-lumber-v1",
+      "group": "hud",
+      "width": 48,
+      "height": 48,
+      "runtime": "public/assets/runtime/village/hud/v1/hud-icon-lumber-v1.png",
+      "runtime2x": "public/assets/runtime/village/hud/v1/hud-icon-lumber-v1@2x.png",
+      "source": "public/assets/sources/village/hud/v1/hud-icon-lumber-v1.json"
+    },
+    {
+      "id": "hud-icon-food-v1",
+      "group": "hud",
+      "width": 48,
+      "height": 48,
+      "runtime": "public/assets/runtime/village/hud/v1/hud-icon-food-v1.png",
+      "runtime2x": "public/assets/runtime/village/hud/v1/hud-icon-food-v1@2x.png",
+      "source": "public/assets/sources/village/hud/v1/hud-icon-food-v1.json"
+    },
+    {
+      "id": "hud-icon-stone-v1",
+      "group": "hud",
+      "width": 48,
+      "height": 48,
+      "runtime": "public/assets/runtime/village/hud/v1/hud-icon-stone-v1.png",
+      "runtime2x": "public/assets/runtime/village/hud/v1/hud-icon-stone-v1@2x.png",
+      "source": "public/assets/sources/village/hud/v1/hud-icon-stone-v1.json"
+    },
+    {
+      "id": "hud-icon-appeal-v1",
+      "group": "hud",
+      "width": 48,
+      "height": 48,
+      "runtime": "public/assets/runtime/village/hud/v1/hud-icon-appeal-v1.png",
+      "runtime2x": "public/assets/runtime/village/hud/v1/hud-icon-appeal-v1@2x.png",
+      "source": "public/assets/sources/village/hud/v1/hud-icon-appeal-v1.json"
+    },
+    {
+      "id": "night-vignette-v1",
+      "group": "vignettes",
+      "width": 440,
+      "height": 160,
+      "runtime": "public/assets/runtime/village/vignettes/v1/night-vignette-v1.png",
+      "runtime2x": "public/assets/runtime/village/vignettes/v1/night-vignette-v1@2x.png",
+      "source": "public/assets/sources/village/vignettes/v1/night-vignette-v1.json"
+    },
+    {
+      "id": "town-vignette-v1",
+      "group": "vignettes",
+      "width": 440,
+      "height": 200,
+      "runtime": "public/assets/runtime/village/vignettes/v1/town-vignette-v1.png",
+      "runtime2x": "public/assets/runtime/village/vignettes/v1/town-vignette-v1@2x.png",
+      "source": "public/assets/sources/village/vignettes/v1/town-vignette-v1.json"
+    },
+    {
+      "id": "combo-hearth-v1",
+      "group": "badges",
+      "width": 64,
+      "height": 64,
+      "runtime": "public/assets/runtime/village/badges/v1/combo-hearth-v1.png",
+      "runtime2x": "public/assets/runtime/village/badges/v1/combo-hearth-v1@2x.png",
+      "source": "public/assets/sources/village/badges/v1/combo-hearth-v1.json"
+    },
+    {
+      "id": "combo-pantry-v1",
+      "group": "badges",
+      "width": 64,
+      "height": 64,
+      "runtime": "public/assets/runtime/village/badges/v1/combo-pantry-v1.png",
+      "runtime2x": "public/assets/runtime/village/badges/v1/combo-pantry-v1@2x.png",
+      "source": "public/assets/sources/village/badges/v1/combo-pantry-v1.json"
+    },
+    {
+      "id": "combo-lamplit-v1",
+      "group": "badges",
+      "width": 64,
+      "height": 64,
+      "runtime": "public/assets/runtime/village/badges/v1/combo-lamplit-v1.png",
+      "runtime2x": "public/assets/runtime/village/badges/v1/combo-lamplit-v1@2x.png",
+      "source": "public/assets/sources/village/badges/v1/combo-lamplit-v1.json"
+    }
+  ],
+  "note": "Selected files are generation candidates reviewed at compact sizes. Earlier passes remain versioned source history. Runtime integration intentionally left to caller per the brief."
+}

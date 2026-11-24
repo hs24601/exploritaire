@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-41858009-ad33-421d-9900-f595a8df2b82.png",
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "feature-berries-v1-green",
+  "w": 320,
+  "h": 320,
+  "group": "features",
+  "subject": "Nine low berry bushes in a 3 by 3 arrangement, mostly unripe pale green bumpy fruit, woven basket half full by front-left edge.",
+  "prompt": "Use case: precise-object-edit. Image 1 is edit target: existing ripe village berry patch. Images 2 Hero and 3 Scratch are style references only. Preserve EXACT overhead camera, nine bush positions in 3x3 layout, silhouette, basket placement, canvas and scale. Change only fruit ripeness: almost all berries on bushes become pale green/cream unripe berries, with very few pink berries remaining. Basket stays half full. Keep existing broad merged watercolor masses, warm top-left light, opaque foliage, real transparent exterior. No cast shadows, paper rectangle, text or border. Do not shift any bush or basket.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-25f50219-f43f-4712-819d-a156773d91f1.png"
+}

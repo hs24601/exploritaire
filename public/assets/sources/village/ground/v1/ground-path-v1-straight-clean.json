@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "name": "ground-path-v1-straight-clean",
+  "group": "ground",
+  "w": 160,
+  "h": 160,
+  "subject": "Packed-earth footpath vertical north-south, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges.",
+  "extra": "Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
+  "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Packed-earth footpath vertical north-south, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-9683b33e-9ac6-49b8-bf46-c588c16f777f.png"
+}

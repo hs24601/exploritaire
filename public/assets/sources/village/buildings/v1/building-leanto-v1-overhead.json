@@ -1,0 +1,13 @@
+{
+  "name": "building-leanto-v1-overhead",
+  "group": "buildings",
+  "w": 160,
+  "h": 160,
+  "tool": "built-in image_gen",
+  "references": [
+    "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+  ],
+  "prompt": "Use case: stylized-concept. Production sprite: ONE lean-to shelter viewed FROM DIRECTLY ABOVE as an orthographic ROOF PLAN, only 15 degrees tilted away from true vertical. Look down onto the broad slanted leafy roof: the roof fills almost the entire shelter footprint. Branch supports are foreshortened dots/short stubs beneath the roof, NOT long upright poles. Only a small end of the bedroll peeks out below the roof. No frontal doorway view, no side-on triangular tent silhouette, no horizon, no isometric 45-degree angle. It should look like a roof seen by a drone looking straight down, aligned north-south with square game tiles. Image 1 actual Hero berry painting is PRIMARY hand-painted watercolor STYLE ONLY; image 2 Scratch supports broad soft wet washes. Neither is subject/scenery. BIG softly merged watercolor masses, broad chunky leaf-roof patches rather than individual leaves, warm ochre wooden branches, muted sage greens, small slate bedroll, top-left late-morning light. Single cutout centered inside square canvas with 8% empty padding, opaque painted interior and real transparent exterior. NO ground patch, cast shadow, surrounding plants, berries, paper, border, text or UI. Master at least 320x320.",
+  "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-428f6225-0a9b-4c5f-82c5-918d78186e4f.png"
+}
