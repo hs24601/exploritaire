@@ -21,13 +21,13 @@ export interface BuildingDef {
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  leanto: { id: 'leanto', name: 'Lean-to', cost: { lumber: 30 }, beds: 1, rank: 1, effect: 'Shelter for 1 kin.' },
+  leanto: { id: 'leanto', name: 'Lean-to', cost: { lumber: 30 }, beds: 1, rank: 1, effect: 'Shelter for 1.' },
   campfire: { id: 'campfire', name: 'Campfire', cost: { lumber: 25 }, appeal: 2, tag: 'Warm', rank: 1, effect: 'Warm. +2 appeal.' },
   bench: { id: 'bench', name: 'Log Bench', cost: { lumber: 20 }, appeal: 1, tag: 'Quiet', rank: 1, effect: 'Quiet. +1 appeal.' },
   stall: { id: 'stall', name: 'Berry Stall', cost: { lumber: 20, food: 25 }, appeal: 2, tag: 'Sweet', rank: 1, effect: 'Sweet. +2 appeal.' },
-  rack: { id: 'rack', name: 'Drying Rack', cost: { lumber: 30 }, rank: 1, effect: 'Stored food no longer spoils overnight.' },
-  burrow: { id: 'burrow', name: 'Burrow', cost: { lumber: 50, stone: 40 }, beds: 2, appeal: 1, rank: 2, effect: 'Shelter for 2 kin. +1 appeal.' },
-  lantern: { id: 'lantern', name: 'Lantern Post', cost: { lumber: 20, stone: 25 }, appeal: 1, tag: 'Bright', rank: 2, effect: 'Bright. Dusk comes 1 hour later.' },
+  rack: { id: 'rack', name: 'Drying Rack', cost: { lumber: 30 }, rank: 1, effect: 'Food no longer spoils.' },
+  burrow: { id: 'burrow', name: 'Burrow', cost: { lumber: 50, stone: 40 }, beds: 2, appeal: 1, rank: 2, effect: 'Shelter for 2. +1 appeal.' },
+  lantern: { id: 'lantern', name: 'Lantern Post', cost: { lumber: 20, stone: 25 }, appeal: 1, tag: 'Bright', rank: 2, effect: 'Bright. Dusk 1h later.' },
   well: { id: 'well', name: 'Stone Well', cost: { stone: 50 }, appeal: 3, rank: 2, effect: '+3 appeal.' },
 };
 export const BUILD_ORDER: BuildingId[] = ['leanto', 'campfire', 'bench', 'stall', 'rack', 'burrow', 'lantern', 'well'];
@@ -48,19 +48,21 @@ export interface KinDef {
   likes: Tag[];
   eats: number;
   perk: string;
+  /** One-line version for compact rows. */
+  perkShort: string;
   surface?: SurfaceId;
 }
 const ART = '/assets/runtime';
 export const KIN: Record<KinId, KinDef> = {
   mochi: { id: 'mochi', name: 'Mochi', portrait: `${ART}/characters/mochi/expressions/emojis/watercolor/v1/mochi_emoji_happy.png`,
     appealNeeded: 0, likes: ['Sweet', 'Warm'], eats: 8, surface: 'berries',
-    perk: 'Berry Patch: every chain of 5 picks gives +1 food.' },
+    perk: 'Berry Patch: every chain of 5 picks gives +1 food.', perkShort: 'Berries: +1 food per 5-chain' },
   banks: { id: 'banks', name: 'Banks', portrait: `${ART}/characters/banks/expressions/emojis/watercolor/v4/banks_emoji_happy.png`,
     appealNeeded: 4, likes: ['Quiet', 'Warm'], eats: 10, surface: 'forest',
-    perk: 'Forest: felling a tree gives +2 more lumber.' },
+    perk: 'Forest: felling a tree gives +2 more lumber.', perkShort: 'Forest: +2 per felled tree' },
   cir: { id: 'cir', name: 'Cir', portrait: `${ART}/keru/cir/cir-watercolor-v1.png`,
     appealNeeded: 8, likes: ['Bright'], eats: 6, surface: 'quarry',
-    perk: 'Quarry: the first stock card each run costs no daylight.' },
+    perk: 'Quarry: the first stock card each run costs no daylight.', perkShort: 'Quarry: first stock card free' },
 };
 export const KIN_ORDER: KinId[] = ['mochi', 'banks', 'cir'];
 
@@ -156,7 +158,7 @@ export function hasResident(v: VillageState, kin: KinId): boolean {
 export type RankId = 1 | 2 | 3;
 export const RANKS: Record<RankId, { name: string; residents: number; appeal: number; unlocks: string }> = {
   1: { name: 'Hamlet', residents: 0, appeal: 0, unlocks: 'Forest and Berry Patch' },
-  2: { name: 'Village', residents: 2, appeal: 5, unlocks: 'Quarry, Burrow, Lantern Post, Stone Well' },
+  2: { name: 'Village', residents: 2, appeal: 5, unlocks: 'the Quarry and stone buildings' },
   3: { name: 'Town', residents: 3, appeal: 12, unlocks: 'the end of this slice' },
 };
 
@@ -171,7 +173,7 @@ export function rank(v: VillageState): RankId {
 export function welcomeBlocker(v: VillageState, kin: KinId): string | null {
   if (freeBeds(v) <= 0) return 'Needs a free bed';
   const likes = KIN[kin].likes;
-  if (v.residents.length > 0 && !likes.some(t => tags(v).includes(t))) return `Wants something ${likes.join(' or ')}`;
+  if (v.residents.length > 0 && !likes.some(t => tags(v).includes(t))) return `Wants ${likes.join(' or ')}`;
   return null;
 }
 

@@ -109,7 +109,7 @@ describe('village', () => {
     v = place(v, { 0: 'leanto' });
     expect(welcomeBlocker(v, 'mochi')).toBeNull();
     v = { ...place(v, { 1: 'leanto' }), residents: [{ kin: 'mochi', hungry: 0 }] };
-    expect(welcomeBlocker(v, 'banks')).toMatch(/Wants something/);
+    expect(welcomeBlocker(v, 'banks')).toMatch(/Wants/);
     v = place(v, { 2: 'bench' });
     expect(welcomeBlocker(v, 'banks')).toBeNull();
   });

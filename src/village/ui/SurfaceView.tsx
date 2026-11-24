@@ -84,7 +84,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
               {perkKin && (
                 <tr className={perkOn ? '' : 'is-off'}>
                   <td>{perkKin.name}'s help</td>
-                  <td className="vg-num">{perkOn ? (shown ? `+${shown.perkBonus}` : '–') : 'Not living here'}</td>
+                  <td className="vg-num">{perkOn ? (shown ? `+${shown.perkBonus}` : '–') : 'Not here'}</td>
                   <td />
                 </tr>
               )}

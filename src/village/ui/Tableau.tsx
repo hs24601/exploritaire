@@ -33,12 +33,24 @@ function useBox(ref: React.RefObject<HTMLElement | null>) {
   return box;
 }
 
-function cardWidth(layout: Props['layout'], piles: number, depth: number, w: number, h: number): number {
-  if (!w || !h) return 0;
-  const byWidth = layout === 'grid' ? (w - 2 * GAP) / 3 * 0.72 : (w - (piles - 1) * GAP) / piles;
+/** Card width, and whether the stock/foundation row sits beside the tableau (short, wide boxes). */
+function cardLayout(layout: Props['layout'], piles: number, depth: number, w: number, h: number): { cw: number; side: boolean } {
+  if (!w || !h) return { cw: 0, side: false };
+  const clamp = (x: number) => Math.max(40, Math.min(132, Math.floor(x)));
+  const cols = layout === 'grid' ? 3 : piles;
   const tall = layout === 'grid' ? 3 * RATIO + 0.24 : RATIO * (1 + (depth - 1) * FAN);
-  const byHeight = (h - (layout === 'grid' ? 3 : 1) * GAP - 18) / (tall + RATIO);
-  return Math.max(40, Math.min(132, Math.floor(Math.min(byWidth, byHeight))));
+  const rowGaps = (layout === 'grid' ? 2 : 0) * GAP;
+  const gridCap = layout === 'grid' ? 0.72 : 1;
+  // Stacked: play row under the tableau.
+  const stackW = (w - (cols - 1) * GAP) / cols * gridCap;
+  const stackH = (h - rowGaps - GAP - 18) / (tall + RATIO);
+  const stacked = Math.min(stackW, stackH);
+  // Side: play row is a column to the right (stock over foundation, then stats).
+  const statsW = 110;
+  const sideW = (w - statsW - (cols + 1) * GAP) / (cols + 1);
+  const sideH = Math.min((h - rowGaps - 8) / tall, (h - 18 - 3 * GAP - 76) / (2 * RATIO));
+  const side = Math.min(sideW, sideH);
+  return side > stacked * 1.08 ? { cw: clamp(side), side: true } : { cw: clamp(stacked), side: false };
 }
 
 export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDraw }: Props) {
@@ -53,7 +65,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
   }, [shake]);
 
   const maxDepth = layout === 'grid' ? 4 : 5;
-  const w = cardWidth(layout, run.piles.length, maxDepth, box.w, box.h);
+  const { cw: w, side } = cardLayout(layout, run.piles.length, maxDepth, box.w, box.h);
   const h = Math.round(w * RATIO);
   const size: CSSProperties = { width: w, height: h };
   const base = foundationTop(run);
@@ -107,7 +119,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
 
   const overFoundation = over?.drop === 'foundation';
   return (
-    <div className={`vg-board is-${layout}`} ref={ref}>
+    <div className={`vg-board is-${layout}${side ? ' is-side' : ''}`} ref={ref}>
       {w > 0 && (
         <>
           <div className="vg-tableau" style={layout === 'grid' ? { gap: GAP, gridTemplateColumns: `repeat(3, ${w}px)` } : { gap: GAP }}>

@@ -16,6 +16,8 @@ const SIZES = [
   { name: 'desktop-1280', width: 1280, height: 720 },
   { name: 'fold7-inner', width: 884, height: 1000 },
   { name: 'fold7-cover', width: 412, height: 915 },
+  { name: 'fold7-cover-land', width: 915, height: 412 },
+  { name: 'fold7-inner-land', width: 1000, height: 884 },
 ];
 
 // A mid-game save: rank 2 reached, Mochi living here, a Hearth combo built.
@@ -33,10 +35,8 @@ function midSave() {
 const PARTS = '.vg-main, .vg-top, .vg-brand, .vg-day, .vg-stores, .vg-store, .vg-top-actions, .vg-nav, .vg-nav-item, .vg-panel, .vg-panel-head, .vg-plot, .vg-plot-name, .vg-build-row, .vg-kin, .vg-location, .vg-felt, .vg-output, .vg-table, .vg-costs, .vg-btn, .vg-tableau, .vg-playrow, .vg-runstats, .vg-stock, .vg-foundation';
 
 async function check(page, label, defects, root = '.vg-app') {
-  const found = await findLayoutDefects(page, root, { parts: root === '.vg-app' ? PARTS : '.vg-panel, .vg-btn, li' });
+  const found = await findLayoutDefects(page, root, { parts: root === '.vg-app' ? PARTS : '.vg-panel, .vg-btn, li', forbidScroll: true });
   // Page-level horizontal scroll is a defect too.
-  const hscroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-  if (hscroll) found.push('page scrolls horizontally');
   for (const d of found) defects.push(`${label}: ${d}`);
   await page.screenshot({ path: path.join(out, `${label}.png`) });
 }
@@ -80,7 +80,6 @@ async function dragTopCardToFoundation(page) {
     await check(page, `${size.name}-forest-idle`, defects);
     await page.click('.vg-output .vg-btn.is-primary');
     await page.waitForSelector('.vg-foundation');
-    await page.evaluate(() => document.querySelector('.vg-main').scrollTo(0, 0));
     let played = 0;
     for (let k = 0; k < 6; k++) { if (await dragTopCardToFoundation(page)) played++; else { await page.click('.vg-stock'); } }
     if (!played) defects.push(`${size.name}: could not drag any forest card onto the foundation`);
@@ -100,6 +99,11 @@ async function dragTopCardToFoundation(page) {
     await page.reload();
     await page.waitForSelector('.vg-app');
     await check(page, `${size.name}-mid-village`, defects);
+    // Every village pane must fit too: visit each visible pane tab.
+    for (const pane of ['build', 'kin', 'plots']) {
+      const tab = page.locator(`.vg-pane-tab.is-${pane}`);
+      if (await tab.isVisible()) { await tab.click(); await check(page, `${size.name}-mid-village-${pane}`, defects); }
+    }
     await page.click('.vg-nav-item.is-quarry');
     await page.click('.vg-output .vg-btn.is-primary');
     await page.waitForSelector('.vg-foundation');

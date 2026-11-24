@@ -21,6 +21,9 @@ function CostChips({ cost, have }: { cost: Cost; have: GameState['village']['res
   );
 }
 
+type Pane = 'plots' | 'build' | 'kin';
+const PANES: { id: Pane; label: string }[] = [{ id: 'plots', label: 'Hollow' }, { id: 'build', label: 'Build' }, { id: 'kin', label: 'Kin' }];
+
 function Portrait({ kin }: { kin: KinId }) {
   return <span className={`vg-portrait is-${kin}`}><img src={KIN[kin].portrait} alt="" draggable={false} /></span>;
 }
@@ -30,6 +33,9 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
   const { begin, over } = useDrag();
   const [picked, setPicked] = useState<BuildingId | null>(null);
   const [selectedPlot, setSelectedPlot] = useState<number | null>(null);
+  // Smaller screens show one pane at a time (CSS decides how many are visible).
+  const [pane, setPane] = useState<Pane>('plots');
+  const pick = (id: BuildingId) => { setPicked(picked === id ? null : id); setPane('plots'); };
   const combos = activeCombos(v.plots);
   const villageTags = tags(v);
   const current = rank(v);
@@ -43,9 +49,15 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
   const selected = selectedPlot !== null ? v.plots[selectedPlot] : null;
 
   return (
-    <section className="vg-village">
-      <div className="vg-village-main">
-        <div className="vg-panel vg-plots-panel">
+    <section className="vg-village" data-pane={pane}>
+      <div className="vg-panes" role="tablist" aria-label="Village panes">
+        {PANES.map(p => (
+          <button key={p.id} type="button" role="tab" aria-selected={pane === p.id} className={`vg-pane-tab is-${p.id}${pane === p.id ? ' is-current' : ''}`} onClick={() => setPane(p.id)}>
+            {p.label}{p.id === 'kin' && v.gate.length > 0 && <span className="vg-pane-dot" aria-label="Wanderers waiting" />}
+          </button>
+        ))}
+      </div>
+        <div className="vg-panel vg-pane is-plots">
           <div className="vg-panel-head">
             <h2>Hollow</h2>
             <span className="vg-head-meta">{RANKS[current].name} · <Icon name="bed" size={16} /> {v.residents.length}/{beds(v)} · <Icon name="appeal" size={16} /> {appeal(v)}</span>
@@ -85,7 +97,7 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
           </div>
         </div>
 
-        <div className="vg-panel vg-build">
+        <div className="vg-panel vg-pane is-build">
           <div className="vg-panel-head"><h2>Build</h2><span className="vg-head-meta">Drag onto a plot</span></div>
           <ul className="vg-build-list">
             {BUILD_ORDER.map(id => {
@@ -95,7 +107,7 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
               const usable = !locked && afford;
               return (
                 <li key={id} className={`vg-build-row${locked ? ' is-locked' : ''}${picked === id ? ' is-picked' : ''}${usable ? '' : ' is-unaffordable'}`}
-                  onClick={usable ? () => setPicked(picked === id ? null : id) : undefined}>
+                  onClick={usable ? () => pick(id) : undefined}>
                   <span className="vg-build-icon" aria-label={usable ? `Drag ${def.name} onto a plot` : undefined}
                     onPointerDown={usable ? e => begin(e, { kind: 'building', id, width: 150, height: 52, ghost: <div className="vg-build-ghost"><Icon name={BUILDING_ICON[id]} size={22} />{def.name}</div> },
                       (_p, t) => { if (t.drop === 'plot' && !v.plots[t.index]) build(id, t.index); }) : undefined}>
@@ -111,9 +123,8 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
             })}
           </ul>
         </div>
-      </div>
 
-      <div className="vg-village-side">
+      <div className="vg-pane is-kin">
         <div className="vg-panel">
           <div className="vg-panel-head"><h2>At the gate</h2><span className="vg-head-meta">{v.gate.length ? 'Wanderers' : 'Nobody today'}</span></div>
           {v.gate.length === 0 && <p className="vg-empty">More appeal brings more wanderers.</p>}
@@ -126,10 +137,11 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
                 <div className="vg-kin-text">
                   <div className="vg-kin-name">{k.name}<span className="vg-kin-meta">leaves in {w.daysLeft} {w.daysLeft === 1 ? 'day' : 'days'}</span></div>
                   <div className="vg-kin-likes">Likes {k.likes.map(t => <span key={t} className={`vg-tag${villageTags.includes(t) ? ' is-met' : ''}`}>{t}</span>)}</div>
-                  <div className="vg-kin-perk">Eats {k.eats} food a night. {k.perk}</div>
+                  <div className="vg-kin-perk">Eats {k.eats} food · {k.perkShort}</div>
+                  {blocker && <div className="vg-kin-blocker">{blocker}</div>}
                 </div>
                 <button type="button" className="vg-btn is-primary is-small" disabled={!!blocker} onClick={() => dispatch({ type: 'welcome', kin: w.kin })}>
-                  {blocker ?? 'Welcome'}
+                  Welcome
                 </button>
               </div>
             );
@@ -143,8 +155,8 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
             <div key={r.kin} className={`vg-kin${r.hungry ? ' is-hungry' : ''}`}>
               <Portrait kin={r.kin} />
               <div className="vg-kin-text">
-                <div className="vg-kin-name">{KIN[r.kin].name}<span className="vg-kin-meta">{r.hungry ? 'Hungry: leaves if unfed tonight' : 'Content'}</span></div>
-                <div className="vg-kin-perk">{KIN[r.kin].perk}</div>
+                <div className="vg-kin-name">{KIN[r.kin].name}<span className="vg-kin-meta">{r.hungry ? 'Hungry' : 'Content'}</span></div>
+                <div className="vg-kin-perk">{KIN[r.kin].perkShort}</div>
               </div>
             </div>
           ))}
@@ -153,11 +165,13 @@ export function VillageView({ game, dispatch }: { game: GameState; dispatch: (a:
         <div className="vg-panel">
           <div className="vg-panel-head"><h2>{RANKS[game.rankReached].name}</h2><span className="vg-head-meta">{next ? `Next: ${next.name}` : 'Top rank in this slice'}</span></div>
           {next ? (
-            <ul className="vg-goals">
-              <li className={v.residents.length >= next.residents ? 'is-done' : ''}>Residents <span className="vg-num">{v.residents.length} / {next.residents}</span></li>
-              <li className={appeal(v) >= next.appeal ? 'is-done' : ''}>Appeal <span className="vg-num">{appeal(v)} / {next.appeal}</span></li>
-              <li className="vg-goal-unlock">Unlocks {next.unlocks}</li>
-            </ul>
+            <>
+              <ul className="vg-goals">
+                <li className={v.residents.length >= next.residents ? 'is-done' : ''}>Residents <span className="vg-num">{v.residents.length}/{next.residents}</span></li>
+                <li className={appeal(v) >= next.appeal ? 'is-done' : ''}>Appeal <span className="vg-num">{appeal(v)}/{next.appeal}</span></li>
+              </ul>
+              <p className="vg-goal-unlock">Unlocks {next.unlocks}</p>
+            </>
           ) : <p className="vg-empty">You built a town. That's the whole slice: thanks for playing.</p>}
         </div>
       </div>

@@ -1,8 +1,10 @@
 // Shared UI layout check for Playwright tools: finds parts that collide with
 // each other or the frame's corner studs, escape their container, clip their
 // own text, or render text below the 16px floor (GAME.md).
-async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSize = 16 }) {
-  return page.evaluate(({ root, parts, cornerInset, minFontSize }) => {
+// forbidScroll (GAME.md, 2026-11-24): any element under root that scrolls, or a page that
+// scrolls, is a defect.
+async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSize = 16, forbidScroll = false }) {
+  return page.evaluate(({ root, parts, cornerInset, minFontSize, forbidScroll }) => {
     const host = document.querySelector(root);
     if (!host) return [`${root}: not found`];
     const visible = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.clip !== 'rect(0px, 0px, 0px, 0px)'; };
@@ -50,7 +52,16 @@ async function findLayoutDefects(page, root, { parts, cornerInset = 0, minFontSi
       const size = parseFloat(getComputedStyle(el).fontSize);
       if (size < minFontSize) defects.push(`${name(el)} text "${node.textContent.trim().slice(0, 20)}" is ${size}px`);
     }
+    if (forbidScroll) {
+      const doc = document.scrollingElement || document.documentElement;
+      if (doc.scrollHeight > window.innerHeight + 1 || doc.scrollWidth > window.innerWidth + 1) defects.push('page scrolls');
+      for (const el of [host, ...host.querySelectorAll('*')]) {
+        const st = getComputedStyle(el);
+        const canScroll = /(auto|scroll)/.test(st.overflowY + st.overflowX);
+        if (canScroll && visible(el) && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)) defects.push(`${name(el)} scrolls`);
+      }
+    }
     return [...new Set(defects)];
-  }, { root, parts, cornerInset, minFontSize });
+  }, { root, parts, cornerInset, minFontSize, forbidScroll });
 }
 module.exports = { findLayoutDefects };
