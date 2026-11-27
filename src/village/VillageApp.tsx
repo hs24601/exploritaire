@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { clockLabel, DAY_CYCLE_MINUTES, durationLabel } from './rules/daylight';
 import { canPlaceDevKin, dailyStamina, daylightLeft, denPlacementBlocker, loadGame, reduce, saveGame, surfaceUnlocked, type GameState } from './rules/game';
 import { SURFACE_ORDER, type SurfaceId } from './rules/surfaces';
@@ -10,7 +10,8 @@ import { InspectCard, KinPane, PlacingCard } from './ui/Drawer';
 import { Icon } from './ui/icons';
 import { useMeasure, useStageLayout } from './ui/layout';
 
-import { KinStack, MapView, type Aim } from './ui/MapView';
+import { KinStack, type Aim } from './ui/MapView';
+import { MapViewToggle, VillageMap, useMapView } from './ui/VillageMap';
 import { KinPortrait } from './ui/KinPortrait';
 import { SurfaceView } from './ui/SurfaceView';
 import { AspenView } from './ui/AspenView';
@@ -24,8 +25,8 @@ import { DIG_KIN } from './rules/den';
 
 const showDevConfig = import.meta.env.DEV || new URLSearchParams(window.location.search).has('dev');
 
-function VillageHud({ game, hudRef, onRest, onMenu, onTime }: { game: GameState; hudRef: RefObject<HTMLElement | null>;
-  onRest: () => void; onMenu: () => void; onTime?: (minutes: number) => void }) {
+function VillageHud({ game, hudRef, onRest, onMenu, onTime, viewToggle }: { game: GameState; hudRef: RefObject<HTMLElement | null>;
+  onRest: () => void; onMenu: () => void; onTime?: (minutes: number) => void; viewToggle?: ReactNode }) {
   const len = dayLength(game.village);
   const left = daylightLeft(game);
   const cycleEnd = DAY_CYCLE_MINUTES - 1;
@@ -59,6 +60,7 @@ function VillageHud({ game, hudRef, onRest, onMenu, onTime }: { game: GameState;
       <div className="vg-top-actions">
         <button type="button" className="vg-btn is-quiet is-small" title="End the day and see the night report" onClick={onRest}><Icon name="moon" size={18} />Rest</button>
         <FpsCounter className="vg-fps" />
+        {viewToggle}
         <button type="button" className="vg-iconbtn" title="Open the Hollow menu" onClick={onMenu} aria-label="Menu"><Icon name="menu" size={20} /></button>
       </div>
     </header>
@@ -149,6 +151,7 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
   const layout = useStageLayout(ref, floatOn ? floatH : 0, hudSpace);
   const view = game.view !== 'village' && game.view !== 'den' && !surfaceUnlocked(game, game.view) ? 'village' : game.view;
   const mini = view !== 'village';
+  const mapView = useMapView();
 
   const dragBuilding = dragging?.kind === 'building' ? (dragging.id as BuildingId) : null;
   const placing = dragBuilding ?? picked;
@@ -250,13 +253,14 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
   return (
     <main className={`vg-stage dock-overlay bar-bottom${mini ? ' is-puzzle' : ' is-map'}${pane && !mini ? ' has-sheet' : ''}`} ref={ref} style={stageVars}>
       <VillageHud game={game} hudRef={hudRef} onRest={() => dispatch({ type: 'rest' })} onMenu={onMenu}
+        viewToggle={!mini && <MapViewToggle view={mapView} />}
         onTime={showDevConfig && !game.night ? minutes => dispatch({ type: 'dev-config', minutes }) : undefined} />
       {layout && (
         <>
           {view === 'forest' && game.aspen && <AspenView clock={game} grove={game.aspen} stamina={game.stamina} staminaCaps={dailyStamina(game.denRest)} cards={game.aspenCards} dispatch={dispatch} />}
           {view === 'den' && den && <DenView game={game} dispatch={dispatch} />}
           {view !== 'village' && view !== 'forest' && view !== 'den' && <SurfaceView key={view} game={game} surface={view} dispatch={dispatch} />}
-          <MapView game={game} layout={layout} mini={mini} placing={placing} aim={aim} selected={selected}
+          <VillageMap view={mapView} game={game} layout={layout} mini={mini} placing={placing} aim={aim} selected={selected}
             denPlacement={denIdea && (denArmed || dragging?.kind === 'den-idea')}
             onTile={onTile} onHover={t => { if (picked) setAimTile(t); }} onFeature={onFeature} onWanderer={onWanderer}
             partyTile={partyTile} selectedKin={selectedKin} onParty={onParty}

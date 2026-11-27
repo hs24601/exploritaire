@@ -1,0 +1,18 @@
+/* Isometric village map (IsoMapView). Shares the chip label and button language of the top-down map. */
+.vg-iso { position: absolute; inset: 0; overflow: hidden; touch-action: none;
+  background: radial-gradient(120% 90% at 50% 40%, #2b3a28, #151c15 70%); }
+.vg-stage.has-sheet .vg-iso { visibility: hidden; }
+.vg-iso-canvas { display: block; cursor: grab; touch-action: none; }
+.vg-iso-canvas:active { cursor: grabbing; }
+.vg-iso-canvas:focus-visible { outline: 2px solid #e9c276; outline-offset: -2px; }
+.vg-iso-label {
+  position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; line-height: 1.15; padding: 3px 10px;
+  border-radius: 8px; background: rgba(15, 18, 23, 0.86); border: 1px solid var(--line-2); white-space: nowrap; pointer-events: none;
+}
+.vg-iso-label.is-locked .vg-chip-meta { color: var(--muted); }
+.vg-iso-label.is-forest { --accent: var(--forest); }
+.vg-iso-label.is-berries { --accent: var(--berries); }
+.vg-iso-status { position: absolute; z-index: 2; left: 50%; bottom: var(--pad, 16px); transform: translateX(-50%); max-width: calc(100% - 2 * var(--pad, 16px));
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
+  padding: 3px 10px; border-radius: 6px; background: #191d19; color: #fff8df; font-size: 16px; font-variant-numeric: tabular-nums; }
+.vg-iso-toggle { pointer-events: auto; color: var(--text); }

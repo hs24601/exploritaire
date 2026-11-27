@@ -29,8 +29,23 @@ interface DragApi {
 const Ctx = createContext<DragApi | null>(null);
 const MOVE_THRESHOLD = 6;
 
+type DropResolver = (clientX: number, clientY: number) => { drop: string; index: number } | null;
+const resolvers = new WeakMap<Element, DropResolver>();
+
+/**
+ * Lets one element answer drops itself (the isometric map's canvas works out the
+ * tile under the pointer). Returns the cleanup.
+ */
+export function setDropResolver(el: Element, resolve: DropResolver): () => void {
+  resolvers.set(el, resolve);
+  return () => { if (resolvers.get(el) === resolve) resolvers.delete(el); };
+}
+
 function targetAt(x: number, y: number): { drop: string; index: number } | null {
-  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-drop]');
+  const under = document.elementFromPoint(x, y);
+  const resolve = under && resolvers.get(under);
+  if (resolve) return resolve(x, y);
+  const el = under?.closest<HTMLElement>('[data-drop]');
   if (!el) return null;
   return { drop: el.dataset.drop!, index: Number(el.dataset.index ?? -1) };
 }
