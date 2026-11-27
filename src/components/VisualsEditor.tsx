@@ -811,7 +811,7 @@ const CardDepthEffectsDemo = memo(function CardDepthEffectsDemo({
       suit: '🔥', 
       name: 'Dark Rider',  
       color: '#ff4500', 
-      cover: '/assets/runtime/characters/shared/constellations/const_fox.png',
+      cover: '/assets/runtime/ui/constellations/const_fox.png',
       character: '/assets/deprecated/pixel/characters/fox_cub.png'
     },
     { 

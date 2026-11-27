@@ -87,7 +87,7 @@ export async function createBiteOpticsRenderer(canvas:HTMLCanvasElement,profile:
   program=gl.createProgram();if(!program)throw new Error('Program allocation failed');gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)??'Shader link failed');
   gl.useProgram(program);buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
   const base=import.meta.env.BASE_URL;
-  const urls=profile==='bite'?['closed','parted','half','open'].map(name=>`${base}assets/runtime/ui/holocards/hero-bite/v2/bite-${name}.png`):FAST_SWIPE_POSES.map(name=>`${base}assets/runtime/ui/holocards/mochi-fast-swipes/v6/swipe-${name}.png`);
+  const urls=profile==='bite'?['closed','parted','half','open'].map(name=>`${base}assets/runtime/abilities/bite/lenticular-jaw/bite-${name}.png`):FAST_SWIPE_POSES.map(name=>`${base}assets/runtime/abilities/fast-swipes/registered-slap-cycle/swipe-${name}.png`);
   urls.push(`${base}assets/runtime/ui/holocards/layered/hero-night-background-v2-ordinary-day.png`);
   const images=await Promise.all(urls.map(async url=>{const image=new Image();image.src=url;await image.decode();return image;}));
   // StrictMode or a settings change may prepare another program during decoding.

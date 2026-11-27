@@ -18,7 +18,7 @@ describe('page 03 Hero woodland edition',()=>{
  it('places four generated Hero poses among the duplicated forest set pieces without prose',()=>{
   const page=pages.pages.find(p=>p.page===3)!;expect(page.controls.some(c=>c.kind==='text')).toBe(false);
   expect(page.controls.filter(c=>c.popup?.mechanism==='extension')).toHaveLength(2);
-  for(const m of HERO_MOMENTS){const c=page.controls.find(c=>c.id===m.id)!;expect(c.art).toContain('characters/hero/book/v1/');expect(c.kind).toBe('popup');}
+  for(const m of HERO_MOMENTS){const c=page.controls.find(c=>c.id===m.id)!;expect(c.art).toContain('kin/hero/sprites/world/storybook-woodland-poses/');expect(c.kind).toBe('popup');}
  });
  it('never exposes Hero in the first pass and never shows two moments at once',()=>{
   for(let t=0;t<=40;t+=.05){const visible=HERO_MOMENTS.filter(m=>heroMoment(m.id,t).visible);expect(visible.length).toBeLessThanOrEqual(1);if(t<8.3)expect(visible).toHaveLength(0);}

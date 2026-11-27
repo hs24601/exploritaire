@@ -4,8 +4,8 @@ import crawlScale from './heroCrawlScale.json';
 export const HERO_WORLD_ACTIONS=['bound','leap','hurdle','mantle','climb90','uphill15','uphill35','downhill15','downhill35','spin180','roll','snuffle','yawn','combatReady','combatStalk','combatBow','combatLeap','crawl'] as const;
 export type HeroWorldAction=typeof HERO_WORLD_ACTIONS[number];
 export const HERO_WORLD_VIEWS=['low-0','low-1','low-2','low-3','low-4','high-0','high-1','high-2','high-3','high-4','top-0'] as const;
-export const HERO_WORLD_ATLAS={cell:192,columns:8,rows:6,width:1536,height:1152,root:'assets/runtime/characters/hero/world-exploration/v1/'};
-export const heroWorldAssetRoot=(action:HeroWorldAction)=>action==='crawl'?'assets/runtime/characters/hero/world-traversal/v1/':action.startsWith('combat')?'assets/runtime/characters/hero/world-combat/v3/':action==='yawn'?'assets/runtime/characters/hero/world-exploration/v2/':HERO_WORLD_ATLAS.root;
+export const HERO_WORLD_ATLAS={cell:192,columns:8,rows:6,width:1536,height:1152,root:'assets/runtime/kin/hero/sprites/world/exploration/exploration-actions/'};
+export const heroWorldAssetRoot=(action:HeroWorldAction)=>action==='crawl'?'assets/runtime/kin/hero/sprites/world/traversal/low-crawl/':action.startsWith('combat')?'assets/runtime/kin/hero/sprites/world/combat/alert-combat-cycle/':action==='yawn'?'assets/runtime/kin/hero/sprites/world/exploration/yawn-cycle/':HERO_WORLD_ATLAS.root;
 /** Higher resolution paint retains facial accents without upscaling the old sheets. */
 export const heroWorldAtlas=(action:HeroWorldAction)=>action.startsWith('combat')||action==='yawn'
  ?{cell:256,columns:8,rows:6,width:2048,height:1536}:HERO_WORLD_ATLAS;

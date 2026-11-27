@@ -1,0 +1,106 @@
+{
+  "generator": "Built-in ImageGen",
+  "references": {
+    "scratch": "public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+    "hero": "public/assets/runtime/kin/hero/portraits/organic-bobtail/hero-watercolor-v6-organic-bobtail.png"
+  },
+  "assets": [
+    {
+      "source": "trowel.png",
+      "runtime": "trowel.png",
+      "size": [
+        2172,
+        724
+      ],
+      "prompt": "Isolated single hand gardening trowel, muted blue-gray steel pointed scoop and short honey ochre wooden handle, horizontal with blade pointing right. Scratch is soft light palette and broad wet watercolor wash reference, Hero berry art is painting style reference. Broad muted soft washes, sparse broken ink, readable at 30 pixels. Real transparent alpha, no background shadow, text or surrounding elements.",
+      "references": [
+        "scratch",
+        "hero"
+      ],
+      "sourceSha256": "5c41d1187a3906a465130395ab87b848d6bd10d1f0a0f30a64009cfb6d322bb0",
+      "runtimeSha256": "5c41d1187a3906a465130395ab87b848d6bd10d1f0a0f30a64009cfb6d322bb0"
+    },
+    {
+      "source": "dig-master.png",
+      "runtime": "trowel-dig.png",
+      "size": [
+        1218,
+        1292
+      ],
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Reference 1 Scratch for light palette and wet soft wash marks, reference 2 approved Hero berry painting for identity and watercolor style, reference 3 for tool design only, reference 4 for prior small corgi proportions and as an explicit negative example of spear grip. Hero is a small tricolor corgi with modest ears, amber eyes and organic short bobtail. The hand trowel is clamped by the MIDDLE of its short wooden shaft ACROSS her mouth, orthogonal to the direction the nose points, held like a stick or bone. Critical visual: in the camera plane the rounded ochre handle projects to the LEFT of her left cheek, the blue-gray steel spade blade projects to the RIGHT of her right cheek, muzzle centered BETWEEN both visible ends. Nose points almost at the viewer with a slight turn to camera-right, never profile. Both tool ends visible at the same height. Broad diluted wet-on-wet washes, creamy opaque fur, transparent alpha with no floor, shadow, labels or scenery. Generate ONE genuine alpha transparent 2 by 2 raster sprite sheet, four separate fully visible full-body digging poses in the four equal quadrants with wide gutters and nothing outside cells. Same camera, size, position and paw ground line across frames. Hero crouches with head low and hind paws planted. Top-left near front paw reaches out, top-right near paw rakes back, bottom-left far paw reaches out, bottom-right far paw rakes back. Slight shoulder motion only. She keeps the trowel clamped crosswise like a bone in ALL FOUR frames with both ends visible. No dirt, FX, frames, letters or numbers. Four discrete sprite cells.",
+      "references": [
+        "scratch",
+        "hero",
+        "trowel.png",
+        "user-supplied previous carry pose"
+      ],
+      "sourceSha256": "2c34001ff23d5a84e45f9254bce607358ea0d1134a9cfe42b3ca27ce5e9e4c95",
+      "runtimeSha256": "2fe42de18a513f8c9d4040c88fd4de8117b9004e9ab5acb0fb222bf7875e14f5"
+    },
+    {
+      "source": "hold-master.png",
+      "runtime": "trowel-hold.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "runtimeSize": [
+        384,
+        384
+      ],
+      "prompt": "Paint one cheerful full-body watercolor pet sprite for an indoor gardening game. Use Scratch (image 1) for its pale palette and soft broad wet washes; use the approved Hero berry illustration (image 2) for style, modest ears, tricolor corgi identity and natural short bobtail. Image 3 is the design reference for the little wooden-handled blue-gray garden scoop. Image 4 is the reference for how Hero carries that garden scoop. Show Hero standing on all four paws, three-quarter front view, body trailing to the left, mouth gently carrying the scoop crosswise like a dog carrying a stick. Rounded wooden end visible to the left of the muzzle and metal scoop visible to its right, close to the cheeks and level with each other. Single sprite, original transparent alpha, no background, scenery, shadow or text, substantially opaque light fur, large cloudy pigment masses with restrained ink accents.",
+      "references": [
+        "scratch",
+        "hero",
+        "trowel.png",
+        "dig-master.png"
+      ],
+      "sourceSha256": "f5500a48ddab417c344f15d77a23f9b8885b1e2aa4c0ddc7395bdb437df8a9b3",
+      "runtimeSha256": "f797bb443d916488ef77d113ce2ffc3a8fd85d53b14fb499708da04089b8a1f9"
+    },
+    {
+      "source": "walk-master.png",
+      "runtime": "trowel-walk.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Make one true-alpha 2 by 2 game animation sheet, precisely four equally sized quadrants with gutters, full silhouettes. Scratch reference 1 supplies pale palette and broad wet washes. Hero berry reference 2 supplies tricolor corgi identity, modest ears, short bobtail and watercolor style. Reference 3 supplies the exact garden scoop and crosswise grip. Hero's body faces screen-right in a side-scroller side-three-quarter view, head very slightly facing the viewer so you see both ends of the little scoop at opposite sides of her muzzle like a stick held by the middle. Preserve that sideways grip through all frames. No text, shadows, scenery or effects. Keep size, torso placement and ground registration identical. Four clear WALK cycle phases with alternating front and rear legs, top left contact left front extended, top right passing, bottom left opposite contact right front extended, bottom right opposite passing. A really legible gait with distinctly different paw placements and weight. Head and tool steady.",
+      "references": [
+        "scratch",
+        "hero",
+        "hold-master.png"
+      ],
+      "sourceSha256": "fec306b7fd5b52e083e3cace400005c68a21afa6a6f7edde004dcb6da03ace15",
+      "runtimeSha256": "617a263bfec4458d0964eb4b553c92e57e7b55cc33c7bfd4978fbb979d279c83"
+    },
+    {
+      "source": "jump-master.png",
+      "runtime": "trowel-jump.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Make one true-alpha 2 by 2 game animation sheet, precisely four equally sized quadrants with gutters, full silhouettes. Scratch reference 1 supplies pale palette and broad wet washes. Hero berry reference 2 supplies tricolor corgi identity, modest ears, short bobtail and watercolor style. Reference 3 supplies the exact garden scoop and crosswise grip. Hero's body faces screen-right in a side-scroller side-three-quarter view, head very slightly facing the viewer so you see both ends of the little scoop at opposite sides of her muzzle like a stick held by the middle. Preserve that sideways grip through all frames. No text, shadows, scenery or effects. Keep size, torso placement and ground registration identical. Four clear PLATFORM JUMP game poses: top left push-off from hind legs and lift front legs, top right upward leap paws tucked, bottom left downward fall with front legs reaching down, bottom right soft crouched landing with four paws. Full silhouette and visible legs in each pose.",
+      "references": [
+        "scratch",
+        "hero",
+        "hold-master.png"
+      ],
+      "sourceSha256": "5a82f1c8aa170a38abf35ba1a4ce027ad5a5f14563de84a4d707011266dcbc79",
+      "runtimeSha256": "7574dd4e7ee9e5090dc1e7d662f7c80d1192ef8ae030669989f4f05da979b644"
+    }
+  ]
+}

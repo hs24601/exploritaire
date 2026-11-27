@@ -6,6 +6,6 @@ export const ABILITY_CARD_ART: Readonly<Record<string, string>> = {
 export function abilityCardArt(name: string) {
   const slug = ABILITY_CARD_ART[name.replace(/^Inferno /, '')];
   // Fetch/Dig already contain only friendly actors and their ordinary props.
-  const version = slug === 'fetch' || slug === 'dig' ? 'v2' : 'v3';
-  return slug ? `${import.meta.env.BASE_URL}assets/runtime/ui/abilities/watercolor-${version}/${slug}.${version === 'v2' ? 'png' : 'webp'}` : undefined;
+  const softWash = slug === 'fetch' || slug === 'dig';
+  return slug ? `${import.meta.env.BASE_URL}assets/runtime/abilities/${slug}/${softWash ? 'soft-wash' : 'light-wash'}/${slug}.${softWash ? 'png' : 'webp'}` : undefined;
 }

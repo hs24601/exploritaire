@@ -9,9 +9,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 manifest = json.loads((ROOT/'docs/art/hero-bobtail-v2-generation.json').read_text())
-target = ROOT/'public/assets/runtime/characters/hero/rig/watercolor/v2'
+target = ROOT/'public/assets/runtime/kin/hero/sprites/combat/painted-bobtail'
 target.mkdir(parents=True, exist_ok=True)
-sources = ROOT/'public/assets/sources/characters/bobtail-v2'
+sources = ROOT/'public/assets/sources/kin/hero/sprites/combat/painted-bobtail'
 sources.mkdir(parents=True, exist_ok=True)
 checks = []
 for entry in manifest:

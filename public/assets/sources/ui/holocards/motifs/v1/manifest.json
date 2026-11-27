@@ -2,7 +2,7 @@
   "generator": "built-in image_gen",
   "referenceRoles": {
     "hero": "artifacts/hero-flame-motifs-v1/hero-flame-motifs-v1.png supplies flame styling; character excluded from output",
-    "mochi": "public/assets/runtime/ui/holocards/actors/mochi-card-watercolor-v1.png supplies character/paint context; character excluded from output"
+    "mochi": "public/assets/runtime/kin/mochi/portraits/flat-watercolor/mochi-card-watercolor-v1.png supplies character/paint context; character excluded from output"
   },
   "assets": [
     {

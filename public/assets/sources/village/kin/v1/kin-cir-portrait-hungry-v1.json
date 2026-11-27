@@ -2,7 +2,7 @@
   "tool": "built-in image_gen",
   "references": [
     "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+    "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
     "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png"
   ],
   "name": "kin-cir-portrait-hungry-v1",
@@ -13,7 +13,7 @@
   "extra": "Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint.",
   "refs": [
     "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+    "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
     "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png"
   ],
   "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. cir head-and-shoulders portrait. Tired and hungry, drooping eyelids and subdued expression, no tears or injuries. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",

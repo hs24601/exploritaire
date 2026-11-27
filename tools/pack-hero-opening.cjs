@@ -1,8 +1,8 @@
 // Pack generated cutouts onto the existing registration grids; retain sources.
 const fs = require('node:fs');
 const { chromium } = require('playwright');
-const root = 'public/assets/runtime/characters/hero/poses/watercolor/v1-opening';
-const sourceRoot = 'public/assets/sources/characters/hero/poses/watercolor/v1-opening';
+const root = 'public/assets/runtime/kin/hero/sprites/world/opening-poses';
+const sourceRoot = 'public/assets/sources/kin/hero/sprites/world/opening-poses';
 const sitting = require('../src/proto/art/heroSittingLayout.json');
 const walking = require('../src/proto/art/heroWalkingLayout.json');
 const standing = {
@@ -16,7 +16,7 @@ const standing = {
     const jobs = ['happy','curious','sad'].map(emotion=>({ name:`${emotion}-heads`, cols:4, rows:2, width:1024, height:512, rects:[] }));
     for (const tier of ['low','high']) {
       jobs.push({name:`sitting-${tier}`,cols:3,rows:3,...sitting[tier]});
-      jobs.push({name:`directions-${tier}`,cols:1,rows:5,rects:standing[tier],template:`public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-${tier}-body-v3.png`, narrow:true});
+      jobs.push({name:`directions-${tier}`,cols:1,rows:5,rects:standing[tier],template:`public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-${tier}-body-v3.png`, narrow:true});
       jobs.push({name:`walking-${tier}`,cols:4,rows:tier==='low'?5:6,...walking[tier],rects:walking[tier].rects.flat()});
     }
     for (const job of jobs) {

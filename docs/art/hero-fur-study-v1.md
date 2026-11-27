@@ -1,6 +1,6 @@
 # Hero fur study v1 (spike)
 
-Question (Eric, 2026-10-20): can Hero's watercolor sprites be generated in code, as the bushes and Khad Roots now are? The smallest test is one still pose with the richest painted reference: the sleeping curl, `runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping-body-v3.png` (plus its bobtail layer). Hero is a girl, a tricolour merle Australian Shepherd.
+Question (Eric, 2026-10-20): can Hero's watercolor sprites be generated in code, as the bushes and Khad Roots now are? The smallest test is one still pose with the richest painted reference: the sleeping curl, `runtime/kin/hero/sprites/world/sleeping-poses/hero-sleeping-body-v3.png` (plus its bobtail layer). Hero is a girl, a tricolour merle Australian Shepherd.
 
 Status: spike for side-by-side review only. Nothing in the game uses it; the approved art is unchanged. Not committed pending Eric's review.
 

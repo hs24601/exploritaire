@@ -1,10 +1,10 @@
 ﻿{
     "references":  [
                        "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-                       "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
-                       "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
-                       "C:/dev/Exploritaire/public/assets/runtime/characters/hero/platforming/suite-v1/hurdle.png",
-                       "C:/dev/Exploritaire/public/assets/runtime/characters/hero/platforming/suite-v1/ledge-climb.png"
+                       "C:/dev/Exploritaire/public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
+                       "C:/dev/Exploritaire/public/assets/runtime/kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
+                       "C:/dev/Exploritaire/public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/hurdle.png",
+                       "C:/dev/Exploritaire/public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/ledge-climb.png"
                    ],
     "version":  1,
     "clips":  [
@@ -1419,7 +1419,7 @@
                       "correction":  {
                                          "prompt":  "Edit reference 1, the existing 8-column by 6-row Hero sprite atlas. Preserve all 44 dogs, exact cell order, framing, canine poses, markings, face expressions, camera views and drawing registration. Reference 2 is the actual Hero style reference; do not add its setting. REMOVE THE TRANSLUCENT WHITE PAPER BACKING EVERYWHERE BETWEEN THE DOGS, INCLUDING THE OUTER CORNERS, GUTTERS AND FOUR EMPTY LOWER-RIGHT CELLS. These surroundings must be genuinely transparent with alpha ZERO, not off-white, not misty semi-transparent paper. Keep all pale ivory fur, ears, muzzle and paws substantially OPAQUE; do not erase or key pale paint. Keep the actual watercolor dogs intact. No new shadows, paper, texture, halos, checkerboard, gridlines, labels or background. Exact 8 by 6 registration and same canvas dimensions as reference 1.",
                                          "references":  [
-                                                            "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-exploration/v1/hurdle-source.png",
+                                                            "C:/dev/Exploritaire/public/assets/sources/kin/hero/sprites/world/exploration/exploration-actions/hurdle-source.png",
                                                             "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
                                                         ]
                                      },
@@ -2133,7 +2133,7 @@
                       "correction":  {
                                          "prompt":  "Edit reference 1, the existing 8-column by 6-row Hero sprite atlas. Preserve all 44 dogs, exact cell order, framing, canine poses, markings, face expressions, camera views and drawing registration. Reference 2 is the actual Hero style reference; do not add its setting. REMOVE THE TRANSLUCENT WHITE PAPER BACKING EVERYWHERE BETWEEN THE DOGS, INCLUDING THE OUTER CORNERS, GUTTERS AND FOUR EMPTY LOWER-RIGHT CELLS. These surroundings must be genuinely transparent with alpha ZERO, not off-white, not misty semi-transparent paper. Keep all pale ivory fur, ears, muzzle and paws substantially OPAQUE; do not erase or key pale paint. Keep the actual watercolor dogs intact. No new shadows, paper, texture, halos, checkerboard, gridlines, labels or background. Exact 8 by 6 registration and same canvas dimensions as reference 1.",
                                          "references":  [
-                                                            "C:/dev/Exploritaire/public/assets/sources/characters/hero/world-exploration/v1/mantle-source.png",
+                                                            "C:/dev/Exploritaire/public/assets/sources/kin/hero/sprites/world/exploration/exploration-actions/mantle-source.png",
                                                             "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
                                                         ]
                                      },

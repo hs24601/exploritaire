@@ -13,7 +13,7 @@ function MotifStudy({actor}:{actor:MotifActor}) {
  const mochiLayers=ACTOR_HOLO_LAYERS[ACTOR_HOLO_ART.mochi];
  return <section className="actor-motif-study" data-motif-study={actor}>
   <h2>{name} · {actor==='hero'?'Flame':'Greenery'}</h2>
-  <div className="actor-motif-study__card"><TradingCard id={'motif-study-'+actor} title={name} art={actor==='mochi'?<LayeredCardArt {...mochiLayers} subject={vineVariant?`${import.meta.env.BASE_URL}assets/runtime/ui/holocards/layered/mochi-watercolor-v3-vines.png`:mochiLayers.subject} label={name}/>:<ActorCardArt sprite={ACTOR_HOLO_ART[actor]} label={name}/>} /></div>
+  <div className="actor-motif-study__card"><TradingCard id={'motif-study-'+actor} title={name} art={actor==='mochi'?<LayeredCardArt {...mochiLayers} subject={vineVariant?`${import.meta.env.BASE_URL}assets/runtime/kin/mochi/portraits/vine-adorned/mochi-watercolor-v3-vines.png`:mochiLayers.subject} label={name}/>:<ActorCardArt sprite={ACTOR_HOLO_ART[actor]} label={name}/>} /></div>
   {actor==='mochi'?<fieldset><legend>Mochi artwork</legend><label><input type="checkbox" checked={vineVariant} onChange={e=>setVineVariant(e.target.checked)}/>Vine-wrapped variant</label></fieldset>:<>
   <fieldset><legend>{name} layers</legend>
    <label><input type="checkbox" checked={options.enabled} onChange={e=>setActorMotifOptions(actor,{enabled:e.target.checked})}/>Element motifs</label>

@@ -14,8 +14,8 @@ import './woodsHandBoard.css';
 type KhadrootRig={root:THREE.Object3D;attack(now:number,localTarget:THREE.Vector3):void;hurt(now:number):void;defeat(now:number):void;reset():void};
 type Options={playMeteo?:(receipts:number,impact:()=>void,done:()=>void)=>boolean;occluders?:THREE.Object3D[];canvas?:HTMLCanvasElement;camera:THREE.PerspectiveCamera;hero:THREE.Object3D;khadroot:KhadrootRig;reduced:boolean;enabled:()=>boolean;paused:()=>boolean};
 const asset=(path:string)=>`${import.meta.env.BASE_URL}assets/runtime/${path}`;
-const ART={fire:asset('spells/fireball/v1/fireball.png'),lustro:asset('ui/stickers/lustro-v1/face-confident.png'),mochiFace:asset('characters/mochi/expressions/emojis/watercolor/v1/mochi_emoji_happy.png'),
- swipes:asset('ui/holocards/mochi-fast-swipes/v1/mochi-fast-swipes.png')};
+const ART={fire:asset('spells/fireball/v1/fireball.png'),lustro:asset('ui/stickers/lustro-v1/face-confident.png'),mochiFace:asset('kin/mochi/expressions/watercolor-emojis/mochi_emoji_happy.png'),
+ swipes:asset('abilities/fast-swipes/swipe-portrait/mochi-fast-swipes.png')};
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,cls='',text='')=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n;};
 const button=(cls:string,text='')=>{const b=el('button',cls,text);b.type='button';return b;};
 const label=(rank:number)=>RANK_LABELS[rank];

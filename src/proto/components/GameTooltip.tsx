@@ -2,6 +2,7 @@ import { resolveTooltipTerm, tooltipParts, tooltipHeading } from '../tooltipTerm
 import { gameTime } from '../../gameTime';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import './GameTooltip.css';
 
 const HOVER_DELAY = 350;
 const LONG_PRESS = 500;
@@ -17,14 +18,14 @@ const stickerJumbo = (anchor: Element) => anchor.closest('.flurry-memory')?.clos
   ?? anchor.closest('.card-jumbo:has(.flurry-memory)');
 
 /** Elements a tap already does something on; those show their tip on long-press only. */
-const interactive = (el: Element) => Boolean(el.closest('button, a[href], input, select, textarea, label, [role="button"], [draggable="true"]'));
+const interactive = (el: Element) => Boolean(el.closest('button, a[href], input, select, textarea, label, [role="button"], [draggable="true"], [data-tooltip-action]'));
 
 /** Replaces the browser's title tooltip across the page with a parchment one.
  * Any element with a `title` gets it: hover or keyboard focus on desktop,
  * long-press (or a tap on plain text) on touch. While the tip shows, the
  * element's `title` is parked so the native tooltip can't appear, then put back
  * so React and screen readers still see it. */
-export function GameTooltip() {
+export function GameTooltip({ enableTitles = TOOLTIPS_ENABLED }: { enableTitles?: boolean }) {
   const [tip, setTip] = useState<Tip | null>(null);
   const tipRef = useRef<Tip | null>(null);
   const timer = useRef<number>(0);
@@ -70,7 +71,7 @@ export function GameTooltip() {
     const show = (el: Element) => {
       if (el.hasAttribute('data-combat-inspected')) return;
       const text = park(el).trim();
-      if (!TOOLTIPS_ENABLED && !el.hasAttribute('data-game-tooltip')) return;
+      if (!enableTitles && !el.hasAttribute('data-game-tooltip')) return;
       if (!text || !el.isConnected) { hide(); return; }
       el.setAttribute('aria-describedby', TIP_ID);
       tipRef.current = { anchor: el, text };
@@ -108,13 +109,14 @@ export function GameTooltip() {
     let touchIntent=false;
     let press: { x: number; y: number; el: Element; shown: boolean } | null = null;
     const down = (event: PointerEvent) => {
+      window.removeEventListener('click', swallow, true);
       if (event.target instanceof Element && event.target.closest('.game-tooltip')) return;
       if (event.pointerType !== 'touch') { hideBubble(); return; }
       if(event.target instanceof Element && event.target.closest('[data-board-piece="tile"],[data-board-piece="actor"],[data-immutable-region]')){hide();return;}
       const wasShowing = tipRef.current?.anchor;
       hide();
       const el = titled(event.target);
-      if (!el) { press = null; return; }
+      if (!el || el.hasAttribute('data-touch-hold')) { press = null; return; }
       // Intent summaries have no gameplay action: one tap opens their explanation.
       if (el.hasAttribute('data-game-tooltip')) {
         touchIntent=true;
@@ -128,14 +130,17 @@ export function GameTooltip() {
       timer.current = gameTime.setTimeout(() => { if (!press) return; press.shown = true; show(el); timer.current = gameTime.setTimeout(hide, TOUCH_SHOW_MS); }, LONG_PRESS);
     };
     const move = (event: PointerEvent) => {
-      if (!press || event.pointerType !== 'touch' || press.shown) return;
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) { press = null; hide(); }
+      if (!press || event.pointerType !== 'touch' || (press.shown && !enableTitles)) return;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) >= (enableTitles ? 6 : 10)) { press = null; hide(); }
     };
     const up = (event: PointerEvent) => {
       if (event.pointerType !== 'touch' || !press) return;
       if (!press.shown) { press = null; hide(); return; }
       // A long-press that showed a tip is not also a tap on the button under it.
-      if (interactive(press.el) && tipRef.current) window.addEventListener('click', swallow, { capture: true, once: true });
+      if (interactive(press.el) && tipRef.current) {
+        if (enableTitles) event.preventDefault();
+        window.addEventListener('click', swallow, { capture: true, once: true });
+      }
       press = null;
     };
     const swallow = (event: Event) => { event.preventDefault(); event.stopPropagation(); };
@@ -182,17 +187,18 @@ export function GameTooltip() {
       document.removeEventListener('keydown', key);
       document.removeEventListener('click', click);
       document.removeEventListener('contextmenu', contextMenu, true);
+      window.removeEventListener('click', swallow, true);
       window.removeEventListener('scroll', hideBubble, true);
       window.removeEventListener('wheel', hideBubble);
       window.removeEventListener('blur', hide);
     };
-  }, []);
+  }, [enableTitles]);
 
-  return tip ? createPortal(<TooltipBubble tip={tip} />, stickerJumbo(tip.anchor) ?? document.body) : null;
+  return tip ? createPortal(<TooltipBubble tip={tip} passive={enableTitles} />, stickerJumbo(tip.anchor) ?? document.body) : null;
 }
 
 /** Sits above its anchor, flips below when there's no room, and stays on screen. */
-export function TooltipBubble({ tip, inspection = false, depth = 0 }: { tip: Tip; inspection?: boolean; depth?: number }) {
+export function TooltipBubble({ tip, inspection = false, depth = 0, passive = false }: { tip: Tip; inspection?: boolean; depth?: number; passive?: boolean }) {
   const jumbo = stickerJumbo(tip.anchor);
   const [child, setChild] = useState<Tip | null>(null);
   useEffect(() => setChild(null), [tip.text, tip.anchor]);
@@ -231,11 +237,11 @@ export function TooltipBubble({ tip, inspection = false, depth = 0 }: { tip: Tip
     return () => { observer.disconnect(); window.removeEventListener('resize', position); window.removeEventListener('scroll', position, true); };
   }, [tip, jumbo]);
   return <div ref={ref} id={depth ? `tooltip-term-${depth}` : inspection ? 'combat-inspection-tooltip' : TIP_ID} role="tooltip" className={`game-tooltip${inspection ? ' combat-inspection' : ''}${place?.below ? ' game-tooltip--below' : ''}`}
-    style={{ ...(place ? { left: place.left, top: place.top, ['--arrow-x' as string]: `${place.arrow}px` } : { left: 0, top: 0, visibility: 'hidden' as const }), zIndex: 70000 + depth * 10, pointerEvents: 'auto', ...(inspection || jumbo ? { animation: 'none' } : {}) }}>
+    style={{ ...(place ? { left: place.left, top: place.top, ['--arrow-x' as string]: `${place.arrow}px` } : { left: 0, top: 0, visibility: 'hidden' as const }), zIndex: 70000 + depth * 10, pointerEvents: passive ? 'none' : 'auto', ...(inspection || jumbo ? { animation: 'none' } : {}) }}>
     {title && <strong className="game-tooltip__title">{title}</strong>}
     <div className="game-tooltip__details">{tooltipParts(text).map((part, index) => {
       const term = part.id ? resolveTooltipTerm(part.id) : null;
-      if (!term || depth >= 5) return <span key={index}>{part.label}</span>;
+      if (passive || !term || depth >= 5) return <span key={index}>{part.label}</span>;
       const open = (anchor: Element) => setChild({ anchor, title: term.name, text: term.description });
       return <button type="button" className="game-tooltip__term" key={index} aria-expanded={child?.anchor.getAttribute('data-term') === part.id} data-term={part.id} onPointerEnter={e => { if (e.pointerType !== 'touch') open(e.currentTarget); }} onFocus={e => open(e.currentTarget)} onClick={e => { e.preventDefault(); e.stopPropagation(); open(e.currentTarget); }}>{part.label}</button>;
     })}</div>

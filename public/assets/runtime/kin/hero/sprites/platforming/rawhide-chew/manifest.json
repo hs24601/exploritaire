@@ -1,0 +1,49 @@
+{
+  "clips": [
+    {
+      "anchor": "feet",
+      "image": "hero-chew.png",
+      "fps": 5,
+      "frames": [
+        {
+          "rect": {
+            "height": 256,
+            "width": 256,
+            "x": 0,
+            "y": 0
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "height": 256,
+            "width": 256,
+            "x": 256,
+            "y": 0
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "height": 256,
+            "width": 256,
+            "x": 512,
+            "y": 0
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ],
+      "loop": true,
+      "id": "bone-chew"
+    }
+  ]
+}

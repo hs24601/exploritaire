@@ -6,7 +6,7 @@ rear, plus overhead. It replaces the vertically compressed ordinary walking
 frames. Crouching at rest retains the established crouch pose.
 
 The byte-identical ImageGen master, exact prompt, reference roles and SHA-256
-digests are under `public/assets/sources/characters/hero/world-traversal/v1/`.
+digests are under `public/assets/sources/kin/hero/sprites/world/traversal/low-crawl/`.
 The actual Hero berry painting supplies watercolor style, the existing bound
 atlas supplies camera order and identity, and the platform crawl supplies low
 canine anatomy. Original alpha is preserved, including opaque pale fur.

@@ -3,8 +3,8 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Drawing
 $root=Split-Path $PSScriptRoot -Parent
 if($Family -notmatch '^[a-z-]+/v[0-9]+$'){throw 'Invalid family'}
-$sourceRoot=Join-Path $root ('public/assets/sources/characters/hero/'+$Family)
-$runtimeRoot=Join-Path $root ('public/assets/runtime/characters/hero/'+$Family)
+$sourceRoot=Join-Path $root ('public/assets/sources/kin/hero/'+$Family)
+$runtimeRoot=Join-Path $root ('public/assets/runtime/kin/hero/'+$Family)
 New-Item -ItemType Directory -Force $sourceRoot,$runtimeRoot | Out-Null
 $data=Get-Content (Join-Path $root $Generation) -Raw | ConvertFrom-Json
 $views=@('low-0','low-1','low-2','low-3','low-4','high-0','high-1','high-2','high-3','high-4','top-0')

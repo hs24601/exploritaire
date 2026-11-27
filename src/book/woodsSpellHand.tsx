@@ -29,7 +29,7 @@ function LenticularFace({flurry=false}:{flurry?:boolean}){
  return <span ref={ref} className="woods-holo-face" data-lustro-expression={flurry?undefined:face} data-flurry-expression={flurry?flurryFace:undefined} style={{backgroundImage:`url("${flurry?FLURRY_FACE_ATLAS.url:LUSTRO_ART+'faces.png'}")`,backgroundSize:flurry?'400% 500%':'300% 300%',backgroundPosition:flurry?`${cell.column/3*100}% ${cell.row/4*100}%`:lustroFacePosition(face)}}/>;
 }
 function EntityArt({entity}:{entity:WoodsEntity}){
- if(entity==='hero')return <LayeredCardArt background={background} subject={`${import.meta.env.BASE_URL}assets/runtime/ui/holocards/layered/hero-watercolor-v6-organic-bobtail.png`} label="Hero"/>;
+ if(entity==='hero')return <LayeredCardArt background={background} subject={`${import.meta.env.BASE_URL}assets/runtime/kin/hero/portraits/organic-bobtail/hero-watercolor-v6-organic-bobtail.png`} label="Hero"/>;
 
  return <div className="layered-card-art woods-holo-art" role="img" aria-label={`${entityDefinition(entity).name} layered portrait`}>
   <img className="layered-card-art__background" src={background} alt="" draggable={false}/>

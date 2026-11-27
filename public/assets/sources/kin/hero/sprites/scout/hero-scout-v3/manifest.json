@@ -1,0 +1,37 @@
+{
+  "method": "Built-in ImageGen",
+  "baseAtlas": "public/assets/runtime/kin/hero/sprites/scout/hero-scout-v2/hero-scout-atlas.png",
+  "runtime": "public/assets/runtime/kin/hero/sprites/scout/hero-scout-v3/hero-scout-atlas.png",
+  "width": 1920,
+  "height": 832,
+  "cellWidth": 384,
+  "cellHeight": 416,
+  "registrationY": 395,
+  "replacement": {
+    "row": 1,
+    "column": 0,
+    "pose": "play-bow"
+  },
+  "passes": [
+    {
+      "file": "play-bow-boot-draft.png",
+      "prompt": "Precise two-region repair of the isolated watercolor Hero scout play-bow sprite in reference 1. Replace the exposed far-left HIND paw below the pink ankle sock with a proper brown leather hiking boot with thick dark sole and muted pink laces, matching the standing scout boots in reference 3. It must read as a complete boot on the planted rear foot. Keep the two extended FRONT paws bare with continuous apricot-to-cream fur, no bands, socks, gloves or boots on either foreleg. Remove the extra long grey-brown serrated strip of fur protruding downward below the backpack and torso between the booted hind leg and the nearest front elbow, at the lower left edge of the body behind the forward sleeve. Bring the underside up to a tidy smooth clothed belly contour, with clean transparent negative space beneath the chest and belly. Preserve the normal white cheek and neck ruff above the scarf. Keep exact play bow silhouette and placement elsewhere, expression, tiny rump bobtail, gear, and orange flag with yellow sun and green palm. Reference 2, the actual Hero berry watercolor, controls paint style: soft merged broad washes, pigment pools, broken brushed edges, matte gauzy gouache accents. Ref 3 is footwear design only. Keep the sprite isolated, full body with padding and generous true RGBA transparent background, including under the chest, no cast shadow, no scenery or paper.",
+      "references": [
+        "v2 play-bow master",
+        "Hero berry painting",
+        "v2 atlas boot design"
+      ],
+      "sha256": "3069863639d0a91ea1b22b721c88fb121cb328c3aa9a4c839493583172589764"
+    },
+    {
+      "file": "play-bow-boot-master.png",
+      "prompt": "Extract just the scout dog from reference 1 and return the full isolated watercolor sprite with true transparent RGBA. Remove the foggy beige halo and all cast shadow, including the large gap between the rear boot and front paws. Precisely preserve the repaired smooth clothed underside and brown leather boot with pink laces on the single visible rear leg. Add a narrow pink sock above that rear boot collar as in reference 2. The two front paws stay entirely bare. Keep shape, framing, face, tail and small yellow sun/green palm pennant from reference 1. Ref 2 is previous pose and rear-sock placement only, do not copy the exposed hind paw or extra underbelly ruff. Ref 3 is the actual Hero watercolor style guide: gentle wet paint washes, merged pigment and matte highlights. Paint opaque fur surrounded by zero-alpha clear space, no haze, no soil, no stroke around the silhouette.",
+      "references": [
+        "Boot repair draft",
+        "v2 play-bow master",
+        "Hero berry painting"
+      ],
+      "sha256": "b177fc0f115a5dccf5e2014f5752ebe494f196042ab0d8f8d798620eb9d7bf36"
+    }
+  ]
+}

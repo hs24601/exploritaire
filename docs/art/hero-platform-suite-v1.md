@@ -34,10 +34,10 @@ Derived sequences: stand-up, crouch-hold, jump-prepare, jump-rise, jump-apex, fa
 
 ## Files and registration
 
-- Runtime: `public/assets/runtime/characters/hero/platforming/suite-v1/`.
+- Runtime: `public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/`.
 - Each `<clip>.png` is a horizontal **3072 × 384** atlas with eight **384 × 384** cells. Individual transparent PNGs are in `frames/<clip>/00.png` through `07.png`.
 - `manifest.json` includes atlas rectangles, normalized pivots, frame durations, facing, loop settings, suggested contact events, source bounds and validation statistics.
-- Original selected ImageGen sheets are retained byte-for-byte in `public/assets/sources/characters/hero/platforming/suite-v1/`. `reference.png` is the approved sitting art. Rejected interaction-halo and seated-standing-idle attempts are retained in `rejected/` for provenance and are not runtime artwork.
+- Original selected ImageGen sheets are retained byte-for-byte in `public/assets/sources/kin/hero/sprites/platforming/platforming-motion-library/`. `reference.png` is the approved sitting art. Rejected interaction-halo and seated-standing-idle attempts are retained in `rejected/` for provenance and are not runtime artwork.
 - Exact prompts and reference roles: `docs/art/hero-platform-suite-v1-production.json`, also copied as source `prompts.json`.
 
 Canonical movement faces right. Mirror at runtime for left movement; brake-turn intentionally includes a turn to left. Frames are in-place: game physics supplies displacement, jump trajectories and collisions. Tail/flame effects remain separate.
@@ -49,8 +49,8 @@ Packing uses a uniform scale per source sheet and translation onto transparent c
 `player.mjs` supplies a framework-independent animation clock and Canvas renderer. The preview imports the matching copy in `tools/hero-platform-player.mjs`.
 
 ```js
-import { loadHeroPlatformSuite } from '/assets/runtime/characters/hero/platforming/suite-v1/player.mjs';
-const suite = await loadHeroPlatformSuite('/assets/runtime/characters/hero/platforming/suite-v1/');
+import { loadHeroPlatformSuite } from '/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/player.mjs';
+const suite = await loadHeroPlatformSuite('/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/');
 const animator = suite.createAnimator();
 animator.play('run', { mirror: false });
 const atlas = await suite.image('run');

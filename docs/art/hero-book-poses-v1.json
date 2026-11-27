@@ -1,7 +1,7 @@
 {
   "generator": "built-in image_gen",
   "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-  "identityReference": "public/assets/runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png",
+  "identityReference": "public/assets/runtime/kin/hero/portraits/ordinary-day/hero-watercolor-v5-ordinary-day.png",
   "selected": [
     {
       "id": "hero-wonder-seated-v1",
@@ -10,8 +10,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\hero-watercolor-v5-ordinary-day.png"
       ],
-      "runtime": "public/assets/runtime/characters/hero/book/v1/hero-wonder-seated-v1.png",
-      "source": "public/assets/sources/characters/hero/book/v1/hero-wonder-seated-v1.png"
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/storybook-woodland-poses/hero-wonder-seated-v1.png",
+      "source": "public/assets/sources/kin/hero/sprites/world/storybook-woodland-poses/hero-wonder-seated-v1.png"
     },
     {
       "id": "hero-careful-step-v2",
@@ -20,8 +20,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
         "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-0caa6c20-69af-41eb-abee-e93011022965.png"
       ],
-      "runtime": "public/assets/runtime/characters/hero/book/v1/hero-careful-step-v2.png",
-      "source": "public/assets/sources/characters/hero/book/v1/hero-careful-step-v2.png"
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/storybook-woodland-poses/hero-careful-step-v2.png",
+      "source": "public/assets/sources/kin/hero/sprites/world/storybook-woodland-poses/hero-careful-step-v2.png"
     },
     {
       "id": "hero-play-bow-v2",
@@ -30,8 +30,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
         "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-0caa6c20-69af-41eb-abee-e93011022965.png"
       ],
-      "runtime": "public/assets/runtime/characters/hero/book/v1/hero-play-bow-v2.png",
-      "source": "public/assets/sources/characters/hero/book/v1/hero-play-bow-v2.png"
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/storybook-woodland-poses/hero-play-bow-v2.png",
+      "source": "public/assets/sources/kin/hero/sprites/world/storybook-woodland-poses/hero-play-bow-v2.png"
     },
     {
       "id": "hero-curled-rest-v2",
@@ -40,8 +40,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\quests\\hero-snuffling-berries-blue-paint-v3.png",
         "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-0caa6c20-69af-41eb-abee-e93011022965.png"
       ],
-      "runtime": "public/assets/runtime/characters/hero/book/v1/hero-curled-rest-v2.png",
-      "source": "public/assets/sources/characters/hero/book/v1/hero-curled-rest-v2.png"
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/storybook-woodland-poses/hero-curled-rest-v2.png",
+      "source": "public/assets/sources/kin/hero/sprites/world/storybook-woodland-poses/hero-curled-rest-v2.png"
     }
   ],
   "notes": "Sources and runtime copies are byte-identical. Complete isolated poses, natural bobtail, opaque pale fur, alpha retained. Soft RGB colours can remain under fully transparent pixels; the paper-cut renderer uses the original alpha silhouette. Runtime geometry clips the cutout, not a rectangular sprite frame. Earlier unselected generated variants remain in the generation history."

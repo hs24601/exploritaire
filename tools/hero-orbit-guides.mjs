@@ -5,10 +5,10 @@ import fs from 'node:fs';
 import { decode, encode, canvas, blit, bounds, crop } from './png-rgba.mjs';
 const P = await import(new URL('../src/proto/heroOrbitProxy.ts', import.meta.url).href);
 const size = Number(process.argv[2] ?? 1024);
-const guides = 'public/assets/sources/characters/hero/orbit/watercolor/v1/guides', review = 'artifacts/hero-orbit';
+const guides = 'public/assets/sources/kin/hero/sprites/combat/standing-low-orbit/guides', review = 'artifacts/hero-orbit';
 fs.mkdirSync(guides, { recursive: true }); fs.mkdirSync(review, { recursive: true });
 // Approved low standing views, in the rig's order (directionalSprites.ts).
-const approved = decode('public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png');
+const approved = decode('public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png');
 const rects = [[48,20,206,251],[41,289,272,248],[19,546,321,254],[25,812,291,256],[55,1080,183,273]];
 const cell = 300, strip = canvas(cell * P.HERO_ORBIT_VIEWS.length, cell * 2, 40);
 P.HERO_ORBIT_VIEWS.forEach((view, i) => {

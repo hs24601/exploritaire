@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "file": "rawhide-source.png",
+      "prompt": "Standalone watercolor game sprite of one cream-tan knotted rolled rawhide chew bone, compact silhouette, side view, horizontal, centered and separated from edges. Use supplied Hero berry painting strictly for the hand-painted softly merging wash marks and uneven pigment, with pale matte gouache highlights. CRITICAL output isolated cutout on real transparent alpha, zero alpha everywhere outside object; do not paint any background, paper, floor, halo, light, glow, or shadow. It must read against a dark desktop. No other objects.",
+      "sha256": "ac58f246ce419603fc54dca8aa8501e31ca81ab45d6fce7b307e85ea0d4b7ed7"
+    },
+    {
+      "file": "chew-source.png",
+      "prompt": "Transparent game sprite sheet of exactly three equally spaced exposed pose drawings in a single horizontal row, one full-body dog per third, generous clear gutters. All three show the same right-facing low sphinx corgi Hero in strict side view, chest near ground, front paws wrapped around a small cream-tan knotted rolled rawhide bone, gently chewing where she stopped. Register all toes and belly on identical baseline and same horizontal offset within each third, exact same body size and silhouette, short organic bobtail, never crop feet or ears. Three poses vary only jaw and tiny head bob: closed, jaw slightly open gripping bone, closed with muzzle slightly dipped. First reference Hero berry painting is the style reference and identity; second reference only character proportions and markings, not paint style. Adult female tricolor, moderate upright ears, short broad muzzle, amber eye, white ruff, natural black saddle and tan points. Hand-painted broad soft merging washes, irregular pigment blooms, broken edges, understated matte gouache and restrained painted features. True transparent alpha, opaque cream fur, no paper, labels or shadows.",
+      "sha256": "4582c30b0398582ee622647c7688bad907b0e1827b319968e9b2ec1f582006ca"
+    }
+  ],
+  "generator": "Built-in ImageGen",
+  "chewIdentityReference": "public/assets/runtime/kin/hero/sprites/platforming/seated-side/hero-sitting-side-v1.png",
+  "packing": "Original alpha preserved. Mechanical bounds crop and resize for the rawhide. Chew frames uniformly scaled into three 256 px cells with one shared paw baseline.",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+}

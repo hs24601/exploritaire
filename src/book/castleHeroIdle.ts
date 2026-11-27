@@ -19,7 +19,7 @@ const sequences: Record<Exclude<AmbientActivity, 'pant'>, readonly Beat[]> = {
 };
 
 export const CASTLE_IDLE_ATLAS = {
-  root: 'characters/hero/castle/activities-v1/',
+  root: 'kin/hero/sprites/world/castle/courtyard-activities/',
   cell: 256,
   columns: 4,
   size: 1024,

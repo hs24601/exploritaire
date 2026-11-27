@@ -5,10 +5,10 @@ export function mountGridTableau(options){
  const setTimeout=(fn,ms)=>{const id=globalThis.setTimeout(()=>{timers.delete(id);fn();},ms);timers.add(id);return id;};
   const teamHand = options.teamHand === true;
   const kinRoster = [
-    ['Mochi', 'characters/mochi/expressions/emojis/watercolor/v1/mochi_emoji_happy.png'],
-    ['Hero', 'characters/hero/poses/watercolor/v1-opening/hero-happy-emoji-v1.png'],
-    ['Demi', 'characters/dem/demi-expressions-v1.png', true],
-    ['Banks', 'characters/banks/expressions/emojis/watercolor/v6/banks_emoji_happy.png'],
+    ['Mochi', 'kin/mochi/expressions/watercolor-emojis/mochi_emoji_happy.png'],
+    ['Hero', 'kin/hero/sprites/world/opening-poses/hero-happy-emoji-v1.png'],
+    ['Demi', 'kin/demi/expressions/demi-expressions-v1.png', true],
+    ['Banks', 'kin/banks/expressions/neutral-frontal/banks_emoji_happy.png'],
     ['River', 'keru/riv/riv-watercolor-v2.png'],
   ];
   const factor=options.cardScale ?? 1;

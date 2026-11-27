@@ -11,4 +11,14 @@ export const WORLD_1111_LAYOUT={
  camera:{yaw:1.026,pitch:.426,distance:12.5},
 } as const;
 
+export const WORLD_TREE_PORTAL_ARRIVAL = {
+ approachLift:9,
+ hero:{x:4.426587655513873,z:57.143042928323396,heading:3.145254700920247},
+ camera:{
+  position:[5.297585867479928,.6638781657862345,59.151182134989426],
+  target:[5.266877228756442,.983324301618947,58.20407541143115],
+  yaw:.03241227571899186,pitch:-.3251449408799681,distance:2.1478482825444933,fov:60,
+ },
+} as const;
+
 export function canCollectFlurry(hero:{x:number;z:number},point:{x:number;z:number}){return Math.hypot(hero.x-point.x,hero.z-point.z)<=6;}

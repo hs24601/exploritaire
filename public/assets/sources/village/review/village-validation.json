@@ -14,7 +14,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Simple campfire flame nested above two crossed logs Intended runtime 64x64; master at least 128x128, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Small isolated painted badge without surrounding medallion, ring, frame or label; broad simple silhouette, transparent background. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -32,7 +32,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Single warm gold lit lantern Intended runtime 64x64; master at least 128x128, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Small isolated painted badge without surrounding medallion, ring, frame or label; broad simple silhouette, transparent background. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -50,7 +50,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Woven basket with raspberry-red berries Intended runtime 64x64; master at least 128x128, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Small isolated painted badge without surrounding medallion, ring, frame or label; broad simple silhouette, transparent background. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -68,7 +68,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Split-log bench with folded muted-color blanket. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -86,7 +86,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Split-log bench with folded muted-color blanket. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -104,7 +104,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Grassy mound with round wooden door and chimney pipe. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -122,7 +122,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Grassy mound with round wooden door and chimney pipe. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -140,7 +140,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Stone ring with crossed logs and single warm static flame. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -158,7 +158,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Stone ring with crossed logs and single warm static flame. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -176,7 +176,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Crooked wooden post with lit warm gold glass lantern for dusk, no external glow or light pool. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -194,7 +194,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Crooked wooden post with lit warm gold glass lantern for dusk, no external glow or light pool. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -212,7 +212,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Crooked wooden post with unlit glass lantern. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -230,7 +230,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Crooked wooden post with unlit glass lantern. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -248,7 +248,7 @@
     "prompt": "Use case: stylized-concept. Production sprite: ONE lean-to shelter viewed FROM DIRECTLY ABOVE as an orthographic ROOF PLAN, only 15 degrees tilted away from true vertical. Look down onto the broad slanted leafy roof: the roof fills almost the entire shelter footprint. Branch supports are foreshortened dots/short stubs beneath the roof, NOT long upright poles. Only a small end of the bedroll peeks out below the roof. No frontal doorway view, no side-on triangular tent silhouette, no horizon, no isometric 45-degree angle. It should look like a roof seen by a drone looking straight down, aligned north-south with square game tiles. Image 1 actual Hero berry painting is PRIMARY hand-painted watercolor STYLE ONLY; image 2 Scratch supports broad soft wet washes. Neither is subject/scenery. BIG softly merged watercolor masses, broad chunky leaf-roof patches rather than individual leaves, warm ochre wooden branches, muted sage greens, small slate bedroll, top-left late-morning light. Single cutout centered inside square canvas with 8% empty padding, opaque painted interior and real transparent exterior. NO ground patch, cast shadow, surrounding plants, berries, paper, border, text or UI. Master at least 320x320.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -266,7 +266,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Slanted branch-and-leaf shelter with bedroll peeking out. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -284,7 +284,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Wooden drying frame with berries drying on strings. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -302,7 +302,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Wooden drying frame with berries drying on strings. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -320,7 +320,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Little cart stall with striped cream and berry-pink awning and berry baskets. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -338,7 +338,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Little cart stall with striped cream and berry-pink awning and berry baskets. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -356,7 +356,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Round fieldstone well with little shingle roof. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -374,7 +374,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Round fieldstone well with little shingle roof. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -392,7 +392,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Open small roofed shed stacked with chunky logs. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -410,7 +410,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Reference scenes are NOT content: NEVER add berries, bushes, stones, plants, ground or scenery unless explicitly requested in the subject. Open small roofed shed stacked with chunky logs. One isolated object, no ground, green #74c487 gold #f0bf5a warm lumber #d3a46d slate #a9bbd0 as appropriate. Intended runtime 160x160; master at least 320x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile.  Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -428,7 +428,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Rustic twig arch with a lantern hook at map edge, no characters or ground. Aspect 160:160, footprint 1 by 1 tiles; master at least 320x320. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -446,7 +446,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Rustic twig arch with a lantern hook at map edge, no characters or ground. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -464,7 +464,7 @@
     "prompt": "Use case: stylized-concept. Paint a FLAT FULL-BLEED RECTANGULAR TEXTURE, portrait 5:7. very DARK PLUM (#3b203c), subtle quiet sweeping vine marks. This is the background SURFACE of a playing-card back, NOT a fruit or object illustration. OPAQUE paint must fill EVERY pixel to all four canvas edges. Overall very low contrast, center calm/dark enough for bright white stock-count text. Absolutely NO focal object, berries, fruit, branches, stones, animals, scenery, detached cutouts, transparent holes, border, lettering, symbols or mockup. References: actual Hero image 1 is PRIMARY broad hand-painted watercolor style only, Scratch image 2 supports soft merged wet washes only. Copy NO reference subjects or colors. Big diluted softly merging wet-on-wet pigment masses, a few broad soft pattern marks, no digital gradients or paper-noise filter. Render only dark patterned rectangular surface at least 360x504 pixels.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -482,7 +482,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Deep dark plum with subtle loose vine pattern Intended runtime 180x252; master at least 360x504, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Full bleed portrait 5:7 canvas, dark enough for white overlaid stock-count text, calm center, no rank/text/numerals/border/frame/card mockup. Paint surface only, opaque throughout rectangular canvas. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -500,7 +500,7 @@
     "prompt": "Use case: stylized-concept. Paint a FLAT FULL-BLEED RECTANGULAR TEXTURE, portrait 5:7. very DARK DEEP FOREST GREEN (#193c2d), subtle quiet loose leaf/wood-grain marks. This is the background SURFACE of a playing-card back, NOT a fruit or object illustration. OPAQUE paint must fill EVERY pixel to all four canvas edges. Overall very low contrast, center calm/dark enough for bright white stock-count text. Absolutely NO focal object, berries, fruit, branches, stones, animals, scenery, detached cutouts, transparent holes, border, lettering, symbols or mockup. References: actual Hero image 1 is PRIMARY broad hand-painted watercolor style only, Scratch image 2 supports soft merged wet washes only. Copy NO reference subjects or colors. Big diluted softly merging wet-on-wet pigment masses, a few broad soft pattern marks, no digital gradients or paper-noise filter. Render only dark patterned rectangular surface at least 360x504 pixels.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -518,7 +518,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Deep dark green, subtle broad leaf and wood-grain pattern Intended runtime 180x252; master at least 360x504, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Full bleed portrait 5:7 canvas, dark enough for white overlaid stock-count text, calm center, no rank/text/numerals/border/frame/card mockup. Paint surface only, opaque throughout rectangular canvas. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -536,7 +536,7 @@
     "prompt": "Use case: stylized-concept. Paint a FLAT FULL-BLEED RECTANGULAR TEXTURE, portrait 5:7. very DARK SLATE (#26364c), broad subtle nearly horizontal geological strata marks. This is the background SURFACE of a playing-card back, NOT a fruit or object illustration. OPAQUE paint must fill EVERY pixel to all four canvas edges. Overall very low contrast, center calm/dark enough for bright white stock-count text. Absolutely NO focal object, berries, fruit, branches, stones, animals, scenery, detached cutouts, transparent holes, border, lettering, symbols or mockup. References: actual Hero image 1 is PRIMARY broad hand-painted watercolor style only, Scratch image 2 supports soft merged wet washes only. Copy NO reference subjects or colors. Big diluted softly merging wet-on-wet pigment masses, a few broad soft pattern marks, no digital gradients or paper-noise filter. Render only dark patterned rectangular surface at least 360x504 pixels.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -554,7 +554,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Dark slate blue-grey with broad quiet strata pattern Intended runtime 180x252; master at least 360x504, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Full bleed portrait 5:7 canvas, dark enough for white overlaid stock-count text, calm center, no rank/text/numerals/border/frame/card mockup. Paint surface only, opaque throughout rectangular canvas. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -572,7 +572,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Three pale green unripe bumpy manaberries, stemless and leafless, compact cluster Intended runtime 96x96; master at least 192x192, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -590,7 +590,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Three raspberry-red bumpy manaberries, stemless and leafless, one compact cluster Intended runtime 96x96; master at least 192x192, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -608,7 +608,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Small bundle of three chunky logs Intended runtime 96x96; master at least 192x192, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -626,7 +626,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Single grey-blue stone with simple glinting warm gold mineral vein Intended runtime 96x96; master at least 192x192, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -644,7 +644,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Single chunky grey-blue stone #a9bbd0 Intended runtime 96x96; master at least 192x192, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -662,7 +662,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Bramble Thicket: dense low thorny berry hedge with mostly pale green fruit, broad merged foliage clumps with sparse thorn accents; woven basket half full visible at front-left. Aspect 320:320, footprint 2 by 2 tiles; master at least 640x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -680,7 +680,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Bramble Thicket: dense low thorny berry hedge with mostly pale green fruit, broad merged foliage clumps with sparse thorn accents; woven basket half full visible at front-left. Canvas 320:320; master at least 640x640. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -698,7 +698,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Nine low berry bushes in a 3 by 3 arrangement, mostly unripe pale green bumpy fruit, woven basket half full by front-left edge. Aspect 320:320, footprint 2 by 2 tiles; master at least 640x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -717,7 +717,7 @@
     "references": [
       "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-41858009-ad33-421d-9900-f595a8df2b82.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -735,7 +735,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Nine low berry bushes in a 3 by 3 arrangement after harvesting, very few remaining fruit, mostly leafy clumps; woven basket half full by front-left edge. Aspect 320:320, footprint 2 by 2 tiles; master at least 640x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -754,7 +754,7 @@
     "references": [
       "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-41858009-ad33-421d-9900-f595a8df2b82.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -772,7 +772,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Low raspberry-red berry bushes arranged in nine distinct rounded clumps in a 3 by 3 layout. Raspberry-red stemless fruit, green #74c487 foliage, berry #e07aab accents, woven basket half full in front-left clearing. Aspect 320:320, footprint 2 by 2 tiles; master at least 640x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -790,7 +790,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Low raspberry-red berry bushes arranged in nine distinct rounded clumps in a 3 by 3 layout. Raspberry-red stemless fruit, green #74c487 foliage, berry #e07aab accents, woven basket half full in front-left clearing. Square canvas, 2 by 2 tile footprint, master at least 640x640. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -808,7 +808,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Old Oaks: few huge gnarled oak trees seen as enormous rounded crowns from overhead, mossy exposed roots in gaps, clearing at front-left with felled stump and axe. Aspect 480:320, footprint 3 by 2 tiles; master at least 960x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -826,7 +826,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Old Oaks: few huge gnarled oak trees seen as enormous rounded crowns from overhead, mossy exposed roots in gaps, clearing at front-left with felled stump and axe. Canvas 480:320; master at least 960x640. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -844,7 +844,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Birch and pine stand: crowns viewed as overlapping rounded and star-shaped canopy islands, trunks almost entirely hidden. Clearing at front-left with stump and axe viewed from above. Aspect 480:320, footprint 3 by 2 tiles; master at least 960x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -863,7 +863,7 @@
     "references": [
       "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-216c30f7-7f82-442b-b05d-1d9370e2b932.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -881,7 +881,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Birch and pine stand after heavy felling, widely separated canopy crowns with obvious gaps and several cut stumps; front-left stump with axe remains clear. Aspect 480:320, footprint 3 by 2 tiles; master at least 960x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -899,7 +899,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Birch and pine stand after heavy felling, widely separated canopy crowns with obvious gaps and several cut stumps; front-left stump with axe remains clear. Canvas aspect 480:320, footprint 3 by 2 tiles, master at least 960x640. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -917,7 +917,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Deep Seam, deep grey-blue #a9bbd0 quarry pit with dark recessed opening, large simple stepped ledges and rubble; warm tiny lantern illuminates pit mouth with pick leaning on wooden cart. Aspect 320:320, footprint 2 by 2 tiles; master at least 640x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -936,7 +936,7 @@
     "references": [
       "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-2871658b-ff2e-4d93-a156-fbdfe14acf70.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -954,7 +954,7 @@
     "prompt": "Use case: stylized-concept. Production GAME MAP SPRITE viewed FROM DIRECTLY ABOVE as an orthographic PLAN VIEW, just 15 degrees tilted away from true vertical. Drone camera pointing almost straight DOWN. Show TOP surfaces; hide nearly all tall vertical sides. For trees, crowns appear as rounded/star-shaped canopy islands and trunks almost entirely hidden. For roofs, roof fills almost entire footprint and supports are foreshortened stubs. For quarry, pit appears as concentric plan-view stepped ledges, not a frontal cave. For upright posts or frames, foreshorten their vertical height dramatically. NO frontal illustration, NO horizon, NO 45-degree isometric view. Subject: Rubble Pit, shallow grey-blue #a9bbd0 stone quarry cut into low hillside, large simple stepped stone ledges and rubble, central pit mouth with pick leaning on small wooden cart. Aspect 320:320, footprint 2 by 2 tiles; master at least 640x640. Image 1 actual Hero berry painting PRIMARY watercolor STYLE ONLY; image 2 Scratch soft wash method only. Never copy their animals, scenery or blue berries. BIG softly merged wet watercolor masses, broad chunky rounded dabs, grouped values, quiet patches, irregular paint edges and sparse loose gouache highlights. No tiny individual leaves, fine hairs, gritty grain, hard facets or digital rendering. Forest #74c487, berries #e07aab, stone #a9bbd0, gold #f0bf5a, lumber #d3a46d as appropriate. Warm top-left light, internal form shading only, NO ground/cast shadow. Object entirely inside 6% transparent padding. Real alpha exterior, opaque paint interiors, no paper, border, text, UI or surrounding scenery. Preserve named node object clearly from ABOVE.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -972,7 +972,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Rubble Pit, shallow grey-blue #a9bbd0 stone quarry cut into low hillside, large simple stepped stone ledges and rubble, central pit mouth with pick leaning on small wooden cart. Square canvas, 2x2 tile footprint, master at least 640x640. Emphasize top surfaces of recessed concentric stepped ledges, large readable cart and pick. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. ",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -990,7 +990,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Painted pale blue-grey mist map fog, mist occupying upper half, clear lower half, alpha fade along middle. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1008,7 +1008,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Painted pale blue-grey mist map fog, mist occupying upper half, clear lower half, alpha fade along middle. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1026,7 +1026,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Painted pale blue-grey mist map fog, mist filling upper-left concave corner with softly fading boundary. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1044,7 +1044,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Painted pale blue-grey mist map fog, mist filling upper-left concave corner with softly fading boundary. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1062,7 +1062,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Painted pale blue-grey mist map fog, mist outside a rounded unexplored upper-left corner, transparent lower-right. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1080,7 +1080,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Painted pale blue-grey mist map fog, mist outside a rounded unexplored upper-left corner, transparent lower-right. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Near-white softly merging large cloudy washes, genuine alpha fades, no scenery or objects. Extend fog to corresponding outer canvas edges to connect neighboring tiles.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1098,7 +1098,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Seamless repeating soft meadow grass texture, muted sage green, very LOW CONTRAST broad cloudy washes. Variant a. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Full bleed square tile, opaque paint all the way to four edges, exact seamless opposite edges. No objects, flowers, stones, isolated clump, vignette or padding. Direct vertical overhead. Must tile without visible seams.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1116,7 +1116,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Seamless repeating soft meadow grass texture, muted sage green, very LOW CONTRAST broad cloudy washes. Variant b. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Full bleed square tile, opaque paint all the way to four edges, exact seamless opposite edges. No objects, flowers, stones, isolated clump, vignette or padding. Direct vertical overhead. Must tile without visible seams.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1134,7 +1134,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Seamless repeating soft meadow grass texture, muted sage green, very LOW CONTRAST broad cloudy washes. Variant c. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Full bleed square tile, opaque paint all the way to four edges, exact seamless opposite edges. No objects, flowers, stones, isolated clump, vignette or padding. Direct vertical overhead. Must tile without visible seams.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1152,7 +1152,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Packed-earth footpath north-to-east right angle, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1171,7 +1171,7 @@
     "references": [
       "C:/Users/ericm/OneDrive/Documents/ChatGPT/Exploritaire 2/output/path-corner-layout-guide.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1189,7 +1189,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Packed-earth footpath north-to-east right angle, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1207,7 +1207,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Packed-earth footpath north-east-south-west cross, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1225,7 +1225,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Packed-earth footpath north-east-south-west cross, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1243,7 +1243,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Packed-earth footpath north edge to rounded cap at tile center, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1261,7 +1261,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Packed-earth footpath north edge to rounded cap at tile center, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1279,7 +1279,7 @@
     "prompt": "Use case: stylized-concept. STRICT LAYER-ONLY REQUEST: PAINT ZERO PLANTS, ZERO BERRIES, ZERO STONES, ZERO SCENERY, ZERO ANIMALS. Packed-earth footpath vertical north-south, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass. Only pigment belonging to this standalone layer is allowed. Style images 1 Hero and 2 Scratch are ONLY brushwork references: copy NO objects or scenery from them. Big soft wet-on-wet diluted washes, broken pigment edges, restrained gouache accents, NO paper rectangle, UI, text, border, shadows or ground backing. Square 320x320 or larger.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1297,7 +1297,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Packed-earth footpath vertical north-south, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1315,7 +1315,7 @@
     "prompt": "Use case: stylized-concept. Transparent game map land feature. Reference 1 actual Hero berry painting is PRIMARY paint style; reference 2 Scratch supports soft wash method only, neither is subject. Camera almost VERTICAL overhead: 75 degrees above ground, 15 degrees from straight down; show tops, hide most vertical sides, NO frontal or isometric view. Packed-earth footpath north-east-west T junction, warm muted ochre #d3a46d, about 36% of tile wide, soft irregular watercolor edges. Square single asset, intended 160x160 at 1x, paint at least 320x320; fill about 80% of tile for buildings. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Square tile; path reaches indicated canvas edges exactly with consistent width for connectivity, transparent outside path; no 6% padding on connecting edges. No surrounding grass.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1333,7 +1333,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Simple warm sun-gold five-petal flower Intended runtime 48x48; master at least 96x96, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Very simple isolated broad painted icon must read at 18px, maximum three grouped values, no microdetail, no background or cast shadow. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1351,7 +1351,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Two raspberry-red stemless leafless berries Intended runtime 48x48; master at least 96x96, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Very simple isolated broad painted icon must read at 18px, maximum three grouped values, no microdetail, no background or cast shadow. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1369,7 +1369,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Three-log bundle Intended runtime 48x48; master at least 96x96, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Very simple isolated broad painted icon must read at 18px, maximum three grouped values, no microdetail, no background or cast shadow. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1387,7 +1387,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Grey-blue stone Intended runtime 48x48; master at least 96x96, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Very simple isolated broad painted icon must read at 18px, maximum three grouped values, no microdetail, no background or cast shadow. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1405,8 +1405,8 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. banks head-and-shoulders portrait. Tired and hungry, drooping eyelids and subdued expression, no tears or injuries. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
-      "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/banks-watercolor-v5.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/runtime/kin/banks/portraits/panther-inspired/banks-watercolor-v5.png"
     ]
   },
   {
@@ -1424,8 +1424,8 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. banks head-and-shoulders portrait. Calm content expression. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
-      "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/banks-watercolor-v5.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/runtime/kin/banks/portraits/panther-inspired/banks-watercolor-v5.png"
     ]
   },
   {
@@ -1443,8 +1443,8 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. banks, full-body natural animal cutout facing three-quarters toward viewer, calmly waiting at gate; no gate painted. Preserve image 3 identity including natural tail or phoenix train. Intended runtime 96x128; master at least 192x256, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Portrait canvas 3:4, all anatomy and tail inside 6% margins, no pedestal, base, scenery or ground. Image 3 identity only, Hero/Scratch control watercolor. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
-      "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/banks-watercolor-v5.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/runtime/kin/banks/portraits/panther-inspired/banks-watercolor-v5.png"
     ]
   },
   {
@@ -1463,7 +1463,7 @@
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1481,7 +1481,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. cir head-and-shoulders portrait. Tired and hungry, drooping eyelids and subdued expression, no tears or injuries. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
       "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png"
     ]
   },
@@ -1501,7 +1501,7 @@
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png",
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1519,7 +1519,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. cir head-and-shoulders portrait. Calm content expression. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
       "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png"
     ]
   },
@@ -1538,7 +1538,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. cir, full-body natural animal cutout facing three-quarters toward viewer, calmly waiting at gate; no gate painted. Preserve image 3 identity including natural tail or phoenix train. Intended runtime 96x128; master at least 192x256, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Portrait canvas 3:4, all anatomy and tail inside 6% margins, no pedestal, base, scenery or ground. Image 3 identity only, Hero/Scratch control watercolor. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
       "C:/dev/Exploritaire/public/assets/runtime/keru/cir/cir-phoenix-watercolor-v2.png"
     ]
   },
@@ -1557,8 +1557,8 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. mochi head-and-shoulders portrait. Tired and hungry, drooping eyelids and subdued expression, no tears or injuries. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
-      "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/runtime/kin/mochi/portraits/raised-paw/mochi-watercolor-v2.png"
     ]
   },
   {
@@ -1576,8 +1576,8 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. mochi head-and-shoulders portrait. Happy gentle closed-mouth expression. Preserve approved character identity, markings, eye colors and anatomy from image 3. Intended runtime 256x256; master at least 512x512, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Face centered exactly at canvas center, front-facing eye-level head with zero yaw, both eyes equally visible, centered nose/beak. Shoulders fill lower canvas. Intended circular mask, ears safely inside 6% margin, NO circle or ring painted. Real transparent exterior. Image 3 IDENTITY ONLY; its harsh detail and background must not override Hero/Scratch broad loose paint. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
-      "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/runtime/kin/mochi/portraits/raised-paw/mochi-watercolor-v2.png"
     ]
   },
   {
@@ -1595,8 +1595,8 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. mochi, full-body natural animal cutout facing three-quarters toward viewer, calmly waiting at gate; no gate painted. Preserve image 3 identity including natural tail or phoenix train. Intended runtime 96x128; master at least 192x256, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Portrait canvas 3:4, all anatomy and tail inside 6% margins, no pedestal, base, scenery or ground. Image 3 identity only, Hero/Scratch control watercolor. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png",
-      "C:/dev/Exploritaire/public/assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+      "C:/dev/Exploritaire/public/assets/runtime/kin/mochi/portraits/raised-paw/mochi-watercolor-v2.png"
     ]
   },
   {
@@ -1614,7 +1614,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. birch and pine stand with sunny clearing Intended runtime 336x120; master at least 672x240, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.8:1 banner vignette, left 45% calm low-detail softly merged dark-muted washes for UI text overlay, subject concentrated toward right. No text/frame. Full scenic painted banner is appropriate. Master at least 672x240. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1632,7 +1632,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. dense thorny brambles and pale green fruit Intended runtime 336x120; master at least 672x240, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.8:1 banner vignette, left 45% calm low-detail softly merged dark-muted washes for UI text overlay, subject concentrated toward right. No text/frame. Full scenic painted banner is appropriate. Master at least 672x240. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1650,7 +1650,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. dark deep stepped quarry with warm lantern Intended runtime 336x120; master at least 672x240, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.8:1 banner vignette, left 45% calm low-detail softly merged dark-muted washes for UI text overlay, subject concentrated toward right. No text/frame. Full scenic painted banner is appropriate. Master at least 672x240. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1668,7 +1668,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. huge old gnarled mossy oaks Intended runtime 336x120; master at least 672x240, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.8:1 banner vignette, left 45% calm low-detail softly merged dark-muted washes for UI text overlay, subject concentrated toward right. No text/frame. Full scenic painted banner is appropriate. Master at least 672x240. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1686,7 +1686,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. shallow grey-blue rubble quarry and cart Intended runtime 336x120; master at least 672x240, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.8:1 banner vignette, left 45% calm low-detail softly merged dark-muted washes for UI text overlay, subject concentrated toward right. No text/frame. Full scenic painted banner is appropriate. Master at least 672x240. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1704,7 +1704,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. sunlit raspberry-red berry hedge Intended runtime 336x120; master at least 672x240, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.8:1 banner vignette, left 45% calm low-detail softly merged dark-muted washes for UI text overlay, subject concentrated toward right. No text/frame. Full scenic painted banner is appropriate. Master at least 672x240. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1722,7 +1722,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Small village under blue moonlight, grassy burrow and twig shelter with softly lit windows and campfire, no characters. Intended runtime 440x160; master at least 880x320, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.75:1 storybook scene vignette, soft irregular alpha edges, no border or text. Keep paint masses broad, dark slate night with warm gold light. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   },
   {
@@ -1740,7 +1740,7 @@
     "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Cozy small village celebration, completed rustic shelters, stall and well gathered around warm campfire with simple gold bunting. Intended runtime 440x200; master at least 880x400, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. Wide 2.2:1 storybook scene vignette, no invented character identities, no text or border, soft irregular alpha edges, warm cheerful muted colors. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
     "references": [
       "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-      "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+      "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
     ]
   }
 ]

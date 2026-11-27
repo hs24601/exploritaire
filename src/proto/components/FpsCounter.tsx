@@ -2,7 +2,7 @@ import { gameTime } from '../../gameTime';
 import { useEffect, useState } from 'react';
 
 /** Sample browser frames without re-rendering the table on every frame. */
-export function FpsCounter() {
+export function FpsCounter({ className = 'proto-map-fps' }: { className?: string } = {}) {
   const [fps, setFps] = useState<number | null>(null);
 
   useEffect(() => {
@@ -33,5 +33,5 @@ export function FpsCounter() {
     };
   }, []);
 
-  return <div className="proto-map-fps" title="Frames per second">FPS {fps ?? '—'}</div>;
+  return <div className={className} title="Frames per second">FPS {fps ?? '—'}</div>;
 }

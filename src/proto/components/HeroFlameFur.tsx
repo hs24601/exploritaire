@@ -2,7 +2,7 @@ import { useId, type CSSProperties } from 'react';
 import { ACTOR_MOTIFS, type MotifOptions } from '../art/actorMotifs';
 import { HERO_FLAME_FUR } from '../art/heroFlameFur';
 
-const original = `${import.meta.env.BASE_URL}assets/runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png`;
+const original = `${import.meta.env.BASE_URL}assets/runtime/kin/hero/portraits/ordinary-day/hero-watercolor-v5-ordinary-day.png`;
 const approved = `${import.meta.env.BASE_URL}assets/runtime/ui/holocards/motifs/v2/hero-approved-composite.png`;
 
 /** Layer decomposition uses SVG sampling/masks, never a new generated flame shape. */

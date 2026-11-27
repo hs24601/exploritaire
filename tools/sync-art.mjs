@@ -15,14 +15,15 @@ const inside = (root, relative) => {
   return file;
 };
 const publicRoot = path.join(game, 'public');
-const migration = JSON.parse(fs.readFileSync(path.join(game, 'docs/art/asset-migration.json'), 'utf8')).assets;
+const { assets: migration, retiredAssets = [] } = JSON.parse(fs.readFileSync(path.join(game, 'docs/art/asset-migration.json'), 'utf8'));
+const retired = new Set(retiredAssets);
 // Mochi's old pixel holocard was explicitly replaced and removed locally.
 // Exclude it so an older sibling manifest cannot restore the retired artwork.
-const entries = manifest.assets.filter(asset => !/\/mochi-card-v[1-4]\.(?:png|prompt\.txt)$/.test(asset.target)).map(asset => {
+const entries = manifest.assets.filter(asset => !retired.has(asset.target.slice('assets/'.length)) && !/\/mochi-card-v[1-4]\.(?:png|prompt\.txt)$/.test(asset.target)).map(asset => {
   const target = asset.target.startsWith('assets/art/')
     ? 'assets/' + (migration[asset.target.slice('assets/'.length)] || asset.target.slice('assets/'.length).replace(/^art\//, 'runtime/ui/'))
     : asset.target;
-  if (!target.startsWith('assets/runtime/ui/') && !target.startsWith('assets/sources/ui/')) throw new Error('Invalid art target');
+  if (!/^assets\/(?:runtime|sources)\/(?:ui|kin|abilities|cinematics)\//.test(target)) throw new Error('Invalid art target');
   return { source: inside(repo, asset.source), target: inside(publicRoot, target) };
 });
 // Read all sources before changing any distributable files.

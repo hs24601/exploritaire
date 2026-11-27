@@ -2,15 +2,7 @@ import * as THREE from 'three';
 import {seeded} from './castlePaint';
 
 export const FLURRY_STORM={height:26,radius:4.6,lowCount:384,count:768};
-const hash=(n:number)=>{const value=Math.sin(n*127.1+31.7)*43758.5453;return value-Math.floor(value);};
-/** Random held glances with eased transitions, rather than a repetitive nod. */
-export function flurryCuriosity(seconds:number,reduced=false){
- if(reduced)return {x:0,y:0,pitch:0,yaw:0,roll:0};
- const clock=seconds/3.8,index=Math.floor(clock),mix=THREE.MathUtils.smoothstep(clock-index,0,.6);
- const x=THREE.MathUtils.lerp(hash(index*2)*2-1,hash((index+1)*2)*2-1,mix);
- const y=THREE.MathUtils.lerp(hash(index*2+1)*1.5-.5,hash((index+1)*2+1)*1.5-.5,mix);
- return {x,y,pitch:y*.075,yaw:x*.14,roll:x*.055+Math.sin(seconds*.65)*.025};
-}
+export {flurryCuriosity} from '../sticker/flurryIdle';
 
 /** One bounded, depth-tested GPU batch. A soft halo is part of each flake,
  * without point lights, bloom, per-frame buffer uploads or a capture pass. */

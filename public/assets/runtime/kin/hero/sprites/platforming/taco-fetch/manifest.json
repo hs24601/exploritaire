@@ -1,0 +1,173 @@
+{
+  "clips": [
+    {
+      "loop": false,
+      "fps": 7,
+      "id": "toy-pickup",
+      "frames": [
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 0,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 384,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 768,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 1152,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        }
+      ],
+      "image": "toy-pickup.png"
+    },
+    {
+      "loop": true,
+      "fps": 12,
+      "id": "toy-run",
+      "frames": [
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 0,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 384,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 768,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 1152,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        }
+      ],
+      "image": "toy-run.png"
+    },
+    {
+      "loop": false,
+      "fps": 4,
+      "id": "toy-bury",
+      "frames": [
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 0,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 384,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 768,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        },
+        {
+          "rect": {
+            "height": 384,
+            "y": 0,
+            "x": 1152,
+            "width": 384
+          },
+          "pivot": {
+            "y": 0.9,
+            "x": 0.5
+          }
+        }
+      ],
+      "image": "toy-bury.png"
+    }
+  ],
+  "version": 1
+}

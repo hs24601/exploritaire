@@ -3,7 +3,7 @@ export type PaperProp = { id?:string; art: string; x: number; z: number; height:
 export type StoryPlacement = { x: number; z: number; width: number; depth: number };
 export type BookScene = { emptyBase?:boolean; id: string; name: string; ink: string; glow: number; action: string; result: string; story: [string, string]; storyPlacement?: [StoryPlacement, StoryPlacement]; symbol: string; props: PaperProp[] };
 const env = 'environment/watercolor/v1/';
-export const HERO_ART = 'characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png';
+export const HERO_ART = 'kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png';
 // Elevated front view, matching the shared directional rig registration.
 export const HERO_BOOK_FRAME = {x:44,y:43,width:194,height:228} as const;
 export const DEN_INTERIOR_INDEX = 3;

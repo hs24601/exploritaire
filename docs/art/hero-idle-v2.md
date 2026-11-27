@@ -1,6 +1,6 @@
 # Hero idle v2
 
-Runtime: `public/assets/runtime/characters/hero/platforming/idle-v2/`.
+Runtime: `public/assets/runtime/kin/hero/sprites/platforming/breath-and-butterfly/`.
 Original ImageGen PNGs: corresponding `public/assets/sources/` directory.
 Selected exact prompts and reference roles: `docs/art/hero-idle-v2-selected.json`.
 Contact sheet: `artifacts/hero-idle-v2/contact-sheet.png`.

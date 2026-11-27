@@ -62,8 +62,8 @@ export async function startBookCombatSandbox(canvas: HTMLCanvasElement) {
   }
   const [pine, hero, enemy, dirtSource, depthSource] = await Promise.all([
     texture('environment/watercolor/v1/pine-relief-v1.png'),
-    texture('characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png', [41, 289, 272, 248], true),
-    texture('characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png', [449, 102, 360, 281]),
+    texture('kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png', [41, 289, 272, 248], true),
+    texture('creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png', [449, 102, 360, 281]),
     loader.loadAsync(`${import.meta.env.BASE_URL}assets/runtime/environment/watercolor/v1/dirt-ground-v1.png`),
     loader.loadAsync(`${import.meta.env.BASE_URL}assets/runtime/labs/depth-relief/pine-depth.png`),
   ]);

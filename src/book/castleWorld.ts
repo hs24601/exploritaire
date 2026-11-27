@@ -56,7 +56,7 @@ import {createClearArrivalFlight} from './clearArrivalFlight';
 import {createWorldStudioEngine} from './worldStudioEngine';
 import {createWorldStudio} from './worldStudio';
 import {validWorldStudioDocument,type WorldStudioDocument} from './worldStudioDocument';
-import {WORLD_1111_LAYOUT} from './world1111Layout';
+import {WORLD_1111_LAYOUT,WORLD_TREE_PORTAL_ARRIVAL} from './world1111Layout';
 import {worldStart} from './worldStart';
 import {createWorldPropInteraction} from './worldPropInteraction';
 import {createWorldFlurry} from './worldFlurry';
@@ -98,6 +98,8 @@ const SPLAT_PREFERENCE = 'exploritaire.world-splats.v1';
 export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 118 | 119 | 120 | 1110 | 1111 = 117) {
   const portals=location.pathname.endsWith('/portals.html');
   const startLocation=page===1111?worldStart(location.search,portals):'grounds';
+  const treeArrival=page===1111&&portals&&startLocation==='grounds'?WORLD_TREE_PORTAL_ARRIVAL:undefined;
+  let treeOpeningHeld=!!treeArrival;
   const directCombat = startLocation==='woods' && new URLSearchParams(location.search).has('combat');
   const directStart=startLocation!=='woods'&&startLocation!=='grounds';
   let portalControls:ReturnType<typeof createPortalControls>|undefined,pad=emptyPortalPad();
@@ -111,19 +113,22 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
   const portalGuard=createWorldPortalGuard(),groundPortalDoors:MeadowPortalEnd[]=[];
   const avoidGroundPortals=(x:number,z:number,r=.45)=>!portalGuard.blocked(groundPortalDoors,x,z,r,castleSurfaceHeight(x,z));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const heroStart = page===1111?WORLD_1111_LAYOUT.hero:natural?{x:0,z:75}:page>=119?BRIDGE_HERO_START:grounds ? GROUNDS_START : C.heroStart;
+  const heroStart = treeArrival?{x:treeArrival.hero.x,z:treeArrival.hero.z}:page===1111?WORLD_1111_LAYOUT.hero:natural?{x:0,z:75}:page>=119?BRIDGE_HERO_START:grounds ? GROUNDS_START : C.heroStart;
+  const startHeading=treeArrival?.hero.heading??Math.PI;
   const bridgePuzzle=page===119?new CastleBridgePuzzle():undefined;
   const castleSurfaceHeight = natural?treeGround:bridgePuzzle?.height??(grounds ? groundsHeight : groundHeight);
-  const startYaw=page===1111?WORLD_1111_LAYOUT.camera.yaw:page>=119?.45:0;
-  const startDistance = page===1111?WORLD_1111_LAYOUT.camera.distance:page>=119?7.5:grounds ? GROUNDS_SHOULDER.distance : SHOULDER.distance, startPitch = page===1111?WORLD_1111_LAYOUT.camera.pitch:page>=119?.32:grounds ? GROUNDS_SHOULDER.pitch : 0;
+  const startYaw=treeArrival?.camera.yaw??(page===1111?WORLD_1111_LAYOUT.camera.yaw:page>=119?.45:0);
+  const startDistance=treeArrival?.camera.distance??(page===1111?WORLD_1111_LAYOUT.camera.distance:page>=119?7.5:grounds?GROUNDS_SHOULDER.distance:SHOULDER.distance);
+  const startPitch=treeArrival?.camera.pitch??(page===1111?WORLD_1111_LAYOUT.camera.pitch:page>=119?.32:grounds?GROUNDS_SHOULDER.pitch:0);
   let waterArrival=shoulderPose(heroStart.x,heroStart.z,startYaw,startPitch,startDistance,castleSurfaceHeight(heroStart.x,heroStart.z));
-  if(natural)waterArrival=groundedOrbitPose(waterArrival,startYaw,startPitch,treeGround);
+  if(treeArrival)waterArrival={position:[...treeArrival.camera.position],target:[...treeArrival.camera.target]};
+  else if(natural)waterArrival=groundedOrbitPose(waterArrival,startYaw,startPitch,treeGround);
   // The live i-dot portal feeds this direct approach without old bridge stops.
   const arrivalPath = page>=119?directGroundsArrival(waterArrival,{...heroStart,y:castleSurfaceHeight(heroStart.x,heroStart.z)},innerWidth/innerHeight,{constrainAim:!natural}):grounds ? GROUNDS_FLIGHT : undefined;
   let clearArrival:ReturnType<typeof createClearArrivalFlight>|undefined;
   const studioWalkable=(x:number,z:number,r=.45,y=treeGround(x,z))=>{if(!treeWalkable(x,z,r)||!avoidGroundPortals(x,z,r)||!groveBodyClear(x,z,r,y))return false;const blocked=(b:THREE.Box3)=>x>b.min.x-r&&x<b.max.x+r&&z>b.min.z-r&&z<b.max.z+r&&y+1.2>b.min.y&&y<b.max.y;return !placedSolids.some(blocked);};
   const groundsSurface=natural?createTreeMovement(studioWalkable):bridgePuzzle?.surface;
-  let platform = grounds ? new CastlePlatformMotion(heroStart.x,heroStart.z,Math.PI,groundsSurface) : undefined;
+  let platform = grounds ? new CastlePlatformMotion(heroStart.x,heroStart.z,startHeading,groundsSurface) : undefined;
   const navigation = grounds ? new CastleGroundsNavigation((x,z,r=.45)=>(natural?studioWalkable(x,z,r):(bridgePuzzle?.walkable??groundsWalkable)(x,z,r))&&avoidGroundPortals(x,z,r)) : undefined;
   const stickerInteraction=navigation?createWorldPropInteraction(navigation):undefined;
   document.body.classList.add('castle-world'); document.title = `${page} · ${title} · Hero’s Journey`;
@@ -479,7 +484,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
   const [rigEntries, idleEntries, platformEntries] = await Promise.all([
     Promise.all(grounds ? [] : rigKeys.map(async id => [id, await loadHeroSheet(HERO_RIG_SHEETS[id])] as const)),
     Promise.all(CASTLE_IDLE_VIEWS.map(async id => [id, await loadHeroSheet(CASTLE_IDLE_ATLAS.root + id + '.webp')] as const)),
-    Promise.all(grounds ? CASTLE_IDLE_VIEWS.map(async id => [id, await loadHeroSheet('characters/hero/castle/platform-v1/' + id + '.webp')] as const) : []),
+    Promise.all(grounds ? CASTLE_IDLE_VIEWS.map(async id => [id, await loadHeroSheet('kin/hero/sprites/world/castle/platforming-poses/' + id + '.webp')] as const) : []),
   ]);
   const forestMeadow=await meadowLoading;
   const combatWoods=page===1111?await createWorldCombatWoods(reduced):undefined;
@@ -560,7 +565,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
   blob.renderOrder = 1;
   scene.add(blob);
   // heading: the way she faces in plan (bearing); she starts looking at the keep
-  const hero = {x: heroStart.x, z: heroStart.z, heading: bearing(0, -1), clock: 0, speed: 0, shade: 0, view: undefined as SpriteView | undefined};
+  const hero = {x: heroStart.x, z: heroStart.z, heading: startHeading, clock: 0, speed: 0, shade: 0, view: undefined as SpriteView | undefined};
   let gridJump:ReturnType<typeof createWorldGridJump>,gridStanding=false;
   combatWoods?.setGridJumpHandler(target=>{
     if(!platform||!platform.grounded||gridJump||!inMeadow||activePair?.id!=='woods'||crossing||mode!=='play')return false;
@@ -619,7 +624,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
     {id:'timber-footbridge',point:new THREE.Vector3(48,1.5,50),radius:12,halfHeight:2,priority:.8},
   ];
   function directJourney(){
-    if(woodsOpeningHeld)takeCameraControl();
+    if(treeOpeningHeld||woodsOpeningHeld)takeCameraControl();
     const destination=inMeadow?meadow!.navigation.destination:navigation?.destination;
     if(!journey||!platform||!destination)return;
     journeyHero.set(hero.x,platform.y,hero.z);
@@ -898,7 +903,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
     if (mode !== 'flight' || flightSpeed > 1) return;
     flightSpeed = 5; skipBtn.hidden = true; canvas.dataset.castlePhase = 'arriving';
   }
-  function replay(playFlight = !grounds) {
+  function replay(playFlight = !grounds||!!treeArrival) {
     controllerView=controllerOwnsCamera=false;
     resetJourney();
     followFov=SHOULDER.fov;
@@ -914,9 +919,10 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
       portalEcho?.removeFromParent();
     }
     bridgeExperience?.close();
-    hero.x = heroStart.x; hero.z = heroStart.z; hero.heading = bearing(0, -1); hero.view = undefined; yaw = startYaw; pitch = startPitch; distance = startDistance;
+    treeOpeningHeld=!!treeArrival;
+    hero.x = heroStart.x; hero.z = heroStart.z; hero.heading = startHeading; hero.view = undefined; yaw = startYaw; pitch = startPitch; distance = startDistance;
     if (grounds) {
-      platform = new CastlePlatformMotion(heroStart.x,heroStart.z,Math.PI,groundsSurface);
+      platform = new CastlePlatformMotion(heroStart.x,heroStart.z,startHeading,groundsSurface);
       jumpPressed = divePressed = false;
       hero.speed = hero.clock = 0;
     }
@@ -1013,6 +1019,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
   function takeCameraControl(){
     combatWoods?.foundations.grid.resetDoubleTap();
     woodsCameraFlight=undefined;
+    treeOpeningHeld=false;
     if(woodsOverhead){woodsOverhead=false;woodsPreviousView=undefined;woodsOpeningHeld=true;canvas.dataset.castleCamera=freeCamera?'free':'follow';}
     if(!woodsOpeningHeld&&!journey?.active&&!bridgeJourney?.active)return;
     woodsOpeningHeld=false;woodsHeldView=undefined;
@@ -1406,6 +1413,10 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
       if (showFlight()) arrive();
       return;
     }
+    if(treeOpeningHeld&&treeArrival&&!inMeadow){
+      if((platform?.speed??0)>.05||platform&&!platform.grounded)takeCameraControl();
+      else return;
+    }
     if(woodsOpeningHeld&&inMeadow&&activePair?.id==='woods'&&woodsArrival){
       if((platform?.speed??0)>.05||freeCamera)takeCameraControl();
       else{const p=woodsHeldView??woodsArrival.landed;if(woodsHeldView)camera.up.fromArray(woodsHeldView.up);else camera.up.set(0,1,0);setCamera(p.position,p.target,p.fov);return;}
@@ -1480,6 +1491,12 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
   }
 
   function resetPlayCamera() {
+    if(treeOpeningHeld&&treeArrival&&!inMeadow){
+      camera.up.set(0,1,0);
+      setCamera(treeArrival.camera.position,treeArrival.camera.target,treeArrival.camera.fov);
+      adoptFollowCamera();
+      return;
+    }
     if(woodsCameraFlight){updateCamera(0);return;}
     if(woodsOverhead&&inMeadow&&activePair?.id==='woods'){updateCamera(0);return;}
     if(woodsOpeningHeld&&woodsArrival){const p=woodsHeldView??woodsArrival.landed;if(woodsHeldView)camera.up.fromArray(woodsHeldView.up);else camera.up.set(0,1,0);setCamera(p.position,p.target,p.fov);adoptFollowCamera();return;}
@@ -1650,7 +1667,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
     knownSolids=grove.cameraObstacles;
     groveBodyClear=grove.movementClear;
     if(page===1111){const stickerSettings=document.createElement('div');panel.append(stickerSettings);const {x,z}=WORLD_1111_LAYOUT.flurry;worldFlurry=await createWorldFlurry(grove.root,new THREE.Vector3(x,treeGround(x,z),z),(material,lit,worldExpression)=>grove.atmosphere.decorate(material,lit,worldExpression),open=>{worldRewardOpen=open;keys.clear();groundsGestures.clear();navigation?.clear();platform?.cancelSprint(true);},quality==='low',treeGround,stickerSettings);}
-    if(!portals||startLocation==='grounds')clearArrival=createClearArrivalFlight(arrivalPath!,treeGround,[...grove.cameraObstacles,...placedSolids],{aspect:innerWidth/innerHeight});
+    if(!portals||startLocation==='grounds')clearArrival=createClearArrivalFlight(arrivalPath!,treeGround,[...grove.cameraObstacles,...placedSolids],{aspect:innerWidth/innerHeight,approachLift:treeArrival?.approachLift});
     destinations.clear();destinations.add(grove.ground);pickSurfaces.length=0;pickSurfaces.push(grove.ground,grove.tree,...(worldFlurry?.root.children??[]),...portalPairs.map(pair=>pair.entry.aperture));
     colliders.clear();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(28,32,220,12),new THREE.MeshBasicMaterial());trunk.position.set(0,100,-42);colliders.add(trunk);colliders.updateMatrixWorld(true);
     if(workbench)syncStudioColliders();
@@ -1702,7 +1719,7 @@ export async function startCastleWorld(canvas: HTMLCanvasElement, page: 117 | 11
   presentBookFrame(canvas); loading.finish(); canvas.focus();
   if(studioEngine&&naturalGrove){
     let lastProps=JSON.stringify(studioDocument.props);
-    studioEditor=await createWorldStudio({canvas,camera,scene,ground:naturalGrove.ground,engine:studioEngine,initial:studioDocument,free:()=>setFreeCamera(true),ready:()=>mode==='play'&&!inMeadow&&!worldRewardOpen,frame:shot=>{setFreeCamera(true);camera.fov=shot.fov;camera.updateProjectionMatrix();freeControls!.frame({...shot,durationMs:0},0);freeControls!.update(0,1,true);},changed:doc=>{studioDocument=doc;placedSolids=studioEngine!.solids;const key=JSON.stringify(doc.props);if(key!==lastProps){const route=createClearArrivalFlight(arrivalPath!,treeGround,[...naturalGrove!.cameraObstacles,...placedSolids],{aspect:camera.aspect});syncStudioColliders();clearArrival=route;lastProps=key;}}});
+    studioEditor=await createWorldStudio({canvas,camera,scene,ground:naturalGrove.ground,engine:studioEngine,initial:studioDocument,free:()=>setFreeCamera(true),ready:()=>mode==='play'&&!inMeadow&&!worldRewardOpen,frame:shot=>{setFreeCamera(true);camera.fov=shot.fov;camera.updateProjectionMatrix();freeControls!.frame({...shot,durationMs:0},0);freeControls!.update(0,1,true);},changed:doc=>{studioDocument=doc;placedSolids=studioEngine!.solids;const key=JSON.stringify(doc.props);if(key!==lastProps){const route=createClearArrivalFlight(arrivalPath!,treeGround,[...naturalGrove!.cameraObstacles,...placedSolids],{aspect:camera.aspect,approachLift:treeArrival?.approachLift});syncStudioColliders();clearArrival=route;lastProps=key;}}});
     if(portals){
       settingsBtn.hidden=true;panel.hidden=true;
       const display=document.createElement('section');while(panel.firstChild)display.append(panel.firstChild);

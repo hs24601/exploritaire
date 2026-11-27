@@ -12,7 +12,7 @@ export function HeroEmoji({ emotion, size = 64, label, className, style }: {
   const key = (closed ? emotion.slice(0, -6) : emotion) as keyof typeof HERO_EMOJI_ATLAS.frames;
   const [x, y, w, h] = curiousHeads[0];
   const frame = directional ? { x, y, w, h } : HERO_EMOJI_ATLAS.frames[key].frame;
-  const sheet = directional ? '/assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-curious-heads-v1.png' : closed ? HERO_EMOJI_CLOSED_SHEET : HERO_EMOJI_SHEET;
+  const sheet = directional ? '/assets/runtime/kin/hero/sprites/world/opening-poses/hero-curious-heads-v1.png' : closed ? HERO_EMOJI_CLOSED_SHEET : HERO_EMOJI_SHEET;
   return <svg viewBox={`0 0 ${frame.w} ${frame.h}`} width={size} height={size}
     role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}
     className={className} data-hero-emoji={emotion}

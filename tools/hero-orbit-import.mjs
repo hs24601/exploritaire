@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { decode, encode } from './png-rgba.mjs';
 const P = await import(new URL('../src/proto/heroOrbitProxy.ts', import.meta.url).href);
 const placeholder = process.argv.includes('--placeholder');
-const sources = 'public/assets/sources/characters/hero/orbit/watercolor/v1', runtime = 'public/assets/runtime/characters/hero/rig/watercolor/orbit-v1';
+const sources = 'public/assets/sources/kin/hero/sprites/combat/standing-low-orbit', runtime = 'public/assets/runtime/kin/hero/sprites/combat/standing-low-orbit';
 const sheetPath = `${runtime}/hero-standing-low-orbit-v1.png`, atlasPath = 'src/proto/heroOrbitAtlas.ts';
 // One texel density for every view, near the approved low sheet (about 250 px per figure).
 const SCALE = .36, PAD = 6, GAP = 16, SIZE = 1024;

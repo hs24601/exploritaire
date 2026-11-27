@@ -1,0 +1,85 @@
+{
+  "generator": "Built-in ImageGen",
+  "assets": [
+    {
+      "file": "puzzle-surface.png",
+      "generationId": "621a465a-9e45-45cb-8435-454910992645",
+      "prompt": "Use case: precise-object-edit. Input 1 is the completed Simple Den cutaway, the edit target. Input 2 is the Hero berry painting, the primary watercolor style reference per art.md. Make a registered earlier excavation frame. Keep the exact same landscape aspect, transparent canvas, grass silhouette, edges, soil footprint, gray stones and their position, forked root and its position, camera, lighting and paint. Modify only the ground inside the dark chamber and immediately at its mouth. Broad light merging washes, pigment blooms, soft broken edges. True alpha outside, no lettering or UI. Remove all straw. Fill virtually the whole chamber with solid exposed ochre earth, leaving only a small shallow scraped indentation at the lower right of center. This must read as unexcavated soil with a tiny starter scrape and no dark entrance.",
+      "references": [
+        {
+          "path": "puzzle-complete.png",
+          "role": "Edit target and layout reference"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Primary watercolor style reference"
+        }
+      ],
+      "sha256": "477e4c64e1099af92e1a7ae9398190172219eb6e44181f67976d87636535acef",
+      "dimensions": [
+        2022,
+        778
+      ]
+    },
+    {
+      "file": "puzzle-deep.png",
+      "generationId": "a53fdf4f-3b44-4914-a2a9-6fa62c761ca8",
+      "prompt": "Use case: precise-object-edit. Input 1 is the completed Simple Den cutaway, the edit target. Input 2 is the Hero berry painting, the primary watercolor style reference per art.md. Make a registered earlier excavation frame. Keep the exact same landscape aspect, transparent canvas, grass silhouette, edges, soil footprint, gray stones and their position, forked root and its position, camera, lighting and paint. Modify only the ground inside the dark chamber and immediately at its mouth. Broad light merging washes, pigment blooms, soft broken edges. True alpha outside, no lettering or UI. Remove all straw. Fill most of the opening with sloping earth and irregular spoil, leaving a visibly smaller half-open shadowed cavity above that floor, perhaps half the finished chamber size. Playable intermediate deep dig, raw and unstaged.",
+      "references": [
+        {
+          "path": "puzzle-complete.png",
+          "role": "Edit target and layout reference"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Primary watercolor style reference"
+        }
+      ],
+      "sha256": "c4ad2d9dd40696638ac37300b0375c665ce16be9c92544205e73d4a32290a526",
+      "dimensions": [
+        2022,
+        778
+      ]
+    },
+    {
+      "file": "puzzle-complete.png",
+      "generationId": "2025759f-9082-4c75-abd5-5a391468e02c",
+      "prompt": "Use case: illustration-story. Exploritaire game asset, genuine transparent alpha, fully isolated with generous transparent margins, no text, UI, animals, horizon, paper or border. Input 1 is the actual approved Hero berry painting: use its broad wet-on-wet watercolor/gouache washes, merged organic pigment edges, restrained detail, grouped values, mossy olives and ochre; style only, do not copy subject or environment. Simple Den is a humble one-kin earthen burrow with an oval opening in a low green sod bank, two gray stones on viewer left, a forked root curving over the doorway on right, and a pale straw bed only when finished. No human architecture or fantasy glow. Puzzle-view complete stage, isolated landscape composition around 2.6:1, side-on earthen cutaway with dead-flat top datum at 28% canvas height, rounded corners of natural soil, roughly 78% canvas width. Low green sod, two embedded gray stones on left, forked right root. One smooth dark oval chamber slightly right of center with a pale curved straw sleeping bed. Cozy yet humble. Show section through earthen shelter, not a freestanding house.",
+      "references": [
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Primary watercolor style reference"
+        }
+      ],
+      "sha256": "5e82596226ebe593c829167febf5a66b0efc70712d4b7ae51ef15d2d82e095ce",
+      "dimensions": [
+        2022,
+        778
+      ]
+    },
+    {
+      "file": "map-complete.png",
+      "generationId": "a958f944-0fa4-4af8-8959-ae42a3b6e31b",
+      "prompt": "Use case: illustration-story. Finished Simple Den world-map sprite for Exploritaire, square true transparent PNG. Input 1 Hero berry painting is the primary direct style reference per art.md: hand-painted storybook watercolor, irregular pigment blooms, soft merging washes, broken brush edges, broad varied paint masses and a few loose gouache accents. Inputs 2 and 3 are the exact active grid-map trees and berry patch, secondary references for nearly overhead camera, greens, scale of marks and ink-free edges. Paint one low earthen burrow seen mostly from above, broad squat olive and yellow-green sod cap, single dark oval entrance facing bottom edge, two gray stones on left, curved forked root on right, a hint of pale straw at threshold. Tight organic footprint, no rectangular ground tile, no trees or berries, animals, text, UI or border. Strong silhouette and dark opening readable at 64 px.",
+      "references": [
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Primary watercolor style reference"
+        },
+        {
+          "path": "public/assets/runtime/environment/watercolor/v1/woods-overhead-v1.png",
+          "role": "Secondary grid-map projection, palette, footprint and edge treatment reference"
+        },
+        {
+          "path": "public/assets/runtime/environment/watercolor/v1/berry-patch-overhead-v2.png",
+          "role": "Secondary grid-map projection, palette, footprint and edge treatment reference"
+        }
+      ],
+      "sha256": "8057841a57bc3dca2f2187d5e01045e039fa7c771f7f93c183d73ff2b995acb6",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    }
+  ]
+}

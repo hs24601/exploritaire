@@ -1,6 +1,6 @@
 // Mechanical packing of original ImageGen alpha; no repainting or color keys.
 const fs=require('node:fs'),crypto=require('node:crypto'),{chromium}=require('playwright');
-const source='public/assets/sources/characters/hero/world-traversal/v1',runtime='public/assets/runtime/characters/hero/world-traversal/v1';
+const source='public/assets/sources/kin/hero/sprites/world/traversal/low-crawl',runtime='public/assets/runtime/kin/hero/sprites/world/traversal/low-crawl';
 (async()=>{
  const browser=await chromium.launch({headless:true});
  try{
@@ -37,7 +37,7 @@ const source='public/assets/sources/characters/hero/world-traversal/v1',runtime=
   manifest.references.forEach(r=>r.sha256=crypto.createHash('sha256').update(fs.readFileSync(r.path)).digest('hex'));
   manifest.packing='Original alpha, fixed 8x6 source grid; one uniform transform per view across four frames, ground baseline 188/192. No vertical squash. Physical width matches existing authored crouch in the same view.';
   manifest.registration=packed.registration;fs.writeFileSync(source+'/manifest.json',JSON.stringify(manifest,null,2)+'\n');
-  const base=JSON.parse(fs.readFileSync('public/assets/sources/characters/hero/castle/platform-v1/manifest.json','utf8'));
+  const base=JSON.parse(fs.readFileSync('public/assets/sources/kin/hero/sprites/world/castle/platforming-poses/manifest.json','utf8'));
   const scales={};for(const r of packed.registration){const size=base.views[r.view].packing[0].size;const axis=r.view==='top-0'?1:0;scales[r.view]=Number((size[axis]/256*base.planeSizeMeters/(axis?r.heightFraction:r.widthFraction)).toFixed(6));}
   fs.writeFileSync('src/book/heroCrawlScale.json',JSON.stringify(scales,null,2)+'\n');console.log('Packed 44 low-crawl poses, original alpha, uniform per-view scale.',scales);
  }finally{await browser.close();}

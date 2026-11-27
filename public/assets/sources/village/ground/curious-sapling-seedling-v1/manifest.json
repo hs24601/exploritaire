@@ -1,0 +1,8 @@
+{
+  "shapeReference": "User-supplied photo of a young maple seedling, shape and scale only",
+  "runtime": "public/assets/runtime/village/ground/curious-sapling-seedling-v1.png",
+  "sha256": "7bf1ec122584649716832669ed94dde3e5db22936b3871420530c6ca5c523a77",
+  "generator": "Built-in ImageGen",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+  "prompt": "A plain isolated botanical seedling sprite. Use Hero berry art exclusively as watercolor style and photograph only as botanical size and shape reference. One tiny young maple seedling with slender brown stem, two broad lobed green leaves and two tiny mid-stem leaves. Handmade watercolor, softly merged broad washes, irregular pigment, imperfect brushwork. Ambient flat daylight, natural leaf greens, subject centered with margin. Deliver true transparent cutout. CRITICAL: alpha zero outside silhouette, absolutely no colored aura, halo, bloom, light spill, shadows, paper, background, soil, framing, or particles."
+}

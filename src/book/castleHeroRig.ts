@@ -6,11 +6,11 @@ import walking from '../proto/art/heroWalkingLayout.json';
  * side, so the over-the-shoulder camera sees her from behind instead of in the
  * side-scroller's profile. Pure selection; the renderer applies the rectangle. */
 export const HERO_RIG_SHEETS = {
-  standing: 'characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png',
-  walking: 'characters/hero/poses/watercolor/v1-opening/hero-walking-low-v1.png',
-  standingHigh: 'characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png',
-  standingRearHigh: 'characters/hero/rig/watercolor/v5/hero-standing-rear-high-v5.png',
-  walkingHigh: 'characters/hero/poses/watercolor/v1-opening/hero-walking-high-v1.png',
+  standing: 'kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png',
+  walking: 'kin/hero/sprites/world/opening-poses/hero-walking-low-v1.png',
+  standingHigh: 'kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png',
+  standingRearHigh: 'kin/hero/sprites/combat/rear-high-standing/hero-standing-rear-high-v5.png',
+  walkingHigh: 'kin/hero/sprites/world/opening-poses/hero-walking-high-v1.png',
 } as const;
 export const HERO_RIG_SIZE = {standing: [1122, 1402], walking: [1512, 1460], standingHigh: [1024, 1536], standingRearHigh: [192, 270], walkingHigh: [walking.high.width, walking.high.height]} as const;
 

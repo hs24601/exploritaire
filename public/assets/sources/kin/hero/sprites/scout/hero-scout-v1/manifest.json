@@ -1,0 +1,49 @@
+{
+  "method": "Built-in ImageGen",
+  "prompt": "Precisely edit reference 1, the green-background Exploritaire Hero scout game sprite sheet, preserving all nine distinct poses, identity, expressions, clothing, colors, scale relationships, orientation and scout equipment. Reference 2 is exclusively the desired short rounded bobtail size and silhouette as viewed in the play bow. Apply that same compact natural rump-hugging tuft in all six views where the tail is visible, with projection appropriate to the angle; in rear views it must be a tiny rounded nub high on the shorts, nowhere near the shorts hem. Reference 3 is the exact tiny flag emblem: round yellow sun disk with the overlapping dark green palm silhouette on the left, preserve colors, replace the old mark on every one of the nine orange pennants. Ignore the dark square behind the icon. Reference 4, the actual Hero berry painting, is the sole style reference for local paint repairs, soft broad grouped watercolor edges and opaque pale fur. Preserve existing rendering elsewhere. Output genuine RGBA transparency, remove entire green screen, all shadows on the backdrop and the horizontal separator. No tint or fringe, no paper or fake checkerboard, no text. Keep complete paws, ears, flags. Organize as an evenly spaced five-column two-row atlas with one pose per cell, bottom-right empty. Top row source order: front, front 3/4, right profile, rear, rear 3/4. Bottom row source order: play bow, eager standing, walking, looking right, empty. Leave generous clear gutters so each pose can be cropped and aligned mechanically. Foot contact at a consistent baseline within each row; embrace exact nine poses and do not introduce duplicate poses.",
+  "references": [
+    {
+      "file": "codex-clipboard-189519f7-2d2f-4cab-a778-f66fd116d564.png",
+      "sha256": "ea3f918b9a86b2ff3a0ec72fa55a37eb114521a06af8d4d11869c35b71ca4cbd",
+      "role": "Edit target and pose order"
+    },
+    {
+      "file": "codex-clipboard-32b5fc92-942e-40de-bc1e-ac62ad04aa97.png",
+      "sha256": "4c71630307e01ea34011d738c71adb476add3632a99989e1b78d5b678ed92547",
+      "role": "Bobtail size and silhouette"
+    },
+    {
+      "file": "codex-clipboard-2b04caa1-62c1-4cba-86af-ddee111d7493.png",
+      "sha256": "21f7a3703e84b378d076cecb471e50f18e136a7d45e6bc43ecb767eb911cbf79",
+      "role": "Flag emblem"
+    },
+    {
+      "file": "hero-snuffling-berries-blue-paint-v3.png",
+      "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+      "role": "Exploritaire painting style"
+    }
+  ],
+  "master": "hero-scout-imagegen.png",
+  "masterSha256": "6ac59589619964458e7143479d48a396856b613acb386b0b6ef43b2f52695e84",
+  "runtime": "public/assets/runtime/kin/hero/sprites/scout/hero-scout-v1/hero-scout-atlas.png",
+  "width": 1920,
+  "height": 832,
+  "cellWidth": 384,
+  "cellHeight": 416,
+  "columns": 5,
+  "rows": 2,
+  "groundY": 399,
+  "frames": [
+    "front",
+    "front-three-quarter",
+    "right-profile",
+    "rear",
+    "rear-three-quarter",
+    "play-bow",
+    "eager-standing",
+    "walking",
+    "looking-right",
+    null
+  ],
+  "packing": "Keep the primary connected alpha silhouette for each pose, preserve its surviving pixel values at source scale, center horizontally by silhouette bounds, and align the lowest pixel to groundY."
+}

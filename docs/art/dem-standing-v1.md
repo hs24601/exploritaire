@@ -6,11 +6,11 @@ The character matches `artifacts/dem-style-v3/dem-storybook-v3.png`: cream fur, 
 
 Runtime assets:
 
-- `public/assets/runtime/characters/dem/rig/watercolor/v1/dem-standing-low-v1.png`
-- Current low sheet: `public/assets/runtime/characters/dem/rig/watercolor/v2/dem-standing-low-v2.png` removes the extra central ear in the front-quarter view, preserving every pixel outside the correction. Source and prompt: `public/assets/sources/characters/dem/rig/watercolor/v2/README.md`.
-- `public/assets/runtime/characters/dem/rig/watercolor/v1/dem-standing-high-v1.png`
+- `public/assets/runtime/kin/dem/sprites/combat/standing-and-reactions/dem-standing-low-v1.png`
+- Current low sheet: `public/assets/runtime/kin/dem/sprites/combat/refined-low-standing/dem-standing-low-v2.png` removes the extra central ear in the front-quarter view, preserving every pixel outside the correction. Source and prompt: `public/assets/sources/kin/dem/sprites/combat/refined-low-standing/README.md`.
+- `public/assets/runtime/kin/dem/sprites/combat/standing-and-reactions/dem-standing-high-v1.png`
 
-Original generated inputs and exact built-in ImageGen prompts are in `public/assets/sources/characters/dem/rig/watercolor/v1/README.md`. Preparation is reproducible with `tools/prepare-dem-standing.mjs`; actor-specific registration is in `src/proto/demSprite.ts` and `src/proto/art/demStandingLayout.json`.
+Original generated inputs and exact built-in ImageGen prompts are in `public/assets/sources/kin/dem/sprites/combat/standing-and-reactions/README.md`. Preparation is reproducible with `tools/prepare-dem-standing.mjs`; actor-specific registration is in `src/proto/demSprite.ts` and `src/proto/art/demStandingLayout.json`.
 
 Review at `/proto.html?actorEditor&entity=dem`. The preview uses the shared head/torso/hind hierarchy, including angular/elevation selection, mirrored views and a world-aligned overhead footprint. Head regions are separate joints for future expression attachments; no new expressions are supplied by this standing set.
 

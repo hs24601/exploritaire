@@ -10,7 +10,7 @@ const assets = {
   pineOrbit: { name: 'Pine · eight-view draft', path: 'labs/pine-orbit-v1/pine-0.png' },
   pine: { name: 'Pine', path: 'environment/watercolor/v1/pine-relief-v1.png' },
   cir: { name: 'Cir', path: 'keru/cir/cir-phoenix-gather-still-v5.png' },
-  hero: { name: 'Hero', path: 'ui/holocards/layered/hero-watercolor-v5-ordinary-day.png' },
+  hero: { name: 'Hero', path: 'kin/hero/portraits/ordinary-day/hero-watercolor-v5-ordinary-day.png' },
   eevee: { name: 'Eevee', path: 'labs/live-paint/eevee.png' },
 } as const;
 type Asset = keyof typeof assets;

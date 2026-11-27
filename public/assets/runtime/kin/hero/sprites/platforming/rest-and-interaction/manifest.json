@@ -1,0 +1,576 @@
+{
+  "clips": [
+    {
+      "name": "Standing and seated idle",
+      "fps": 2,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1536,
+            "height": 384,
+            "width": 384
+          },
+          "index": 4
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1920,
+            "height": 384,
+            "width": 384
+          },
+          "index": 5
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 2304,
+            "height": 384,
+            "width": 384
+          },
+          "index": 6
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 2688,
+            "height": 384,
+            "width": 384
+          },
+          "index": 7
+        }
+      ],
+      "id": "breath",
+      "image": "breath.png",
+      "loop": true
+    },
+    {
+      "name": "Settle into a nap",
+      "fps": 6,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        }
+      ],
+      "id": "nap-settle",
+      "image": "nap-settle.png",
+      "loop": false
+    },
+    {
+      "name": "Napping breath",
+      "fps": 1.5,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        }
+      ],
+      "id": "nap",
+      "image": "nap.png",
+      "loop": true
+    },
+    {
+      "name": "Tail chase",
+      "fps": 8,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        }
+      ],
+      "id": "tail-chase",
+      "image": "tail-chase.png",
+      "loop": true
+    },
+    {
+      "name": "Digging strokes",
+      "fps": 8,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        }
+      ],
+      "id": "dig",
+      "image": "dig.png",
+      "loop": true
+    },
+    {
+      "name": "Enter burrow",
+      "fps": 8,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        }
+      ],
+      "id": "burrow",
+      "image": "burrow.png",
+      "loop": false
+    },
+    {
+      "name": "Close both eyes",
+      "fps": 8,
+      "frames": [
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 0,
+            "height": 384,
+            "width": 384
+          },
+          "index": 0
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 384,
+            "height": 384,
+            "width": 384
+          },
+          "index": 1
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 768,
+            "height": 384,
+            "width": 384
+          },
+          "index": 2
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1152,
+            "height": 384,
+            "width": 384
+          },
+          "index": 3
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1536,
+            "height": 384,
+            "width": 384
+          },
+          "index": 4
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 1920,
+            "height": 384,
+            "width": 384
+          },
+          "index": 5
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 2304,
+            "height": 384,
+            "width": 384
+          },
+          "index": 6
+        },
+        {
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          },
+          "rect": {
+            "y": 0,
+            "x": 2688,
+            "height": 384,
+            "width": 384
+          },
+          "index": 7
+        }
+      ],
+      "id": "blink",
+      "image": "blink.png",
+      "loop": false
+    }
+  ],
+  "character": "Hero",
+  "animations": {
+    "stand-breath": {
+      "clip": "breath",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        2,
+        1
+      ],
+      "loop": true,
+      "name": "Standing breath"
+    },
+    "sit-breath": {
+      "clip": "breath",
+      "frames": [
+        4,
+        5,
+        6,
+        7,
+        6,
+        5
+      ],
+      "loop": true,
+      "name": "Seated breath"
+    },
+    "wake": {
+      "clip": "nap-settle",
+      "frames": [
+        3,
+        2,
+        1,
+        0
+      ],
+      "loop": false,
+      "name": "Wake and stand"
+    }
+  },
+  "version": 1
+}

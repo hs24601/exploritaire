@@ -1,9 +1,9 @@
 import {describe,it,expect} from 'vitest';
 import {HERO_WORLD_ACTIONS,HERO_WORLD_VIEWS,heroWorldActionFrame} from './heroWorldActions';
-import packing from '../../public/assets/sources/characters/hero/world-exploration/v1/manifest.json';
-import combatPacking from '../../public/assets/sources/characters/hero/world-combat/v3/manifest.json';
-import refreshedPacking from '../../public/assets/sources/characters/hero/world-exploration/v2/manifest.json';
-import baseline from '../../public/assets/sources/characters/hero/castle/activities-v1/manifest.json';
+import packing from '../../public/assets/sources/kin/hero/sprites/world/exploration/exploration-actions/manifest.json';
+import combatPacking from '../../public/assets/sources/kin/hero/sprites/world/combat/alert-combat-cycle/manifest.json';
+import refreshedPacking from '../../public/assets/sources/kin/hero/sprites/world/exploration/yawn-cycle/manifest.json';
+import baseline from '../../public/assets/sources/kin/hero/sprites/world/castle/courtyard-activities/manifest.json';
 describe('Hero world action physical scale',()=>{
  it('matches each clip neutral footprint to the existing Hero instead of its sheet cell',()=>{
   for(const id of HERO_WORLD_ACTIONS)for(const key of HERO_WORLD_VIEWS){

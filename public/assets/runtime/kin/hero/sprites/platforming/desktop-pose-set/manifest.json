@@ -1,0 +1,44 @@
+{
+  "clips": [
+    { "id": "idle", "image": "poses.png", "fps": 4, "loop": true, "frames": [
+      {"rect":{"x":0,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}}
+    ] },
+    { "id": "breath-stand", "image": "poses.png", "fps": 4, "loop": true, "frames": [
+      {"rect":{"x":0,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}}
+    ] },
+    { "id": "lie-down", "image": "poses.png", "fps": 5, "loop": false, "frames": [
+      {"rect":{"x":0,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}},
+      {"rect":{"x":313,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}},
+      {"rect":{"x":627,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8435}},
+      {"rect":{"x":940,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8435}}
+    ] },
+    { "id": "wake-up", "image": "poses.png", "fps": 5, "loop": false, "frames": [
+      {"rect":{"x":940,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8435}},
+      {"rect":{"x":627,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8435}},
+      {"rect":{"x":313,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}},
+      {"rect":{"x":0,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}}
+    ] },
+    { "id": "sleep", "image": "poses.png", "fps": 4, "loop": true, "frames": [
+      {"rect":{"x":0,"y":313,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8435}},
+      {"rect":{"x":313,"y":313,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8371}},
+      {"rect":{"x":627,"y":313,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8371}},
+      {"rect":{"x":940,"y":313,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8466}},
+      {"rect":{"x":627,"y":313,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8371}},
+      {"rect":{"x":313,"y":313,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8371}}
+    ] },
+    { "id": "spin", "image": "poses.png", "fps": 8, "loop": false, "frames": [
+      {"rect":{"x":0,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}},
+      {"rect":{"x":0,"y":627,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8339}},
+      {"rect":{"x":313,"y":627,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8786}},
+      {"rect":{"x":627,"y":627,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8435}},
+      {"rect":{"x":940,"y":627,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8147}},
+      {"rect":{"x":0,"y":0,"width":313,"height":313},"pivot":{"x":0.5,"y":0.8754}}
+    ] },
+    { "id": "sniff", "image": "poses.png", "fps": 6, "loop": false, "frames": [
+      {"rect":{"x":0,"y":940,"width":313,"height":313},"pivot":{"x":0.5,"y":0.7668}},
+      {"rect":{"x":313,"y":940,"width":313,"height":313},"pivot":{"x":0.5,"y":0.7668}},
+      {"rect":{"x":627,"y":940,"width":313,"height":313},"pivot":{"x":0.5,"y":0.7668}},
+      {"rect":{"x":940,"y":940,"width":313,"height":313},"pivot":{"x":0.5,"y":0.7668}}
+    ] }
+  ]
+}

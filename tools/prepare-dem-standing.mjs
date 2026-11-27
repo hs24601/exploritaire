@@ -11,7 +11,7 @@ try {
   const measurements = {};
   for (const [tier, count] of combat ? [['hit',11],['flinch',11]] : [['low', 5], ['high', 6]]) {
     const name = combat ? `dem-${tier}` : `dem-standing-${tier}`;
-    const source = `public/assets/sources/characters/dem/rig/watercolor/v1/${name}-source-v1.png`;
+    const source = `public/assets/sources/kin/dem/sprites/combat/standing-and-reactions/${name}-source-v1.png`;
     const result = await page.evaluate(async ({ url, count, columns, rows }) => {
       const image = new Image(); image.src = url; await image.decode();
       const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -68,7 +68,7 @@ try {
       return { png:output.toDataURL(), size:[output.width,output.height], rects, sourceBounds:components.map(p=>[p.x0,p.y0,p.x1-p.x0+1,p.y1-p.y0+1]), transparent };
     }, { url: 'data:image/png;base64,' + fs.readFileSync(source).toString('base64'), count, columns, rows });
     const { png, ...layout } = result;
-    fs.writeFileSync(`public/assets/runtime/characters/dem/rig/watercolor/v1/${name}-v1.png`, Buffer.from(png.split(',')[1], 'base64'));
+    fs.writeFileSync(`public/assets/runtime/kin/dem/sprites/combat/standing-and-reactions/${name}-v1.png`, Buffer.from(png.split(',')[1], 'base64'));
     measurements[tier] = layout;
     console.log(tier, layout);
   }

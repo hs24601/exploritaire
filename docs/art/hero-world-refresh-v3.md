@@ -4,9 +4,9 @@ Combat v3 replaces the rejected sleepy v2 faces. Built-in `image_gen.imagegen` g
 
 The face uses open amber eyes, pricked ears, the original short muzzle and a closed neutral mouth. The yawn opens the lower jaw while preserving the upper muzzle and skull. This is a new raster generation, not sharpening, recoloring, procedural face replacement or enlargement of the rejected sprites.
 
-- Combat runtime: `public/assets/runtime/characters/hero/world-combat/v3/`.
-- Yawn runtime: `public/assets/runtime/characters/hero/world-exploration/v2/yawn.png`.
-- Original-alpha masters, per-phase prompts, actual reference roles and SHA256 digests: corresponding `public/assets/sources/characters/hero/` family manifests.
+- Combat runtime: `public/assets/runtime/kin/hero/sprites/world/combat/alert-combat-cycle/`.
+- Yawn runtime: `public/assets/runtime/kin/hero/sprites/world/exploration/yawn-cycle/yawn.png`.
+- Original-alpha masters, per-phase prompts, actual reference roles and SHA256 digests: corresponding `public/assets/sources/kin/hero/` family manifests.
 - Portable complete prompt set and selected original generation paths: `artifacts/hero-world-refresh-generation.json`.
 - Contact review: `artifacts/hero-world-refresh-review.png`.
 

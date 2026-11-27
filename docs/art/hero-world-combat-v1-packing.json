@@ -1,8 +1,8 @@
 ﻿{
     "references":  [
                        "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-                       "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
-                       "C:/dev/Exploritaire/public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png"
+                       "C:/dev/Exploritaire/public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
+                       "C:/dev/Exploritaire/public/assets/runtime/kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png"
                    ],
     "version":  1,
     "clips":  [

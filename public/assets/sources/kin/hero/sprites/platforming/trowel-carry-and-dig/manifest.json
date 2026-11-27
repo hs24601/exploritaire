@@ -1,0 +1,85 @@
+{
+  "generator": "Built-in ImageGen",
+  "references": {
+    "palette": "public/assets/sources/abilities/scratch/light-wash/scratch-source.png",
+    "identity": "public/assets/runtime/kin/hero/portraits/organic-bobtail/hero-watercolor-v6-organic-bobtail.png",
+    "prop": "public/assets/sources/kin/hero/sprites/platforming/trowel-dig-and-hold/trowel.png"
+  },
+  "assets": [
+    {
+      "master": "carry-master.png",
+      "poseReference": "carry-reference.png",
+      "runtime": "carry.png",
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Create one real alpha transparent 2x2 game sprite sheet by precisely repainting only Hero's mouth and the object touching it in reference 4, quadrant for quadrant. Reference 1 Scratch supplies light watercolor palette and broad soft wet washes, reference 2 Hero berry supplies exact small tricolor corgi identity and watercolor baseline, reference 3 supplies the design of the little wooden-handled blue-gray garden hand scoop, and reference 4 is the fixed exact side-on body pose and animation registration per quadrant. Preserve each pose, leg shape, coat and exact right-facing profile, no frontal or three-quarter view. Replace the taco in each cell with the small garden scoop, painted into the mouth with the same cheek silhouette and cushioned lip contact. She grips the middle of the handle crosswise like a dog with a stick. Shown from profile, the scoop is compact and naturally foreshortened, sits just below her nose, and the lips visibly wrap around the wood. Match the taco sprite's cohesive soft integrated painting. Full silhouettes, four distinct cells, each in the same positions as reference 4, wide empty gutters, no grid lines, no paper backgrounds, shadow, text or effects.",
+      "sha256": {
+        "master": "9db0a3348b1af2e7c89986bfd49d2b3b99735733a477d23db43d09aca0aefa30",
+        "poseReference": "97d7b66f2178a2343067c9597816ca1c5df71d3ccf30e4e29c1103c9a3545770",
+        "runtime": "8c0de3fd00c89aef1eb8bd6edb4a8060a063da3cc458739c84ede10b1e0d00c4"
+      }
+    },
+    {
+      "master": "walk-master.png",
+      "poseReference": "walk-reference.png",
+      "runtime": "walk.png",
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Create a transparent 2x2 game sprite sheet by precisely repainting only Hero's mouth and the garden scoop touching it in reference 4. Reference 1 Scratch is light palette and broad soft washes, reference 2 Hero berry is exact tricolor corgi identity and watercolor baseline, reference 3 the tiny wooden-handled blue-gray scoop design, and reference 4 is the fixed exact side-on body pose and walk registration per quadrant. Keep all original paw placements in the four respective walking phases. Preserve right-facing strict profile body, coat and full silhouettes. Paint the little scoop snugly into her lips, mouth gripping the middle of the wooden handle sideways as a dog holds a stick. Compact foreshortened scoop below her nose, cohesive soft brushwork, no outlines added. Four separate figures with wide gutters, no grid lines or paper background, true alpha.",
+      "sha256": {
+        "master": "e3f1e8e2b598e96b5783aefb501b9084f61377013b6b2e0e0e66dab6bb8f1e9e",
+        "poseReference": "c4463e77edae3ec1b838010a7fb5c03d2d5e83f9a94f24516617b76d8e79d4d9",
+        "runtime": "1d37f461bb9faaa1e0220ee798c2f5f0ae35f1153deb5937a51f0b20a8de6b18"
+      }
+    },
+    {
+      "master": "poses-master.png",
+      "poseReference": "poses-reference.png",
+      "runtime": "poses.png",
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Create one real alpha transparent 2x2 game sprite sheet by precisely repainting only Hero's mouth and the object touching it in reference 4, quadrant for quadrant. Reference 1 Scratch supplies light watercolor palette and broad soft wet washes, reference 2 Hero berry supplies exact small tricolor corgi identity and watercolor baseline, reference 3 supplies the design of the little wooden-handled blue-gray garden hand scoop, and reference 4 is the fixed exact side-on body pose and animation registration per quadrant. Preserve each pose, leg shape, coat and exact right-facing profile, no frontal or three-quarter view. Keep standing, jumping, falling, and held poses in their respective quadrants. Paint a little garden scoop into her mouth in every frame. She grips the middle of the handle crosswise like a dog with a stick. Shown from profile, the scoop is compact and naturally foreshortened, sits just below her nose, and the lips visibly wrap around the wood. Match the taco sprite's cohesive soft integrated painting. Full silhouettes, four distinct cells, each in the same positions as reference 4, wide empty gutters, no grid lines, no paper backgrounds, shadow, text or effects.",
+      "sha256": {
+        "master": "cf2e06fc50b4a822af14a79ee96373edc1e9ac7e1229b0267d4be073d9bdc1e1",
+        "poseReference": "46f82a9d2ca4eaca1e115e73f4ae99a279d9d1da61a834de4e96a30fedde7674",
+        "runtime": "e6253887eb9c6251ccfd9653daac1d14d454741c432d9e80ee4689437b3a5d02"
+      }
+    },
+    {
+      "master": "dig-master.png",
+      "poseReference": "dig-reference.png",
+      "runtime": "dig.png",
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Create one real alpha transparent 2x2 game sprite sheet by precisely repainting only Hero's mouth and the object touching it in reference 4, quadrant for quadrant. Reference 1 Scratch supplies light watercolor palette and broad soft wet washes, reference 2 Hero berry supplies exact small tricolor corgi identity and watercolor baseline, reference 3 supplies the design of the little wooden-handled blue-gray garden hand scoop, and reference 4 is the fixed exact side-on body pose and animation registration per quadrant. Preserve each pose, leg shape, coat and exact right-facing profile, no frontal or three-quarter view. Keep the four original digging paw phases and nose-down focus. Paint a little garden scoop into her mouth in every frame. She grips the middle of the handle crosswise like a dog with a stick. Shown from profile, the scoop is compact and naturally foreshortened, sits just below her nose, and the lips visibly wrap around the wood. Match the taco sprite's cohesive soft integrated painting. Full silhouettes, four distinct cells, each in the same positions as reference 4, wide empty gutters, no grid lines, no paper backgrounds, shadow, text or effects.",
+      "sha256": {
+        "master": "13378bd79e4ea228f336e534cca5b14f7860d8c0b8d5c86e0757313a876a8835",
+        "poseReference": "8dc9b3afda9a87877e03e71afb8f4c5b9b05ea088136dcec602328875ca98630",
+        "runtime": "089569822b47af2ada852651bf2b29416f90efd7df53337d58d0c3bfbb595bc4"
+      }
+    },
+    {
+      "master": "transition-master.png",
+      "poseReference": "transition-reference.png",
+      "runtime": "transition.png",
+      "runtimeSize": [
+        1536,
+        384
+      ],
+      "prompt": "Create one real alpha transparent 2x2 game sprite sheet by precisely repainting only Hero's mouth and the object touching it in reference 4, quadrant for quadrant. Reference 1 Scratch supplies light watercolor palette and broad soft wet washes, reference 2 Hero berry supplies exact small tricolor corgi identity and watercolor baseline, reference 3 supplies the design of the little wooden-handled blue-gray garden hand scoop, and reference 4 is the fixed exact side-on body pose and animation registration per quadrant. Preserve each pose, leg shape, coat and exact right-facing profile, no frontal or three-quarter view. Keep the crouch before jumping, tucked apex, bent landing, and rising recovery poses in their respective quadrants. Paint a little garden scoop into her mouth in every frame. She grips the middle of the handle crosswise like a dog with a stick. Shown from profile, the scoop is compact and naturally foreshortened, sits just below her nose, and the lips visibly wrap around the wood. Match the taco sprite's cohesive soft integrated painting. Full silhouettes, four distinct cells, each in the same positions as reference 4, wide empty gutters, no grid lines, no paper backgrounds, shadow, text or effects.",
+      "sha256": {
+        "master": "0d503d36a857e8e0868ff2725ffd1cc3df69d83a9938c8903938fbd77f984465",
+        "poseReference": "c7fbede934b7f0ec882bd20613ebab4ce04577c18f1bf7a6f98df739e4af5769",
+        "runtime": "5c208e89396a131af248694cc62a54207f9cbf02c2589603f066749b74dc4cca"
+      }
+    }
+  ]
+}

@@ -5,7 +5,9 @@ const names=process.argv.includes('--frontal')
  : ['happy','blush','heartEyes','sad','stars','upset','upsetWithSymbol','behind','fighting'];
 const version=process.argv[3]||'v2';
 if(!/^v\d+$/.test(version))throw Error('Expected version such as v3');
-const directory=`public/assets/runtime/characters/banks/expressions/emojis/watercolor/${version}`;
+const style={v1:'original-watercolor',v2:'soft-frontal',v3:'action-watercolor',v4:'charcoal-tabby',v5:'storybook-gouache',v6:'neutral-frontal'}[version];
+if(!style)throw Error('Expected a Banks expression revision from v1 to v6');
+const directory=`public/assets/runtime/kin/banks/expressions/${style}`;
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});try{
  const page=await browser.newPage();
  const result=await page.evaluate(async({data,names})=>{

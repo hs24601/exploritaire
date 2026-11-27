@@ -9,14 +9,14 @@ Each sheet has four consecutive action exposures for eleven views: low front/fro
 Every initial generation received these actual images:
 
 1. `public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png`: mandatory watercolor style; broad soft washes and sparse selective facial accents.
-2. `public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png`: Hero identity, anatomy, markings and low camera views.
-3. `public/assets/runtime/characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png`: elevated view identity/anatomy.
-4. `public/assets/runtime/characters/hero/platforming/suite-v1/hurdle.png`: action reference only.
-5. `public/assets/runtime/characters/hero/platforming/suite-v1/ledge-climb.png`: action reference only.
+2. `public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png`: Hero identity, anatomy, markings and low camera views.
+3. `public/assets/runtime/kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png`: elevated view identity/anatomy.
+4. `public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/hurdle.png`: action reference only.
+5. `public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/ledge-climb.png`: action reference only.
 
 Hurdle, mantle, leap, uphill15, downhill35 and snuffle received targeted ImageGen transparency corrections, referencing the original sheet and actual Hero berry painting. Their final generated alpha is retained. No background keying, recoloring, painting, alpha replacement or generated-limb reconstruction was performed in the packer.
 
-Selected byte-identical masters, dark-ground review sheets, exact prompts/correction prompts, original generation paths and SHA256 digests are under `public/assets/sources/characters/hero/world-exploration/v1/`. The portable packing record is [hero-world-exploration-v1-packing.json](./hero-world-exploration-v1-packing.json). Runtime images are under `public/assets/runtime/characters/hero/world-exploration/v1/`.
+Selected byte-identical masters, dark-ground review sheets, exact prompts/correction prompts, original generation paths and SHA256 digests are under `public/assets/sources/kin/hero/sprites/world/exploration/exploration-actions/`. The portable packing record is [hero-world-exploration-v1-packing.json](./hero-world-exploration-v1-packing.json). Runtime images are under `public/assets/runtime/kin/hero/sprites/world/exploration/exploration-actions/`.
 
 `tools/pack-hero-world-exploration.ps1` crops at transparent gutters near the generated grid boundaries and applies one uniform registration transform to all four exposures in each view. The lowest planted exposure sits at pixel 190, with a transparent gutter. It never independently rescales individual animation frames. Source alpha remains untouched. View-specific source orientation corrections are recorded in `heroWorldActions.ts`; runtime mirroring follows the existing navigation rig's left-facing convention.
 

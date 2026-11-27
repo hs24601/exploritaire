@@ -10,11 +10,11 @@ function Add-PackFile([string]$source, [string]$entry) {
     $script:count++
 }
 try {
-    $runtime = Join-Path $project 'public/assets/runtime/characters/hero/platforming/suite-v1'
+    $runtime = Join-Path $project 'public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library'
     foreach ($file in Get-ChildItem -LiteralPath $runtime -File -Recurse) {
-        Add-PackFile $file.FullName ('assets/runtime/characters/hero/platforming/suite-v1/' + [IO.Path]::GetRelativePath($runtime, $file.FullName))
+        Add-PackFile $file.FullName ('assets/runtime/kin/hero/sprites/platforming/platforming-motion-library/' + [IO.Path]::GetRelativePath($runtime, $file.FullName))
     }
-    $sources = Join-Path $project 'public/assets/sources/characters/hero/platforming/suite-v1'
+    $sources = Join-Path $project 'public/assets/sources/kin/hero/sprites/platforming/platforming-motion-library'
     foreach ($file in Get-ChildItem -LiteralPath $sources -File) {
         Add-PackFile $file.FullName ('sources/hero-platform-suite-v1/' + $file.Name)
     }

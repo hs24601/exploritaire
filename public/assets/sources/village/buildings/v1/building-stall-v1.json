@@ -2,7 +2,7 @@
   "tool": "built-in image_gen",
   "references": [
     "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+    "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
   ],
   "name": "building-stall-v1",
   "group": "buildings",

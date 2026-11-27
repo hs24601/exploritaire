@@ -11,8 +11,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
       ],
       "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-0011a455-238b-45c4-a09a-d5c83e45c798.png",
-      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-wonder-seated-v1.png",
-      "source": "public/assets/sources/characters/mochi/book/v1/mochi-wonder-seated-v1.png"
+      "runtime": "public/assets/runtime/kin/mochi/sprites/world/storybook-woodland-poses/mochi-wonder-seated-v1.png",
+      "source": "public/assets/sources/kin/mochi/sprites/world/storybook-woodland-poses/mochi-wonder-seated-v1.png"
     },
     {
       "id": "mochi-careful-step-v1",
@@ -22,8 +22,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
       ],
       "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-d1081077-178d-486d-8f6d-c373cda6bb1d.png",
-      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-careful-step-v1.png",
-      "source": "public/assets/sources/characters/mochi/book/v1/mochi-careful-step-v1.png"
+      "runtime": "public/assets/runtime/kin/mochi/sprites/world/storybook-woodland-poses/mochi-careful-step-v1.png",
+      "source": "public/assets/sources/kin/mochi/sprites/world/storybook-woodland-poses/mochi-careful-step-v1.png"
     },
     {
       "id": "mochi-play-stretch-v1",
@@ -33,8 +33,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
       ],
       "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-16b0cc25-b6f9-43c2-8ce6-4347d16d7c87.png",
-      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-play-stretch-v1.png",
-      "source": "public/assets/sources/characters/mochi/book/v1/mochi-play-stretch-v1.png"
+      "runtime": "public/assets/runtime/kin/mochi/sprites/world/storybook-woodland-poses/mochi-play-stretch-v1.png",
+      "source": "public/assets/sources/kin/mochi/sprites/world/storybook-woodland-poses/mochi-play-stretch-v1.png"
     },
     {
       "id": "mochi-curled-rest-v1",
@@ -44,8 +44,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
       ],
       "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-45005d52-9dba-45a3-a748-6742e097c214.png",
-      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-curled-rest-v1.png",
-      "source": "public/assets/sources/characters/mochi/book/v1/mochi-curled-rest-v1.png"
+      "runtime": "public/assets/runtime/kin/mochi/sprites/world/storybook-woodland-poses/mochi-curled-rest-v1.png",
+      "source": "public/assets/sources/kin/mochi/sprites/world/storybook-woodland-poses/mochi-curled-rest-v1.png"
     },
     {
       "id": "mochi-happy-perch-v1",
@@ -55,8 +55,8 @@
         "C:\\dev\\Exploritaire\\public\\assets\\runtime\\ui\\holocards\\layered\\mochi-watercolor-v2.png"
       ],
       "generated": "C:\\Users\\ericm\\.codex\\generated_images\\01a1a48e-ad41-74f2-9ce8-530b63de01bc\\exec-ec4b04e1-e00d-4767-b758-e95b7014bea3.png",
-      "runtime": "public/assets/runtime/characters/mochi/book/v1/mochi-happy-perch-v1.png",
-      "source": "public/assets/sources/characters/mochi/book/v1/mochi-happy-perch-v1.png"
+      "runtime": "public/assets/runtime/kin/mochi/sprites/world/storybook-woodland-poses/mochi-happy-perch-v1.png",
+      "source": "public/assets/sources/kin/mochi/sprites/world/storybook-woodland-poses/mochi-happy-perch-v1.png"
     }
   ],
   "notes": "Five separate Mochi paintings. Natural tortoiseshell cat, black paws, long tail; no baked tree or magic. The happy perch is mounted with the existing pine in one shared V-fold. Generated source PNGs and alpha are preserved byte-for-byte."

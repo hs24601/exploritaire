@@ -10,7 +10,7 @@
       "role": "Current combat body identity and proportions"
     },
     {
-      "path": "public/assets/sources/characters/hero/orbit/watercolor/v1/guides/hero-standing-low-side-approved-v3-crop.png",
+      "path": "public/assets/sources/kin/hero/sprites/combat/standing-low-orbit/guides/hero-standing-low-side-approved-v3-crop.png",
       "role": "Approved low side-view identity/silhouette"
     },
     {
@@ -18,8 +18,8 @@
       "role": "ART.md loose watercolor medium; scenery excluded"
     }
   ],
-  "runtime": "public/assets/runtime/characters/hero/platforming/v1/hero-sitting-side-v1.png",
-  "source": "public/assets/sources/characters/hero/platforming/v1/hero-sitting-side-v1.png",
+  "runtime": "public/assets/runtime/kin/hero/sprites/platforming/seated-side/hero-sitting-side-v1.png",
+  "source": "public/assets/sources/kin/hero/sprites/platforming/seated-side/hero-sitting-side-v1.png",
   "notes": [
     "Original generated PNG/alpha retained byte-for-byte in source and runtime.",
     "Combat sprites and consumers are unchanged; new platforming asset only.",

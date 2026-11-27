@@ -3,8 +3,8 @@ import { createQuadrupedSpriteDefinition, type QuadrupedLayout } from './quadrup
 import measurements from './art/demStandingLayout.json';
 
 export const DEM_SPRITE_ASSETS: Readonly<Record<string, string>> = {
-  demLow: 'runtime/characters/dem/rig/watercolor/v2/dem-standing-low-v2.png',
-  demHigh: 'runtime/characters/dem/rig/watercolor/v1/dem-standing-high-v1.png',
+  demLow: 'runtime/kin/dem/sprites/combat/refined-low-standing/dem-standing-low-v2.png',
+  demHigh: 'runtime/kin/dem/sprites/combat/standing-and-reactions/dem-standing-high-v1.png',
 };
 
 // Register Dem's bear anatomy independently of the dog/cat layouts. Each frame

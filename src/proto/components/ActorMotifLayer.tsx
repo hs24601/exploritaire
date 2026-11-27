@@ -22,7 +22,7 @@ export function ActorMotifLayer({ actor }: { actor: MotifActor }) {
         <path d="M30 29 Q51 20 73 29 L70 35 Q51 29 33 36 Z M29 63 Q51 53 75 62 L72 68 Q51 61 32 70 Z"/>
       </clipPath></defs>
       <g clipPath={`url(#${instance+m.id})`}><svg width="100" height="100" viewBox={`${m.x*10.24} ${m.y*15.36} ${m.w*10.24} ${m.h*15.36}`} preserveAspectRatio="none">
-        <image href={`${import.meta.env.BASE_URL}assets/runtime/ui/holocards/layered/mochi-watercolor-v2.png`} width="1024" height="1536"/>
+        <image href={`${import.meta.env.BASE_URL}assets/runtime/kin/mochi/portraits/raised-paw/mochi-watercolor-v2.png`} width="1024" height="1536"/>
       </svg></g>
     </svg>}
    </span>)}

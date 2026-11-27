@@ -4,12 +4,12 @@ Dem's hit is a short forward ice-claw strike with a planted supporting stance. F
 
 ## Files
 
-- `public/assets/runtime/characters/dem/rig/watercolor/v1/dem-hit-v1.png`
-- `public/assets/runtime/characters/dem/rig/watercolor/v1/dem-flinch-v1.png`
+- `public/assets/runtime/kin/dem/sprites/combat/standing-and-reactions/dem-hit-v1.png`
+- `public/assets/runtime/kin/dem/sprites/combat/standing-and-reactions/dem-flinch-v1.png`
 - `src/proto/art/demCombatLayout.json` — measured atlas crops
 - `src/proto/demCombatSprites.ts` — reusable poses and one-shot animation sampler
 
-Exact built-in ImageGen prompts and original sources are recorded in `public/assets/sources/characters/dem/rig/watercolor/v1/combat-v1.md`. Rebuild the runtime sheets with `node tools/prepare-dem-standing.mjs --combat`.
+Exact built-in ImageGen prompts and original sources are recorded in `public/assets/sources/kin/dem/sprites/combat/standing-and-reactions/combat-v1.md`. Rebuild the runtime sheets with `node tools/prepare-dem-standing.mjs --combat`.
 
 ## Playback
 

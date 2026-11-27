@@ -4,7 +4,7 @@ import type {HeroIdlePose} from './heroIdle';
 type Frame={index:number;rect:{x:number;y:number;width:number;height:number};pivot:{x:number;y:number}};
 type Clip={id:string;image:string;fps:number;loop:boolean;frames:Frame[]};
 export async function createPlatformHero(report:(done:number,total:number)=>void){
- const base=`${import.meta.env.BASE_URL}assets/runtime/characters/hero/platforming/`,root=base+'suite-v1/',idleRoot=base+'idle-v2/';
+ const base=`${import.meta.env.BASE_URL}assets/runtime/kin/hero/sprites/platforming/`,root=base+'platforming-motion-library/',idleRoot=base+'breath-and-butterfly/';
  const responses=await Promise.all([fetch(root+'manifest.json'),fetch(idleRoot+'manifest.json')]);if(responses.some(r=>!r.ok))throw Error('Hero sprite manifest could not load');
  const [legacy,idles]=await Promise.all(responses.map(r=>r.json())) as [{clips:Clip[]},{clips:Clip[]}];
  // Legacy idle/sit sheets contain baked winks and are deliberately excluded.

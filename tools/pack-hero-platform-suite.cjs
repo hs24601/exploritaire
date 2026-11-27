@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),{chromium}=require('playwright');
-const source='public/assets/sources/characters/hero/platforming/suite-v1',runtime='public/assets/runtime/characters/hero/platforming/suite-v1';
+const source='public/assets/sources/kin/hero/sprites/platforming/platforming-motion-library',runtime='public/assets/runtime/kin/hero/sprites/platforming/platforming-motion-library';
 
 function makeAliases(){return {
  'stand-up':{name:'Stand up from crouch',clip:'crouch',frames:[7,6,5,4,3,2,1,0],fps:12,loop:false},

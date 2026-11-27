@@ -6,15 +6,15 @@ import type { FoeKind } from './rules/combatRules';
 const base = import.meta.env.BASE_URL;
 type Sprite = { src: string; sheet?: [number, number] };
 const KIN_ART: Record<KinId, Sprite> = {
-  hero: { src: 'assets/runtime/characters/hero/poses/watercolor/v1-opening/hero-happy-emoji-v1.png' },
-  mochi: { src: 'assets/runtime/characters/mochi/expressions/emojis/watercolor/v1/mochi_emoji_happy.png' },
-  banks: { src: 'assets/runtime/characters/banks/expressions/emojis/watercolor/v6/banks_emoji_happy.png' },
-  demi: { src: 'assets/runtime/characters/dem/demi-expressions-v1.png', sheet: [4, 3] },
+  hero: { src: 'assets/runtime/kin/hero/sprites/world/opening-poses/hero-happy-emoji-v1.png' },
+  mochi: { src: 'assets/runtime/kin/mochi/expressions/watercolor-emojis/mochi_emoji_happy.png' },
+  banks: { src: 'assets/runtime/kin/banks/expressions/neutral-frontal/banks_emoji_happy.png' },
+  demi: { src: 'assets/runtime/kin/demi/expressions/demi-expressions-v1.png', sheet: [4, 3] },
   cir: { src: 'assets/runtime/keru/cir/cir-expression-neutral-v2.png' },
   riv: { src: 'assets/runtime/keru/riv/riv-watercolor-v2.png' },
 };
 const FOE_ART: Record<FoeKind, Sprite> = {
-  slime: { src: 'assets/runtime/characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png', sheet: [3, 3] },
+  slime: { src: 'assets/runtime/creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png', sheet: [3, 3] },
   root: { src: 'assets/runtime/ui/quests/khad-roots-berry-bush-night-paint-v1.png' },
 };
 

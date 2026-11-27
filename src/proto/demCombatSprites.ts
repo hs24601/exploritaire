@@ -3,8 +3,8 @@ import type { AtlasRect, DirectionalFrame, DirectionalSpriteDefinition } from '.
 import measurements from './art/demCombatLayout.json';
 
 export const DEM_COMBAT_ASSETS: Readonly<Record<string,string>> = {
-  demHit: 'runtime/characters/dem/rig/watercolor/v1/dem-hit-v1.png',
-  demFlinch: 'runtime/characters/dem/rig/watercolor/v1/dem-flinch-v1.png',
+  demHit: 'runtime/kin/dem/sprites/combat/standing-and-reactions/dem-hit-v1.png',
+  demFlinch: 'runtime/kin/dem/sprites/combat/standing-and-reactions/dem-flinch-v1.png',
 };
 export type DemReaction = 'hit' | 'flinch';
 

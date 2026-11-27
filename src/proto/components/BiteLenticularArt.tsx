@@ -1,6 +1,6 @@
 import './BiteLenticularArt.css';
 import {BiteOpticsCanvas} from './BiteOpticsCanvas';
-const root=`${import.meta.env.BASE_URL}assets/runtime/ui/holocards/hero-bite/v2/`;
+const root=`${import.meta.env.BASE_URL}assets/runtime/abilities/bite/lenticular-jaw/`;
 
 /** Lateral viewing angle selects jaw states; there is deliberately no animation clock. */
 export function BiteLenticularArt({orientation='portrait'}:{orientation?:'portrait'|'landscape'}){

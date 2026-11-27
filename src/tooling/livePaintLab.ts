@@ -40,7 +40,7 @@ async function start() {
     load('runtime/ui/holocards/layered/hero-night-background-v2-ordinary-day.png'),
     load('runtime/environment/watercolor/v1/hero-den-sprite-v2.png'),
     load('runtime/environment/watercolor/v1/woods-cluster-sprite-v1.png'),
-    load('runtime/ui/holocards/layered/hero-watercolor-v5-ordinary-day.png'),
+    load('runtime/kin/hero/portraits/ordinary-day/hero-watercolor-v5-ordinary-day.png'),
     load(BATTLE_SPRITE_ASSETS.heroHigh),
     load('runtime/labs/live-paint/eevee.png'),
   ]);

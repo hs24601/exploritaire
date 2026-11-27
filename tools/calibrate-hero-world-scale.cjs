@@ -1,5 +1,5 @@
 const fs=require('node:fs');
-const root='public/assets/sources/characters/hero/';
+const root='public/assets/sources/kin/hero/';
 const old=JSON.parse(fs.readFileSync(root+'castle/activities-v1/manifest.json'));
 const pack=JSON.parse(fs.readFileSync(root+'world-exploration/v1/manifest.json','utf8').replace(/^\uFEFF/,''));
 const refresh=root+'world-exploration/v2/manifest.json';

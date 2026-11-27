@@ -1,7 +1,7 @@
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Drawing
 $root=Split-Path $PSScriptRoot -Parent
-$family=Join-Path $root 'public/assets/sources/characters/hero/world-combat'
+$family=Join-Path $root 'public/assets/sources/kin/hero/sprites/world/combat'
 $out=[Drawing.Bitmap]::new(1000,1120);$g=[Drawing.Graphics]::FromImage($out);$g.Clear([Drawing.ColorTranslator]::FromHtml('#20353a'))
 $g.InterpolationMode=[Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 $font=[Drawing.Font]::new('Georgia',15)

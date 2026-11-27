@@ -7,7 +7,7 @@ Scope: the standing pose, alert expression, low camera tier (about 15° elevatio
 ## How the pieces fit
 
 1. **Proxy** `src/proto/heroOrbitProxy.ts` (`hero-orbit-proxy-v1`): a 3D body of ellipsoids with markings attached to body parts. It is never shown in the game.
-2. **Guides** `tools/hero-orbit-guides.mjs` ray-casts the proxy at each view into `public/assets/sources/characters/hero/orbit/watercolor/v1/guides/`. Every guide shares one world scale and ground line. Beside each guide is the approved v3 crop for the same angle. `artifacts/hero-orbit/guides-vs-approved.png` compares them.
+2. **Guides** `tools/hero-orbit-guides.mjs` ray-casts the proxy at each view into `public/assets/sources/kin/hero/sprites/combat/standing-low-orbit/guides/`. Every guide shares one world scale and ground line. Beside each guide is the approved v3 crop for the same angle. `artifacts/hero-orbit/guides-vs-approved.png` compares them.
 3. **Sol** paints each view from its guide using the rubric and prompts below.
 4. **Import** `tools/hero-orbit-import.mjs` validates the paintings and packs them into the runtime sheet that the `?khad-combat` toggle uses.
 
@@ -17,11 +17,11 @@ For every view, attach all of these:
 
 | Role | File |
 | --- | --- |
-| Guide (the image to paint over) | `public/assets/sources/characters/hero/orbit/watercolor/v1/guides/hero-standing-low-<view>-guide-v1.png` |
-| Same angle, approved identity | `public/assets/sources/characters/hero/orbit/watercolor/v1/guides/hero-standing-low-<view>-approved-v3-crop.png` |
-| Whole approved standing sheet | `public/assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png` |
-| Watercolor quality anchor | `public/assets/runtime/characters/hero/sleeping/watercolor/v1/hero-sleeping-body-v3.png` |
-| Alert face anchor | `public/assets/runtime/characters/hero/expressions/heads/watercolor/v2/hero-curious-heads-v1.png` |
+| Guide (the image to paint over) | `public/assets/sources/kin/hero/sprites/combat/standing-low-orbit/guides/hero-standing-low-<view>-guide-v1.png` |
+| Same angle, approved identity | `public/assets/sources/kin/hero/sprites/combat/standing-low-orbit/guides/hero-standing-low-<view>-approved-v3-crop.png` |
+| Whole approved standing sheet | `public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png` |
+| Watercolor quality anchor | `public/assets/runtime/kin/hero/sprites/world/sleeping-poses/hero-sleeping-body-v3.png` |
+| Alert face anchor | `public/assets/runtime/kin/hero/expressions/heads/layered-directional-heads/hero-curious-heads-v1.png` |
 | House style | `ART.md` |
 
 `<view>` is one of `front`, `front-quarter`, `side`, `rear-quarter`, `rear`. Run the five views in one session if possible, so Sol keeps one individual in mind. After the first accepted view, attach it to the remaining runs as well.
@@ -73,7 +73,7 @@ Paint Hero, a young girl tricolour merle Australian Shepherd puppy, standing ale
 
 Save each accepted painting, unedited, as:
 
-`public/assets/sources/characters/hero/orbit/watercolor/v1/hero-standing-low-<view>-sol-v1.png`
+`public/assets/sources/kin/hero/sprites/combat/standing-low-orbit/hero-standing-low-<view>-sol-v1.png`
 
 Then run:
 
@@ -81,7 +81,7 @@ Then run:
 node --import ./tools/ts-resolve.mjs tools/hero-orbit-import.mjs
 ```
 
-The importer checks R1–R2 and reports silhouette agreement with the guide. It packs the views into `public/assets/runtime/characters/hero/rig/watercolor/orbit-v1/hero-standing-low-orbit-v1.png` and regenerates `src/proto/heroOrbitAtlas.ts`. Until Sol's paintings exist, `--placeholder` packs the guides instead, so the scene toggle can be checked end to end.
+The importer checks R1–R2 and reports silhouette agreement with the guide. It packs the views into `public/assets/runtime/kin/hero/sprites/combat/standing-low-orbit/hero-standing-low-orbit-v1.png` and regenerates `src/proto/heroOrbitAtlas.ts`. Until Sol's paintings exist, `--placeholder` packs the guides instead, so the scene toggle can be checked end to end.
 
 ## Review
 

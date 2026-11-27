@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import * as THREE from 'three';
 import {createClearArrivalFlight} from './clearArrivalFlight';
 import {directGroundsArrival,groundedOrbitPose} from './castleArrival';
-import {WORLD_1111_LAYOUT} from './world1111Layout';
+import {WORLD_1111_LAYOUT,WORLD_TREE_PORTAL_ARRIVAL} from './world1111Layout';
 import {shoulderPose,type FlightKey} from './castleLayout';
 
 // Paint is immaterial to solid geometry. Keep the actual seeded tree, forest,
@@ -13,13 +13,26 @@ vi.mock('./castleWatercolor',async()=>{
 });
 vi.mock('./worldTreeGroundCover',()=>({createWorldTreeGroundCover:()=>({grassCards:0}),worldTreeSoilPaint:()=>new THREE.Texture()}));
 vi.mock('./waterfallParticles',()=>({createWaterfallFlow:()=>({texture:new THREE.Texture(),update:()=>{},dispose:()=>{}})}));
-import {createWorldTreeScene,treeGround} from './worldTreeScene';
+import {createWorldTreeScene,treeGround,treeWalkable} from './worldTreeScene';
 
 const keys=(start:THREE.Vector3,end:THREE.Vector3):readonly FlightKey[]=>[
   {t:0,position:start.toArray(),target:end.toArray(),fov:50},
   {t:8,position:end.toArray(),target:end.clone().add(new THREE.Vector3(0,0,-1)).toArray(),fov:60},
 ];
 describe('cleared initial fly-in',()=>{
+  it.each([1432/734,412/915])('flies to the captured tree shot over walkable ground at aspect %s',(aspect)=>{
+    const {hero,camera,approachLift}=WORLD_TREE_PORTAL_ARRIVAL;
+    expect(treeWalkable(hero.x,hero.z)).toBe(true);
+    expect(treeGround(hero.x,hero.z)).toBe(0);
+    const art=[{aspect:992/1586,foot:.006},{aspect:1266/1242,foot:.035},{aspect:992/1586,foot:.006}].map(a=>({...a,texture:new THREE.Texture()}));
+    const grove=createWorldTreeScene(new THREE.Scene(),new THREE.MeshBasicMaterial(),m=>m,true,art);
+    const path=directGroundsArrival({position:[...camera.position],target:[...camera.target]},undefined,aspect);
+    const landing=createClearArrivalFlight(path,treeGround,grove.cameraObstacles,{aspect,approachLift}).sample(path[path.length-1].t);
+    expect(landing.done).toBe(true);
+    expect(landing.fov).toBe(camera.fov);
+    expect(new THREE.Vector3(...landing.position).distanceTo(new THREE.Vector3(...camera.position))).toBeLessThan(1e-8);
+    expect(new THREE.Vector3(...landing.target).distanceTo(new THREE.Vector3(...camera.target))).toBeLessThan(1e-8);
+  });
   it('detours around a solid instead of passing through or snapping out of it',()=>{
     const box=new THREE.Box3(new THREE.Vector3(-5,0,-5),new THREE.Vector3(5,30,5));
     const start=new THREE.Vector3(-24,8,0),end=new THREE.Vector3(24,4,0),flight=createClearArrivalFlight(keys(start,end),()=>0,[box]);

@@ -1,0 +1,8 @@
+{
+  "scaleReference": "User-supplied maple seedling photograph, scale and maturity only",
+  "runtime": "public/assets/runtime/village/ground/curious-sapling-overhead-seedling-v2.png",
+  "prompt": "Create one transparent game sprite of a tiny new maple seedling. EXACT NADIR, camera straight overhead 90 degrees down, orthographic, as if photographed by a microscope from the sky. The crown is a compact roughly square silhouette of two young green star-shaped lobed maple leaves spreading left and right with two tiny emerging leaves at their junction. Leaf tops dominate the entire silhouette. The stem is completely hidden under the crown by exact overhead projection; absolutely no tall vertical stem, side profile, horizon, angled or isometric perspective. Second reference landscape photo is ONLY for seedling's real-world scale and youthful leaf count; do not follow its camera angle, colors or treatment. First reference Hero berry painting is the exclusive rendering style: light softly merging hand-painted watercolor, irregular pigment pooling and broken brush edges with a few loose gouache accents. Fresh natural greens. Center compact isolated leaves on a square transparent canvas with modest margins. True zero alpha outside plant. No background, paper, glow, light spill, ground, or shadows.",
+  "generator": "Built-in ImageGen",
+  "sha256": "9185c2d08ace0410cfc58a02530d6e30e172acd7f59ce22ab065a19620e9c699",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png"
+}

@@ -1,6 +1,6 @@
 {
   "directions-low": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-directions-low-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-directions-low-watercolor-v6.png",
     "width": 1122,
     "height": 1402,
     "frames": [
@@ -84,7 +84,7 @@
     "partial": 57218
   },
   "directions-high": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-directions-high-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-directions-high-watercolor-v6.png",
     "width": 1024,
     "height": 1536,
     "frames": [
@@ -168,7 +168,7 @@
     "partial": 64778
   },
   "sitting-low": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-sitting-low-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-sitting-low-watercolor-v6.png",
     "width": 1338,
     "height": 1383,
     "frames": [
@@ -312,7 +312,7 @@
     "partial": 322920
   },
   "walking-low": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-walking-low-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-walking-low-watercolor-v6.png",
     "width": 1512,
     "height": 1460,
     "frames": [
@@ -621,7 +621,7 @@
     "partial": 290988
   },
   "sitting-high": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-sitting-high-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-sitting-high-watercolor-v6.png",
     "width": 1353,
     "height": 1446,
     "frames": [
@@ -765,7 +765,7 @@
     "partial": 341794
   },
   "walking-high": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-walking-high-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-walking-high-watercolor-v6.png",
     "width": 1224,
     "height": 2190,
     "frames": [
@@ -1134,7 +1134,7 @@
     "partial": 314744
   },
   "flinch-atlas": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-flinch-atlas-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-flinch-atlas-watercolor-v6.png",
     "width": 1275,
     "height": 1233,
     "frames": [
@@ -1278,7 +1278,7 @@
     "partial": 356571
   },
   "down-atlas": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v6/banks-down-atlas-watercolor-v6.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/broad-wash-tabby/banks-down-atlas-watercolor-v6.png",
     "width": 1312,
     "height": 1199,
     "frames": [

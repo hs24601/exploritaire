@@ -1,6 +1,6 @@
 {
   "directions-low": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-directions-low-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-directions-low-watercolor-v4.png",
     "width": 1122,
     "height": 1402,
     "frames": [
@@ -84,7 +84,7 @@
     "partial": 95474
   },
   "directions-high": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-directions-high-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-directions-high-watercolor-v4.png",
     "width": 1024,
     "height": 1536,
     "frames": [
@@ -168,7 +168,7 @@
     "partial": 98282
   },
   "sitting-low": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-sitting-low-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-sitting-low-watercolor-v4.png",
     "width": 1338,
     "height": 1383,
     "frames": [
@@ -312,7 +312,7 @@
     "partial": 334518
   },
   "walking-low": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-walking-low-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-walking-low-watercolor-v4.png",
     "width": 1512,
     "height": 1460,
     "frames": [
@@ -621,7 +621,7 @@
     "partial": 311560
   },
   "sitting-high": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-sitting-high-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-sitting-high-watercolor-v4.png",
     "width": 1353,
     "height": 1446,
     "frames": [
@@ -765,7 +765,7 @@
     "partial": 363225
   },
   "walking-high": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-walking-high-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-walking-high-watercolor-v4.png",
     "width": 1224,
     "height": 2190,
     "frames": [
@@ -1134,7 +1134,7 @@
     "partial": 308366
   },
   "flinch-atlas": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-flinch-atlas-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-flinch-atlas-watercolor-v4.png",
     "width": 1275,
     "height": 1233,
     "frames": [
@@ -1278,7 +1278,7 @@
     "partial": 378549
   },
   "down-atlas": {
-    "path": "public/assets/runtime/characters/banks/rig/watercolor/v4/banks-down-atlas-watercolor-v4.png",
+    "path": "public/assets/runtime/kin/banks/sprites/combat/athletic-action/banks-down-atlas-watercolor-v4.png",
     "width": 1312,
     "height": 1199,
     "frames": [

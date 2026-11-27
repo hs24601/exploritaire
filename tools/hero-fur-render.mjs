@@ -7,7 +7,7 @@ import { decode, encode, canvas, scene, blit, crop } from './png-rgba.mjs';
 const P = await import(new URL('../src/proto/heroFurPainter.ts', import.meta.url).href);
 const outDir = process.argv[2] ?? 'artifacts/hero-fur-study', seed = Number(process.argv[3] ?? P.HERO_FUR_DEFAULTS.seed);
 fs.mkdirSync(outDir, { recursive: true });
-const S = 512, G = 16, art = 'public/assets/runtime/characters/hero/sleeping/watercolor/v1';
+const S = 512, G = 16, art = 'public/assets/runtime/kin/hero/sprites/world/sleeping-poses';
 
 // The reference, registered into the painter's frame (92% width, 17% from the top).
 const body = decode(`${art}/hero-sleeping-body-v3.png`), tail = decode(`${art}/hero-sleeping-bobtail-layer-v3.png`);

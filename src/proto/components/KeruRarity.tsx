@@ -211,7 +211,7 @@ export const keruCardText = (battle: BattleState, keru: InvokeKeruId) =>
 
 /** Shared art for hand cards, held cards, badges' inspection and jumbo views. */
 export const keruCardArt = (keru: InvokeKeruId, name = keruName(keru)) => keru === 'dem' ? <KeruAbilityArt subject={demSubject} background={demBackground} label="Dem" />
-  : keru === 'cir' ? <KeruAbilityArt subject={CIR_ART} label="Cir" /> : keru === 'banks' ? <KeruAbilityArt subject={`${import.meta.env.BASE_URL}assets/runtime/characters/banks/banks-keru-subject-watercolor-v3.png`} label="Banks" /> : keru === 'riv' ? <KeruAbilityArt subject={`${import.meta.env.BASE_URL}assets/runtime/keru/riv/riv-watercolor-v2.png`} label="Riv" />
+  : keru === 'cir' ? <KeruAbilityArt subject={CIR_ART} label="Cir" /> : keru === 'banks' ? <KeruAbilityArt subject={`${import.meta.env.BASE_URL}assets/runtime/kin/banks/portraits/keru-card/banks-keru-subject-watercolor-v3.png`} label="Banks" /> : keru === 'riv' ? <KeruAbilityArt subject={`${import.meta.env.BASE_URL}assets/runtime/keru/riv/riv-watercolor-v2.png`} label="Riv" />
   : <span className="ability-status-art"><ActorCardArt sprite={ACTOR_HOLO_ART[keru] ?? ACTOR_HOLO_ART.hero} label={name} /></span>;
 
 /** The Keru invoke card face (hand, drag clone and jumbo): art in its tier frame, value chip, cost and rules text. */

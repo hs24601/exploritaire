@@ -2,7 +2,7 @@
   "hero": [
     {
       "key": "hero-view-0",
-      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "source": "kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
       "rect": [
         48,
         20,
@@ -13,7 +13,7 @@
     },
     {
       "key": "hero-view-1",
-      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "source": "kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
       "rect": [
         41,
         289,
@@ -24,7 +24,7 @@
     },
     {
       "key": "hero-view-2",
-      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "source": "kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
       "rect": [
         19,
         546,
@@ -35,7 +35,7 @@
     },
     {
       "key": "hero-view-3",
-      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "source": "kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
       "rect": [
         25,
         812,
@@ -46,7 +46,7 @@
     },
     {
       "key": "hero-view-4",
-      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "source": "kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
       "rect": [
         55,
         1080,
@@ -57,7 +57,7 @@
     },
     {
       "key": "hero-view-5",
-      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "source": "kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
       "rect": [
         44,
         43,
@@ -68,7 +68,7 @@
     },
     {
       "key": "hero-view-6",
-      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "source": "kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
       "rect": [
         44,
         274,
@@ -79,7 +79,7 @@
     },
     {
       "key": "hero-view-7",
-      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "source": "kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
       "rect": [
         28,
         509,
@@ -90,7 +90,7 @@
     },
     {
       "key": "hero-view-8",
-      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "source": "kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
       "rect": [
         41,
         753,
@@ -101,7 +101,7 @@
     },
     {
       "key": "hero-view-9",
-      "source": "characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png",
+      "source": "kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
       "rect": [
         55,
         1080,
@@ -112,7 +112,7 @@
     },
     {
       "key": "hero-view-10",
-      "source": "characters/hero/rig/watercolor/v4/hero-directions-high-body-v4.png",
+      "source": "kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
       "rect": [
         71,
         1022,
@@ -125,7 +125,7 @@
   "slime": [
     {
       "key": "slime-view-0",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         38,
         114,
@@ -136,7 +136,7 @@
     },
     {
       "key": "slime-view-1",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         449,
         102,
@@ -147,7 +147,7 @@
     },
     {
       "key": "slime-view-2",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         874,
         104,
@@ -158,7 +158,7 @@
     },
     {
       "key": "slime-view-3",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         40,
         495,
@@ -169,7 +169,7 @@
     },
     {
       "key": "slime-view-4",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         448,
         501,
@@ -180,7 +180,7 @@
     },
     {
       "key": "slime-view-5",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         38,
         114,
@@ -191,7 +191,7 @@
     },
     {
       "key": "slime-view-6",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         875,
         522,
@@ -202,7 +202,7 @@
     },
     {
       "key": "slime-view-7",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         41,
         896,
@@ -213,7 +213,7 @@
     },
     {
       "key": "slime-view-8",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         448,
         893,
@@ -224,7 +224,7 @@
     },
     {
       "key": "slime-view-9",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         448,
         501,
@@ -235,7 +235,7 @@
     },
     {
       "key": "slime-view-10",
-      "source": "characters/dark-slime/rig/watercolor/v1/dark-slime-directions-watercolor-v1.png",
+      "source": "creatures/dark-slime/sprites/combat/watercolor-directions/dark-slime-directions-watercolor-v1.png",
       "rect": [
         882,
         883,

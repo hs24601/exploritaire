@@ -1,5 +1,5 @@
 const fs=require('fs'),{chromium}=require('playwright');
-const root='public/assets/runtime/characters/hero/platforming/idle-v2',source='public/assets/sources/characters/hero/platforming/idle-v2';
+const root='public/assets/runtime/kin/hero/sprites/platforming/breath-and-butterfly',source='public/assets/sources/kin/hero/sprites/platforming/breath-and-butterfly';
 (async()=>{const records=JSON.parse(fs.readFileSync('docs/art/hero-idle-v2-selected.json')),browser=await chromium.launch({headless:true});try{
  const page=await browser.newPage(),clips=[];for(const record of records.clips){
   const packed=await page.evaluate(async({b64,id,columns,rows})=>{

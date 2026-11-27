@@ -2,7 +2,7 @@ import { validStep, validChoreography } from './cameraChoreography';
 import type { CalloutDraft } from './components/CalloutEditing';
 import { CALLOUT_EFFECTS } from './calloutEffects';
 import { HERO_EMOJI_EMOTIONS } from './heroEmojis';
-import banksAtlas from '../../public/assets/runtime/characters/banks/expressions/emojis/watercolor/v6/banks-emojis-v6.json';
+import banksAtlas from '../../public/assets/runtime/kin/banks/expressions/neutral-frontal/banks-emojis-v6.json';
 const BANKS_EMOJI_EMOTIONS = Object.keys(banksAtlas.frames);
 import { MOCHI_EMOJI_EMOTIONS } from './mochiEmojis';
 export function validCallout(d: CalloutDraft): boolean {

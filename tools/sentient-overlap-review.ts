@@ -5,7 +5,7 @@ import {heroWorldActionFrame,HERO_WORLD_ATLAS} from '../src/book/heroWorldAction
 const scene=new THREE.Scene();scene.background=new THREE.Color('#25343a');
 const camera=new THREE.PerspectiveCamera(40,1.6,.1,100);camera.position.set(0,2.5,7);camera.lookAt(0,2.5,0);
 const renderer=new THREE.WebGLRenderer({canvas:document.querySelector('canvas')!,preserveDrawingBuffer:true,antialias:false});renderer.setSize(1000,650);camera.aspect=1000/650;camera.updateProjectionMatrix();
-const texture=await new THREE.TextureLoader().loadAsync('/assets/runtime/characters/hero/world-exploration/v1/yawn.png');texture.colorSpace=THREE.SRGBColorSpace;
+const texture=await new THREE.TextureLoader().loadAsync('/assets/runtime/kin/hero/sprites/world/exploration/exploration-actions/yawn.png');texture.colorSpace=THREE.SRGBColorSpace;
 const pose=heroWorldActionFrame('yawn',0,0,0,0),[x,y,w,h]=pose.rect;texture.repeat.set(w/HERO_WORLD_ATLAS.width,h/HERO_WORLD_ATLAS.height);texture.offset.set(x/HERO_WORLD_ATLAS.width,1-(y+h)/HERO_WORLD_ATLAS.height);
 const hero=new THREE.Mesh(new THREE.PlaneGeometry(1,1).translate(0,.5,0),new THREE.MeshBasicMaterial({map:texture,alphaTest:.35,transparent:true,side:THREE.DoubleSide}));hero.scale.setScalar(pose.planeSize);hero.position.set(0,2,-.5);hero.renderOrder=3;scene.add(hero);
 const root=new THREE.Group();scene.add(root);const snow=await createWorldFlurry(root,new THREE.Vector3(),()=>{},()=>{},true);const outline=createSentientOverlap([hero.material]);

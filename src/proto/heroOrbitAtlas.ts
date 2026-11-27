@@ -4,7 +4,7 @@ export const HERO_ORBIT_ATLAS = {
   version: 'hero-orbit-v1',
   /** True while the sheet holds the proxy guides instead of Sol's paintings. */
   placeholder: true,
-  sheet: 'runtime/characters/hero/rig/watercolor/orbit-v1/hero-standing-low-orbit-v1.png',
+  sheet: 'runtime/kin/hero/sprites/combat/standing-low-orbit/hero-standing-low-orbit-v1.png',
   rects: {
     'front': [16, 16, 155, 260],
     'front-quarter': [16, 292, 247, 274],

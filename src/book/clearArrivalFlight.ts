@@ -4,7 +4,7 @@ import {sampleFlight,type FlightKey} from './castleLayout';
 /** Precompute a terrain/solid-aware route once. Playback never pushes the
  * camera out of geometry after rendering, and never re-smooths a cleared path
  * with an unchecked Catmull spline that can cut across its corners. */
-export function createClearArrivalFlight(path:readonly FlightKey[],height:(x:number,z:number)=>number,solids:readonly THREE.Box3[],options:{aspect?:number;nearPlane?:number}={}){
+export function createClearArrivalFlight(path:readonly FlightKey[],height:(x:number,z:number)=>number,solids:readonly THREE.Box3[],options:{aspect?:number;nearPlane?:number;approachLift?:number}={}){
   const start=new THREE.Vector3(...path[0].position),end=new THREE.Vector3(...path[path.length-1].position);
   // Cover the whole near-plane footprint at the widest flight lens, not just
   // a center ray. Default to the grove's two-metre cap; smaller scene lenses
@@ -52,8 +52,9 @@ export function createClearArrivalFlight(path:readonly FlightKey[],height:(x:num
     // Reach a clear point above the final shoulder pose before settling onto
     // it. A coarse grid cannot connect reliably to a point exactly on the
     // minimum-clearance surface beside a rising bank.
-    const approach=end.clone();approach.y+=3;
+    const approach=end.clone();approach.y+=options.approachLift??3;
     if(!clear(approach,end))throw new Error('The final arrival descent is obstructed.');
+    const approachAltitude=options.approachLift===undefined?end.y:approach.y;
     const step=3,minX=Math.min(start.x,end.x)-42,minZ=Math.min(start.z,end.z)-42;
     const cols=Math.ceil((Math.abs(start.x-end.x)+84)/step)+1,rows=Math.ceil((Math.abs(start.z-end.z)+84)/step)+1,count=cols*rows;
     const direction=end.clone().sub(start);direction.y=0;const length2=direction.lengthSq();
@@ -62,7 +63,7 @@ export function createClearArrivalFlight(path:readonly FlightKey[],height:(x:num
       // Hold the entry altitude until clear of the starting crown; immediately
       // descending from its top can trap the first grid edge inside the crown.
       const t=THREE.MathUtils.smoothstep(progress,.16,1);
-      return new THREE.Vector3(x,Math.max(floor(x,z),THREE.MathUtils.lerp(start.y,end.y,t)),z);
+      return new THREE.Vector3(x,Math.max(floor(x,z),THREE.MathUtils.lerp(start.y,approachAltitude,t)),z);
     });
     const index=(p:THREE.Vector3)=>Math.round((p.z-minZ)/step)*cols+Math.round((p.x-minX)/step),first=index(start),last=index(approach);
     points[first]=start;points[last]=approach;

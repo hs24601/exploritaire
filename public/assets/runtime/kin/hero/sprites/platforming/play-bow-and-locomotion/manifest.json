@@ -1,0 +1,1524 @@
+{
+  "version": 1,
+  "character": "Hero",
+  "clips": [
+    {
+      "id": "walk",
+      "image": "locomotion.png",
+      "fps": 9,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "image": "locomotion.png",
+      "fps": 12,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "crouch",
+      "image": "locomotion.png",
+      "fps": 7,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "jump-prepare",
+      "image": "locomotion.png",
+      "fps": 7,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "jump-rise",
+      "image": "locomotion.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 384,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "jump-apex",
+      "image": "locomotion.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 768,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "fall",
+      "image": "locomotion.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 1152,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "land",
+      "image": "locomotion.png",
+      "fps": 10,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "crawl",
+      "image": "locomotion.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 768,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "idle",
+      "image": "idle-and-play.png",
+      "fps": 2,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "breath",
+      "image": "idle-and-play.png",
+      "fps": 4,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "blink",
+      "image": "idle-and-play.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 768,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "sit",
+      "image": "idle-and-play.png",
+      "fps": 4,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "sit-down",
+      "image": "idle-and-play.png",
+      "fps": 5,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "stand-up",
+      "image": "idle-and-play.png",
+      "fps": 5,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "lie-down",
+      "image": "idle-and-play.png",
+      "fps": 6,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "sleep",
+      "image": "idle-and-play.png",
+      "fps": 2,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 768,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "spin",
+      "image": "idle-and-play.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "tail-chase",
+      "image": "idle-and-play.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "roll",
+      "image": "idle-and-play.png",
+      "fps": 5,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "salute",
+      "image": "idle-and-play.png",
+      "fps": 5,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "celebrate",
+      "image": "idle-and-play.png",
+      "fps": 6,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "chase",
+      "image": "idle-and-play.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 1152,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "hurdle",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "ledge-climb",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 384,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.7,
+            "y": 0.46
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "wall-slide",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "wall-jump",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 384,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "brake-turn",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 768,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "dig",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "burrow",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "ledge-hang",
+      "image": "traversal-and-digging.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "grip",
+      "frames": [
+        {
+          "rect": {
+            "x": 768,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.7,
+            "y": 0.46
+          }
+        }
+      ]
+    },
+    {
+      "id": "toy-pickup",
+      "image": "taco-fetch.png",
+      "fps": 7,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 0,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "toy-run",
+      "image": "taco-fetch.png",
+      "fps": 12,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 384,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "toy-bury",
+      "image": "taco-fetch.png",
+      "fps": 4,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 1152,
+            "y": 768,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "interact",
+      "image": "taco-fetch.png",
+      "fps": 6,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "hurt",
+      "image": "taco-fetch.png",
+      "fps": 9,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 384,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 0,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "defeat",
+      "image": "taco-fetch.png",
+      "fps": 5,
+      "loop": false,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 384,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        },
+        {
+          "rect": {
+            "x": 768,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "swim",
+      "image": "taco-fetch.png",
+      "fps": 8,
+      "loop": true,
+      "anchor": "feet",
+      "frames": [
+        {
+          "rect": {
+            "x": 1152,
+            "y": 1152,
+            "width": 384,
+            "height": 384
+          },
+          "pivot": {
+            "x": 0.5,
+            "y": 0.9
+          }
+        }
+      ]
+    }
+  ]
+}

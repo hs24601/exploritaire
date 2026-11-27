@@ -8,26 +8,26 @@ Banks is predominantly dark charcoal/graphite, with muted gray tabby bands, dark
 
 | Set | Active location | Coverage |
 | --- | --- | --- |
-| Action subject | `public/assets/runtime/ui/holocards/layered/banks-watercolor-v7.png` | Transparent painted subject, existing parallax/night forest |
-| Flat portrait | `public/assets/runtime/ui/holocards/actors/banks-card-v7.png` | 1024×1536 fallback |
-| Rig sheets | `public/assets/runtime/characters/banks/rig/watercolor/v5/` | 8 atlases, 90 complete paintings: 10 standing, 18 sitting, 44 walking, 9 flinch, 9 down |
-| Expressions | `public/assets/runtime/characters/banks/expressions/emojis/watercolor/v4/` | Nine individual faces, atlas and JSON |
-| Rescue | `public/assets/runtime/cinematics/banks-hero-nuzzle-v4.png` | Four 768×640 paired frames, 3072×640 strip |
+| Action subject | `public/assets/runtime/kin/banks/portraits/charcoal-tabby/banks-watercolor-v7.png` | Transparent painted subject, existing parallax/night forest |
+| Flat portrait | `public/assets/runtime/kin/banks/portraits/charcoal-tabby/banks-card-v7.png` | 1024×1536 fallback |
+| Rig sheets | `public/assets/runtime/kin/banks/sprites/combat/charcoal-tabby/` | 8 atlases, 90 complete paintings: 10 standing, 18 sitting, 44 walking, 9 flinch, 9 down |
+| Expressions | `public/assets/runtime/kin/banks/expressions/charcoal-tabby/` | Nine individual faces, atlas and JSON |
+| Rescue | `public/assets/runtime/cinematics/banks-rescue/banks-hero-nuzzle-v4.png` | Four 768×640 paired frames, 3072×640 strip |
 
 All 21 active PNGs resolve through the production constants and media preloader. Prior assets remain historical. Rig rectangles and joint hierarchy remain unchanged. Banks's standing low/high views have uniform 1.25 scale compensation for the larger empty atlas margins around the long horizontal silhouette; paws remain grounded and the independent overhead footprint remains unchanged. This avoids standing appearing undersized beside walking.
 
 ## Sources, prompts and reproduction
 
-- Holocard source: `public/assets/sources/ui/holocards/actors/banks-v7/action-source.png`; prompt: `docs/art/banks-holocard-v7.prompt.txt`.
-- Rig sources: `public/assets/sources/characters/banks-watercolor-v5/`; prompts: `docs/art/banks-watercolor-v5/*.prompt.txt`.
-- Expressions: `public/assets/sources/characters/banks/expressions/emojis/watercolor/v4/banks-emojis-generated-v4.png`; prompt: `docs/art/banks-emojis-watercolor-v4.prompt.txt`.
-- Rescue: `public/assets/sources/cinematics/banks-hero-nuzzle-v4-source.png`; prompt: `docs/art/banks-rescue-nuzzle-v4.prompt.txt`.
+- Holocard source: `public/assets/sources/kin/banks/portraits/charcoal-tabby/action-source.png`; prompt: `docs/art/banks-holocard-v7.prompt.txt`.
+- Rig sources: `public/assets/sources/kin/banks/sprites/combat/charcoal-tabby/`; prompts: `docs/art/banks-watercolor-v5/*.prompt.txt`.
+- Expressions: `public/assets/sources/kin/banks/expressions/charcoal-tabby/banks-emojis-generated-v4.png`; prompt: `docs/art/banks-emojis-watercolor-v4.prompt.txt`.
+- Rescue: `public/assets/sources/cinematics/banks-rescue/banks-hero-nuzzle-v4-source.png`; prompt: `docs/art/banks-rescue-nuzzle-v4.prompt.txt`.
 
 Set `CHROME_PATH` if the bundled Playwright browser is unavailable. Packing uses original generated alpha, preserving opaque body paint and translucent edges without color keying.
 
 ```powershell
 node tools/prepare-banks-watercolor.cjs v5
-node tools/prepare-banks-emojis-v2.cjs public/assets/sources/characters/banks/expressions/emojis/watercolor/v4/banks-emojis-generated-v4.png v4
+node tools/prepare-banks-emojis-v2.cjs public/assets/sources/kin/banks/expressions/charcoal-tabby/banks-emojis-generated-v4.png v4
 node tools/prepare-banks-nuzzle.cjs v4
 node tools/prepare-banks-holocard.cjs v7
 ```

@@ -8,7 +8,7 @@ const { prewarmSpriteBounds, registerSpriteBounds } = await import('./spriteBoun
 
 describe('precomputed sprite trims', () => {
   it('bundled art resolves from the manifest without decoding pixels', async () => {
-    const rel = 'assets/runtime/characters/hero/rig/watercolor/v3/hero-directions-low-body-v3.png';
+    const rel = 'assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png';
     const entry = (spriteTrims.sprites as Record<string, { x0: number; y0: number; x1: number; y1: number; aspect: number }>)[rel];
     expect(entry).toBeDefined();
     await expect(prewarmSpriteBounds(`/${rel}`)).resolves.toEqual({ x0: entry.x0, y0: entry.y0, x1: entry.x1, y1: entry.y1, aspect: entry.aspect });

@@ -1,0 +1,72 @@
+{
+  "method": "Built-in ImageGen",
+  "passes": [
+    {
+      "master": "hero-scout-watercolor-master.png",
+      "prompt": "Repaint all nine Exploritaire Hero scout sprites from scratch as loose traditional children's storybook watercolor with touches of matte gouache. Ref 1 is the exact atlas to repaint, for silhouette, pose, outfit, colors, framing and order ONLY. Ref 2 (Hero in the berry patch) is the controlling paint style, actual brush language, color grouping and face simplification. Do not inherit the tight illustration rendering from ref 1. Ref 3 is the flag mark only, a small dark-green palm on the left of a yellow sun disc. Ref 4 shows the small, close-set natural bobtail size. Keep the same nine poses and their identifying expressions, tricolor fur, muted olive and khaki scout outfit, coral scarf and bows and orange pennants. Rebuild the color shapes in diluted wet-on-wet pigment. Use a few large warm gray, chestnut, apricot and cream fur washes that bleed together, pale broken edges, soft backruns and blooms, pools of pigment at selected edges, paper-like lights held within the painted body, and sparse opaque accents. Broad uneven hand-brushed strokes, lost-and-found edges, generous quiet areas. Matte amber eyes with one small accent and relaxed soft eyelid marks. Paint clothing folds, boot shapes, bag, badge sash and face with the same economical brushwork. Badges are loose dots of paint. Let soft washes carry the form; no dark contour tracing, tiny repeated fur spikes, sharp facets, hard cel shading, glossy plastic eyes, digital gradients, studio lighting or all-over texture effects. The silhouettes should still read cleanly at game scale. Preserve complete silhouettes with generous gaps, uniform physical scale, generous outer padding, and same 5-column 2-row grid exactly. Top row: front, front three-quarter, right profile, rear, rear three-quarter. Bottom row: play bow, eager standing, walking, looking right, empty. All nine pennants have the palm/sun mark. Tail stays a compact rump-hugging tuft where visible. Genuine RGBA transparent background, including empty cell and spaces between limbs, no backdrop, scenery, ground shadows, labels or grid lines. Preserve opaque cream fur by painting the look of translucent washes inside the silhouette.",
+      "references": [
+        {
+          "file": "hero-scout-atlas.png",
+          "role": "Pose, costume and layout"
+        },
+        {
+          "file": "hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Watercolor style"
+        },
+        {
+          "file": "codex-clipboard-2b04caa1-62c1-4cba-86af-ddee111d7493.png",
+          "role": "Flag emblem"
+        },
+        {
+          "file": "codex-clipboard-32b5fc92-942e-40de-bc1e-ac62ad04aa97.png",
+          "role": "Bobtail silhouette"
+        }
+      ],
+      "masterSha256": "28f8052733050f8c13fb45af393163328d92dfb29b2f285edf1d2da8fe6d3ca5"
+    },
+    {
+      "master": "hero-scout-play-bow-master.png",
+      "prompt": "Edit reference 1. Return ONLY the lower-left play-bow pose as one isolated complete sprite on genuine transparent RGBA. Repaint the two coral-pink bands on the front wrists as continuous natural apricot-to-cream fur from the short scout sleeves all the way down into the bare forepaws. Both forelegs and front paws must be entirely bare with no wristbands, cuffs, socks, gloves, boots or accessories. Keep the pink sock at the far-left rear ankle and preserve the same rear paw. Match this exact low chest, raised rump, two outstretched front paws, head tilt, happy open mouth, proportions, crest and outfit. Tuck the visible tail tighter into the rump as a short round tuft matching ref 4. Keep the orange pennant with ref 3's yellow sun and green palm emblem. Ref 2, Hero in the berry patch, controls the watercolor brushwork: gentle wet washes, soft merged broad fur masses, lightly pooled pigment, matte face, judicious opaque accents, no dark contour. Match the pale warm pastel color and brush softness of ref 1's play-bow sprite so the single result can replace that pose. Fully visible silhouette with plenty of padding, no cast shadow, no ground, no paper, no scenery, no other sprites.",
+      "references": [
+        {
+          "file": "hero-scout-watercolor-master.png",
+          "role": "Play-bow pose, silhouette and palette"
+        },
+        {
+          "file": "hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Watercolor style"
+        },
+        {
+          "file": "codex-clipboard-2b04caa1-62c1-4cba-86af-ddee111d7493.png",
+          "role": "Flag emblem"
+        },
+        {
+          "file": "codex-clipboard-32b5fc92-942e-40de-bc1e-ac62ad04aa97.png",
+          "role": "Bobtail silhouette"
+        }
+      ],
+      "masterSha256": "4098fc36f567a176c03012c57125b44d162b43c89acc4168a68024c66cef694f"
+    }
+  ],
+  "runtime": "public/assets/runtime/kin/hero/sprites/scout/hero-scout-v2/hero-scout-atlas.png",
+  "width": 1920,
+  "height": 832,
+  "cellWidth": 384,
+  "cellHeight": 416,
+  "columns": 5,
+  "rows": 2,
+  "registrationY": 395,
+  "frames": [
+    "front",
+    "front-three-quarter",
+    "right-profile",
+    "rear",
+    "rear-three-quarter",
+    "play-bow",
+    "eager-standing",
+    "walking",
+    "looking-right",
+    null
+  ],
+  "packing": "Keep the primary connected alpha silhouette in each source region. Scale atlas poses uniformly to 95% and the separately rendered play bow to 25.5% of its larger master. Center by silhouette bounds and align the last row with alpha of at least 128 to local y=395."
+}

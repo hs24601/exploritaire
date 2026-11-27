@@ -1,0 +1,3103 @@
+{
+  "generator": "Built-in ImageGen",
+  "page": 117,
+  "cellSize": 256,
+  "atlasSize": 1024,
+  "planeSizeMeters": 1.4,
+  "frameOrder": [
+    "closed-mouth neutral",
+    "blink",
+    "light pant",
+    "deep pant",
+    "lowering into sit",
+    "seated",
+    "lowering into prone",
+    "prone",
+    "lift hind paw",
+    "scratch contact",
+    "sniff up",
+    "sniff turn left",
+    "sniff turn right",
+    "ears swivel",
+    "curious head tilt",
+    "head tilt easing"
+  ],
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+  "scratchAnatomyReference": {
+    "file": "scratch-anatomy-reference.png",
+    "sha256": "e6b7e6a63199ae7d63f63b8c97bc96b753fabab77c92caa326edc968fe8fab8f"
+  },
+  "referencePreparation": "Original runtime view rectangle, tightly cropped to the opaque silhouette and enlarged to 2x.",
+  "packing": "Extract the four-by-four paint keys, fit each view at a uniform scale relative to its existing neutral pose, ground-register low and elevated keys and center the overhead footprints. Runtime WebP is lossless and keeps generated alpha within each crop.",
+  "views": {
+    "low-0": {
+      "source": "low-0-source.png",
+      "sourceSha256": "49b4e882c54f965f45a6b8d053f0f4d2fedd24f5c7c86efaf1a9bce1d9a7e47d",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: near ground, about 12\u00e2\u20ac\u201c15 degrees above horizontal, straight-on front, Hero faces camera. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/world/opening-poses/hero-directions-low-v1.png",
+        "rect": [
+          48,
+          20,
+          206,
+          251
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/low-0.webp",
+      "runtimeSha256": "9cf379a824caeb1f884bee29c37b9f1f52f3cd79b13bcba487e5b6ab0e978ec0",
+      "packing": [
+        {
+          "sourceRect": [
+            76,
+            8,
+            280,
+            296
+          ],
+          "offset": [
+            67,
+            81
+          ],
+          "size": [
+            122,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            385,
+            9,
+            590,
+            295
+          ],
+          "offset": [
+            67,
+            83
+          ],
+          "size": [
+            122,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            700,
+            8,
+            906,
+            295
+          ],
+          "offset": [
+            66,
+            82
+          ],
+          "size": [
+            123,
+            171
+          ]
+        },
+        {
+          "sourceRect": [
+            1013,
+            7,
+            1220,
+            295
+          ],
+          "offset": [
+            66,
+            81
+          ],
+          "size": [
+            123,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            73,
+            313,
+            273,
+            597
+          ],
+          "offset": [
+            68,
+            84
+          ],
+          "size": [
+            119,
+            169
+          ]
+        },
+        {
+          "sourceRect": [
+            380,
+            325,
+            584,
+            589
+          ],
+          "offset": [
+            67,
+            96
+          ],
+          "size": [
+            122,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            696,
+            351,
+            902,
+            589
+          ],
+          "offset": [
+            66,
+            111
+          ],
+          "size": [
+            123,
+            142
+          ]
+        },
+        {
+          "sourceRect": [
+            1004,
+            374,
+            1221,
+            588
+          ],
+          "offset": [
+            63,
+            125
+          ],
+          "size": [
+            129,
+            128
+          ]
+        },
+        {
+          "sourceRect": [
+            62,
+            617,
+            261,
+            895
+          ],
+          "offset": [
+            68,
+            87
+          ],
+          "size": [
+            119,
+            166
+          ]
+        },
+        {
+          "sourceRect": [
+            359,
+            616,
+            579,
+            893
+          ],
+          "offset": [
+            62,
+            88
+          ],
+          "size": [
+            131,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            708,
+            616,
+            887,
+            895
+          ],
+          "offset": [
+            74,
+            87
+          ],
+          "size": [
+            107,
+            166
+          ]
+        },
+        {
+          "sourceRect": [
+            1018,
+            616,
+            1202,
+            895
+          ],
+          "offset": [
+            73,
+            87
+          ],
+          "size": [
+            110,
+            166
+          ]
+        },
+        {
+          "sourceRect": [
+            84,
+            928,
+            257,
+            1219
+          ],
+          "offset": [
+            76,
+            80
+          ],
+          "size": [
+            103,
+            173
+          ]
+        },
+        {
+          "sourceRect": [
+            395,
+            925,
+            572,
+            1218
+          ],
+          "offset": [
+            75,
+            78
+          ],
+          "size": [
+            105,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            675,
+            918,
+            887,
+            1218
+          ],
+          "offset": [
+            65,
+            74
+          ],
+          "size": [
+            126,
+            179
+          ]
+        },
+        {
+          "sourceRect": [
+            1013,
+            924,
+            1203,
+            1218
+          ],
+          "offset": [
+            71,
+            78
+          ],
+          "size": [
+            113,
+            175
+          ]
+        }
+      ]
+    },
+    "low-1": {
+      "source": "low-1-source.png",
+      "sourceSha256": "ea09d08155c5de2537da9c3355ce554edbd8e37a729eaa0275a9175e9eee8823",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: near ground, about 12\u00e2\u20ac\u201c15 degrees above horizontal, front three-quarter, muzzle points LEFT and chest visible. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/world/opening-poses/hero-directions-low-v1.png",
+        "rect": [
+          41,
+          289,
+          272,
+          248
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/low-1.webp",
+      "runtimeSha256": "589a3a214478dbd9c09cf32a78721faaf544d81209aee82b787f31c651058de0",
+      "packing": [
+        {
+          "sourceRect": [
+            45,
+            14,
+            287,
+            294
+          ],
+          "offset": [
+            54,
+            83
+          ],
+          "size": [
+            147,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            359,
+            14,
+            602,
+            294
+          ],
+          "offset": [
+            54,
+            83
+          ],
+          "size": [
+            147,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            675,
+            14,
+            917,
+            294
+          ],
+          "offset": [
+            54,
+            83
+          ],
+          "size": [
+            147,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            991,
+            14,
+            1233,
+            294
+          ],
+          "offset": [
+            54,
+            83
+          ],
+          "size": [
+            147,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            45,
+            317,
+            291,
+            592
+          ],
+          "offset": [
+            53,
+            86
+          ],
+          "size": [
+            149,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            364,
+            326,
+            587,
+            588
+          ],
+          "offset": [
+            60,
+            94
+          ],
+          "size": [
+            135,
+            159
+          ]
+        },
+        {
+          "sourceRect": [
+            670,
+            346,
+            920,
+            588
+          ],
+          "offset": [
+            52,
+            106
+          ],
+          "size": [
+            151,
+            147
+          ]
+        },
+        {
+          "sourceRect": [
+            961,
+            376,
+            1250,
+            586
+          ],
+          "offset": [
+            40,
+            126
+          ],
+          "size": [
+            175,
+            127
+          ]
+        },
+        {
+          "sourceRect": [
+            61,
+            625,
+            282,
+            890
+          ],
+          "offset": [
+            61,
+            93
+          ],
+          "size": [
+            134,
+            160
+          ]
+        },
+        {
+          "sourceRect": [
+            341,
+            627,
+            593,
+            890
+          ],
+          "offset": [
+            51,
+            94
+          ],
+          "size": [
+            153,
+            159
+          ]
+        },
+        {
+          "sourceRect": [
+            670,
+            620,
+            913,
+            894
+          ],
+          "offset": [
+            54,
+            87
+          ],
+          "size": [
+            147,
+            166
+          ]
+        },
+        {
+          "sourceRect": [
+            982,
+            623,
+            1228,
+            893
+          ],
+          "offset": [
+            53,
+            89
+          ],
+          "size": [
+            149,
+            164
+          ]
+        },
+        {
+          "sourceRect": [
+            53,
+            939,
+            283,
+            1211
+          ],
+          "offset": [
+            58,
+            88
+          ],
+          "size": [
+            139,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            358,
+            929,
+            598,
+            1211
+          ],
+          "offset": [
+            55,
+            82
+          ],
+          "size": [
+            145,
+            171
+          ]
+        },
+        {
+          "sourceRect": [
+            678,
+            927,
+            913,
+            1211
+          ],
+          "offset": [
+            57,
+            81
+          ],
+          "size": [
+            142,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            988,
+            929,
+            1229,
+            1211
+          ],
+          "offset": [
+            55,
+            82
+          ],
+          "size": [
+            146,
+            171
+          ]
+        }
+      ]
+    },
+    "low-2": {
+      "source": "low-2-source.png",
+      "sourceSha256": "e2c030cfadaaa23292531e456369610d3a4771465f9fe3cdf2a563c28795bf21",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: near ground, about 12\u00e2\u20ac\u201c15 degrees above horizontal, true LEFT-facing side profile, one eye visible and the full side of the torso. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/world/opening-poses/hero-directions-low-v1.png",
+        "rect": [
+          19,
+          546,
+          321,
+          254
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/low-2.webp",
+      "runtimeSha256": "c99a7ed78385271601ac6f84f0caa1e06b24854c79051777d6f72b79da2d436f",
+      "packing": [
+        {
+          "sourceRect": [
+            19,
+            21,
+            304,
+            286
+          ],
+          "offset": [
+            34,
+            79
+          ],
+          "size": [
+            187,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            328,
+            21,
+            610,
+            286
+          ],
+          "offset": [
+            35,
+            79
+          ],
+          "size": [
+            185,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            637,
+            20,
+            919,
+            286
+          ],
+          "offset": [
+            35,
+            79
+          ],
+          "size": [
+            185,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            945,
+            21,
+            1228,
+            286
+          ],
+          "offset": [
+            35,
+            79
+          ],
+          "size": [
+            186,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            18,
+            322,
+            295,
+            589
+          ],
+          "offset": [
+            37,
+            78
+          ],
+          "size": [
+            182,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            329,
+            329,
+            578,
+            589
+          ],
+          "offset": [
+            46,
+            83
+          ],
+          "size": [
+            163,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            627,
+            344,
+            911,
+            585
+          ],
+          "offset": [
+            35,
+            95
+          ],
+          "size": [
+            186,
+            158
+          ]
+        },
+        {
+          "sourceRect": [
+            931,
+            369,
+            1237,
+            584
+          ],
+          "offset": [
+            27,
+            112
+          ],
+          "size": [
+            201,
+            141
+          ]
+        },
+        {
+          "sourceRect": [
+            23,
+            630,
+            276,
+            893
+          ],
+          "offset": [
+            45,
+            81
+          ],
+          "size": [
+            166,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            332,
+            633,
+            574,
+            893
+          ],
+          "offset": [
+            48,
+            83
+          ],
+          "size": [
+            159,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            628,
+            630,
+            912,
+            891
+          ],
+          "offset": [
+            35,
+            82
+          ],
+          "size": [
+            186,
+            171
+          ]
+        },
+        {
+          "sourceRect": [
+            940,
+            631,
+            1227,
+            891
+          ],
+          "offset": [
+            34,
+            83
+          ],
+          "size": [
+            188,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            29,
+            942,
+            304,
+            1205
+          ],
+          "offset": [
+            38,
+            81
+          ],
+          "size": [
+            180,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            329,
+            942,
+            610,
+            1205
+          ],
+          "offset": [
+            36,
+            81
+          ],
+          "size": [
+            184,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            641,
+            947,
+            917,
+            1204
+          ],
+          "offset": [
+            37,
+            85
+          ],
+          "size": [
+            181,
+            168
+          ]
+        },
+        {
+          "sourceRect": [
+            945,
+            946,
+            1227,
+            1205
+          ],
+          "offset": [
+            35,
+            83
+          ],
+          "size": [
+            185,
+            170
+          ]
+        }
+      ]
+    },
+    "low-3": {
+      "source": "low-3-source.png",
+      "sourceSha256": "48af43cdb58f4733693a20ed8ef446055d1f39d7f4d649c6276ea30a710fe259",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: near ground, about 12\u00e2\u20ac\u201c15 degrees above horizontal, rear three-quarter, Hero looks away toward upper-left, rump nearer than muzzle. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
+        "rect": [
+          25,
+          812,
+          291,
+          256
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/low-3.webp",
+      "runtimeSha256": "e3064491c0d262a7cd58e16d489c92fc251fed8aa265c3511fac8ab6171c4913",
+      "packing": [
+        {
+          "sourceRect": [
+            51,
+            18,
+            279,
+            300
+          ],
+          "offset": [
+            57,
+            78
+          ],
+          "size": [
+            142,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            365,
+            18,
+            593,
+            300
+          ],
+          "offset": [
+            57,
+            78
+          ],
+          "size": [
+            142,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            678,
+            18,
+            907,
+            300
+          ],
+          "offset": [
+            57,
+            78
+          ],
+          "size": [
+            142,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            993,
+            18,
+            1220,
+            300
+          ],
+          "offset": [
+            57,
+            78
+          ],
+          "size": [
+            141,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            51,
+            332,
+            272,
+            604
+          ],
+          "offset": [
+            59,
+            84
+          ],
+          "size": [
+            137,
+            169
+          ]
+        },
+        {
+          "sourceRect": [
+            365,
+            336,
+            582,
+            597
+          ],
+          "offset": [
+            60,
+            91
+          ],
+          "size": [
+            135,
+            162
+          ]
+        },
+        {
+          "sourceRect": [
+            677,
+            348,
+            920,
+            591
+          ],
+          "offset": [
+            52,
+            102
+          ],
+          "size": [
+            151,
+            151
+          ]
+        },
+        {
+          "sourceRect": [
+            966,
+            374,
+            1236,
+            591
+          ],
+          "offset": [
+            44,
+            118
+          ],
+          "size": [
+            168,
+            135
+          ]
+        },
+        {
+          "sourceRect": [
+            52,
+            652,
+            270,
+            912
+          ],
+          "offset": [
+            60,
+            92
+          ],
+          "size": [
+            135,
+            161
+          ]
+        },
+        {
+          "sourceRect": [
+            368,
+            653,
+            582,
+            911
+          ],
+          "offset": [
+            61,
+            93
+          ],
+          "size": [
+            133,
+            160
+          ]
+        },
+        {
+          "sourceRect": [
+            684,
+            640,
+            907,
+            927
+          ],
+          "offset": [
+            59,
+            75
+          ],
+          "size": [
+            138,
+            178
+          ]
+        },
+        {
+          "sourceRect": [
+            992,
+            642,
+            1221,
+            927
+          ],
+          "offset": [
+            57,
+            76
+          ],
+          "size": [
+            142,
+            177
+          ]
+        },
+        {
+          "sourceRect": [
+            59,
+            957,
+            280,
+            1241
+          ],
+          "offset": [
+            59,
+            77
+          ],
+          "size": [
+            137,
+            176
+          ]
+        },
+        {
+          "sourceRect": [
+            367,
+            956,
+            594,
+            1241
+          ],
+          "offset": [
+            57,
+            76
+          ],
+          "size": [
+            141,
+            177
+          ]
+        },
+        {
+          "sourceRect": [
+            683,
+            957,
+            907,
+            1241
+          ],
+          "offset": [
+            58,
+            77
+          ],
+          "size": [
+            139,
+            176
+          ]
+        },
+        {
+          "sourceRect": [
+            994,
+            960,
+            1221,
+            1241
+          ],
+          "offset": [
+            57,
+            79
+          ],
+          "size": [
+            141,
+            174
+          ]
+        }
+      ]
+    },
+    "low-4": {
+      "source": "low-4-source.png",
+      "sourceSha256": "4c84e55ce1622b8f51d7cd92a2ca2e13e930ae74449915b42d9873d578eb68f2",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: near ground, about 12\u00e2\u20ac\u201c15 degrees above horizontal, straight rear, exactly centered behind her, Hero facing directly AWAY, backs of ears and paired heels, face hidden. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
+        "rect": [
+          55,
+          1080,
+          183,
+          273
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/low-4.webp",
+      "runtimeSha256": "45b6976523de85bcc3fc7661915c6c6fd280d91cce55e4267c34d2e87a7c59ce",
+      "packing": [
+        {
+          "sourceRect": [
+            95,
+            15,
+            246,
+            302
+          ],
+          "offset": [
+            84,
+            88
+          ],
+          "size": [
+            87,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            398,
+            16,
+            548,
+            301
+          ],
+          "offset": [
+            85,
+            89
+          ],
+          "size": [
+            86,
+            164
+          ]
+        },
+        {
+          "sourceRect": [
+            712,
+            16,
+            860,
+            301
+          ],
+          "offset": [
+            85,
+            89
+          ],
+          "size": [
+            85,
+            164
+          ]
+        },
+        {
+          "sourceRect": [
+            1026,
+            16,
+            1176,
+            302
+          ],
+          "offset": [
+            85,
+            88
+          ],
+          "size": [
+            86,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            89,
+            335,
+            244,
+            598
+          ],
+          "offset": [
+            83,
+            101
+          ],
+          "size": [
+            89,
+            152
+          ]
+        },
+        {
+          "sourceRect": [
+            385,
+            341,
+            562,
+            600
+          ],
+          "offset": [
+            77,
+            104
+          ],
+          "size": [
+            102,
+            149
+          ]
+        },
+        {
+          "source": "low-rear-prone-source.png",
+          "sourceRect": [
+            149,
+            120,
+            765,
+            775
+          ],
+          "offset": [
+            77,
+            145
+          ],
+          "size": [
+            102,
+            108
+          ]
+        },
+        {
+          "source": "low-rear-prone-source.png",
+          "sourceRect": [
+            995,
+            347,
+            1671,
+            784
+          ],
+          "offset": [
+            72,
+            181
+          ],
+          "size": [
+            112,
+            72
+          ]
+        },
+        {
+          "sourceRect": [
+            88,
+            640,
+            257,
+            899
+          ],
+          "offset": [
+            79,
+            104
+          ],
+          "size": [
+            97,
+            149
+          ]
+        },
+        {
+          "sourceRect": [
+            393,
+            652,
+            566,
+            903
+          ],
+          "offset": [
+            78,
+            108
+          ],
+          "size": [
+            100,
+            145
+          ]
+        },
+        {
+          "sourceRect": [
+            714,
+            629,
+            863,
+            913
+          ],
+          "offset": [
+            85,
+            89
+          ],
+          "size": [
+            86,
+            164
+          ]
+        },
+        {
+          "sourceRect": [
+            1027,
+            637,
+            1177,
+            913
+          ],
+          "offset": [
+            85,
+            94
+          ],
+          "size": [
+            86,
+            159
+          ]
+        },
+        {
+          "sourceRect": [
+            88,
+            950,
+            238,
+            1237
+          ],
+          "offset": [
+            85,
+            88
+          ],
+          "size": [
+            86,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            401,
+            946,
+            552,
+            1236
+          ],
+          "offset": [
+            84,
+            86
+          ],
+          "size": [
+            87,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            705,
+            943,
+            866,
+            1237
+          ],
+          "offset": [
+            81,
+            84
+          ],
+          "size": [
+            93,
+            169
+          ]
+        },
+        {
+          "sourceRect": [
+            1028,
+            948,
+            1179,
+            1237
+          ],
+          "offset": [
+            84,
+            86
+          ],
+          "size": [
+            87,
+            167
+          ]
+        }
+      ],
+      "proneRepair": {
+        "file": "low-rear-prone-source.png",
+        "sha256": "4e4a1fcec373cbfba0d7638207198be84488684141749c7eafdc599b4ab2ea0d",
+        "prompt": "Create exactly two transparent game sprite keys side by side, 2 columns and 1 row, for Hero going PRONE viewed DIRECTLY FROM BEHIND at the same LOW ground-level elevation and yaw as Image 2. Image 1 is the actual approved Hero berry painting for soft loosely merged storybook watercolor style. Image 2 is Hero's exact rear-facing identity and camera reference: amber, copper, smoky merle, white neck ruff, short organic bobtail, no face visible. Image 3 is a pose-anatomy reference for the same dog prone, and its SIDE camera must not be copied. In both generated cells she faces straight AWAY, not a side profile, seen from directly behind. First cell: elbow and chest drop down in front, hindquarters partly lower with hocks beginning to fold; back slopes DOWN away from the camera. Second cell: belly and chest FLAT ON GROUND, rump completely lowered, hind paws tucked beside her hips, ears and top of her head peeking only a little beyond the rump, laid out away from us. A genuinely LOW, squat silhouette, about half the standing sprite's height. She cannot look like sitting with upright shoulders. Hind toes point forward away, heels smooth. The legs articulate naturally, no extra legs. Fixed camera and body scale. Transparent background, no scenery, floor, text or shadow. Preserve opaque pale fur, both cutouts isolated and fully inside their cells.",
+        "poseReference": {
+          "role": "identity, stance, elevation and yaw",
+          "file": "public/assets/runtime/kin/hero/sprites/combat/separate-bobtail-layers/hero-directions-low-body-v3.png",
+          "rect": [
+            55,
+            1080,
+            183,
+            273
+          ]
+        },
+        "proneAnatomyReference": "public/assets/runtime/kin/hero/sprites/platforming/breath-and-butterfly/frames/lie-down/7.png",
+        "cells": [
+          6,
+          7
+        ]
+      }
+    },
+    "high-0": {
+      "source": "high-0-source.png",
+      "sourceSha256": "a078f97791590fec9f1890d33418431783d1f3f8f0a3bd18734863e6df4c20ca",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: about 52 degrees above ground, distinctly elevated with tops of body and head visible, straight-on front, Hero faces camera. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/world/opening-poses/hero-directions-high-v1.png",
+        "rect": [
+          44,
+          43,
+          194,
+          228
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/high-0.webp",
+      "runtimeSha256": "96ccb7e2464a3ac85f852e8bd0f44275c030fc85a2bcebfb276b43cf0dc00107",
+      "packing": [
+        {
+          "sourceRect": [
+            63,
+            9,
+            256,
+            301
+          ],
+          "offset": [
+            76,
+            96
+          ],
+          "size": [
+            104,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            378,
+            9,
+            569,
+            302
+          ],
+          "offset": [
+            76,
+            95
+          ],
+          "size": [
+            103,
+            158
+          ]
+        },
+        {
+          "sourceRect": [
+            691,
+            9,
+            882,
+            301
+          ],
+          "offset": [
+            76,
+            96
+          ],
+          "size": [
+            103,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            1005,
+            9,
+            1196,
+            301
+          ],
+          "offset": [
+            76,
+            96
+          ],
+          "size": [
+            103,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            58,
+            321,
+            259,
+            609
+          ],
+          "offset": [
+            74,
+            98
+          ],
+          "size": [
+            108,
+            155
+          ]
+        },
+        {
+          "sourceRect": [
+            369,
+            327,
+            571,
+            608
+          ],
+          "offset": [
+            73,
+            102
+          ],
+          "size": [
+            109,
+            151
+          ]
+        },
+        {
+          "sourceRect": [
+            674,
+            333,
+            888,
+            607
+          ],
+          "offset": [
+            70,
+            106
+          ],
+          "size": [
+            115,
+            147
+          ]
+        },
+        {
+          "sourceRect": [
+            986,
+            351,
+            1205,
+            602
+          ],
+          "offset": [
+            69,
+            118
+          ],
+          "size": [
+            118,
+            135
+          ]
+        },
+        {
+          "sourceRect": [
+            43,
+            636,
+            254,
+            923
+          ],
+          "offset": [
+            71,
+            99
+          ],
+          "size": [
+            114,
+            154
+          ]
+        },
+        {
+          "sourceRect": [
+            348,
+            634,
+            578,
+            923
+          ],
+          "offset": [
+            66,
+            98
+          ],
+          "size": [
+            124,
+            155
+          ]
+        },
+        {
+          "sourceRect": [
+            693,
+            631,
+            881,
+            923
+          ],
+          "offset": [
+            77,
+            96
+          ],
+          "size": [
+            101,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            1004,
+            634,
+            1197,
+            923
+          ],
+          "offset": [
+            76,
+            98
+          ],
+          "size": [
+            104,
+            155
+          ]
+        },
+        {
+          "sourceRect": [
+            68,
+            946,
+            257,
+            1241
+          ],
+          "offset": [
+            77,
+            94
+          ],
+          "size": [
+            102,
+            159
+          ]
+        },
+        {
+          "sourceRect": [
+            360,
+            946,
+            570,
+            1242
+          ],
+          "offset": [
+            71,
+            94
+          ],
+          "size": [
+            113,
+            159
+          ]
+        },
+        {
+          "sourceRect": [
+            667,
+            941,
+            884,
+            1241
+          ],
+          "offset": [
+            69,
+            92
+          ],
+          "size": [
+            117,
+            161
+          ]
+        },
+        {
+          "sourceRect": [
+            1001,
+            945,
+            1197,
+            1241
+          ],
+          "offset": [
+            75,
+            94
+          ],
+          "size": [
+            105,
+            159
+          ]
+        }
+      ]
+    },
+    "high-1": {
+      "source": "high-1-source.png",
+      "sourceSha256": "7191a4849fb1cb84969151f538f9e8677b9fa7e62299f1a362dae4d6aa87b5b7",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: about 52 degrees above ground, distinctly elevated with tops of body and head visible, front three-quarter, muzzle points LEFT and chest visible. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/world/opening-poses/hero-directions-high-v1.png",
+        "rect": [
+          44,
+          274,
+          242,
+          228
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/high-1.webp",
+      "runtimeSha256": "8c1cab7a3ff8a9c6a927b8efe46c0a37c387cc96cf6ac9fb7b65727c8d7dbc3b",
+      "packing": [
+        {
+          "sourceRect": [
+            36,
+            11,
+            287,
+            295
+          ],
+          "offset": [
+            58,
+            95
+          ],
+          "size": [
+            139,
+            158
+          ]
+        },
+        {
+          "sourceRect": [
+            350,
+            12,
+            600,
+            295
+          ],
+          "offset": [
+            58,
+            96
+          ],
+          "size": [
+            139,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            662,
+            11,
+            914,
+            295
+          ],
+          "offset": [
+            58,
+            95
+          ],
+          "size": [
+            140,
+            158
+          ]
+        },
+        {
+          "sourceRect": [
+            979,
+            11,
+            1229,
+            295
+          ],
+          "offset": [
+            58,
+            95
+          ],
+          "size": [
+            139,
+            158
+          ]
+        },
+        {
+          "sourceRect": [
+            39,
+            313,
+            278,
+            595
+          ],
+          "offset": [
+            61,
+            96
+          ],
+          "size": [
+            133,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            354,
+            320,
+            581,
+            596
+          ],
+          "offset": [
+            65,
+            100
+          ],
+          "size": [
+            126,
+            153
+          ]
+        },
+        {
+          "sourceRect": [
+            661,
+            336,
+            918,
+            596
+          ],
+          "offset": [
+            56,
+            109
+          ],
+          "size": [
+            143,
+            144
+          ]
+        },
+        {
+          "sourceRect": [
+            963,
+            358,
+            1247,
+            591
+          ],
+          "offset": [
+            49,
+            124
+          ],
+          "size": [
+            158,
+            129
+          ]
+        },
+        {
+          "sourceRect": [
+            40,
+            619,
+            271,
+            899
+          ],
+          "offset": [
+            64,
+            97
+          ],
+          "size": [
+            128,
+            156
+          ]
+        },
+        {
+          "sourceRect": [
+            343,
+            635,
+            585,
+            899
+          ],
+          "offset": [
+            61,
+            106
+          ],
+          "size": [
+            134,
+            147
+          ]
+        },
+        {
+          "sourceRect": [
+            659,
+            619,
+            916,
+            899
+          ],
+          "offset": [
+            56,
+            97
+          ],
+          "size": [
+            143,
+            156
+          ]
+        },
+        {
+          "sourceRect": [
+            972,
+            617,
+            1233,
+            899
+          ],
+          "offset": [
+            55,
+            96
+          ],
+          "size": [
+            145,
+            157
+          ]
+        },
+        {
+          "sourceRect": [
+            40,
+            926,
+            285,
+            1214
+          ],
+          "offset": [
+            60,
+            93
+          ],
+          "size": [
+            136,
+            160
+          ]
+        },
+        {
+          "sourceRect": [
+            356,
+            925,
+            600,
+            1214
+          ],
+          "offset": [
+            60,
+            92
+          ],
+          "size": [
+            136,
+            161
+          ]
+        },
+        {
+          "sourceRect": [
+            665,
+            925,
+            917,
+            1214
+          ],
+          "offset": [
+            58,
+            92
+          ],
+          "size": [
+            140,
+            161
+          ]
+        },
+        {
+          "sourceRect": [
+            983,
+            930,
+            1232,
+            1214
+          ],
+          "offset": [
+            59,
+            95
+          ],
+          "size": [
+            138,
+            158
+          ]
+        }
+      ]
+    },
+    "high-2": {
+      "source": "high-2-source.png",
+      "sourceSha256": "239f84ad9a329a0fc0c9e01a351d010becc1b798a5ac82e96e6af4f6ad72907d",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: about 52 degrees above ground, distinctly elevated with tops of body and head visible, true LEFT-facing side profile, one eye visible and the full side of the torso. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/world/opening-poses/hero-directions-high-v1.png",
+        "rect": [
+          28,
+          509,
+          286,
+          242
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/high-2.webp",
+      "runtimeSha256": "226899909837200f733d3c2210d985e5bf9de1621a0f335096576e3c87022187",
+      "packing": [
+        {
+          "sourceRect": [
+            23,
+            24,
+            301,
+            281
+          ],
+          "offset": [
+            37,
+            86
+          ],
+          "size": [
+            181,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            343,
+            25,
+            618,
+            281
+          ],
+          "offset": [
+            38,
+            86
+          ],
+          "size": [
+            179,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            661,
+            24,
+            937,
+            280
+          ],
+          "offset": [
+            38,
+            86
+          ],
+          "size": [
+            180,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            981,
+            24,
+            1259,
+            281
+          ],
+          "offset": [
+            37,
+            86
+          ],
+          "size": [
+            181,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            27,
+            317,
+            303,
+            583
+          ],
+          "offset": [
+            38,
+            80
+          ],
+          "size": [
+            180,
+            173
+          ]
+        },
+        {
+          "sourceRect": [
+            344,
+            331,
+            605,
+            584
+          ],
+          "offset": [
+            43,
+            88
+          ],
+          "size": [
+            170,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            656,
+            353,
+            937,
+            584
+          ],
+          "offset": [
+            36,
+            102
+          ],
+          "size": [
+            183,
+            151
+          ]
+        },
+        {
+          "sourceRect": [
+            972,
+            391,
+            1265,
+            583
+          ],
+          "offset": [
+            32,
+            128
+          ],
+          "size": [
+            191,
+            125
+          ]
+        },
+        {
+          "sourceRect": [
+            29,
+            618,
+            287,
+            875
+          ],
+          "offset": [
+            44,
+            86
+          ],
+          "size": [
+            168,
+            167
+          ]
+        },
+        {
+          "sourceRect": [
+            346,
+            620,
+            604,
+            875
+          ],
+          "offset": [
+            44,
+            87
+          ],
+          "size": [
+            168,
+            166
+          ]
+        },
+        {
+          "sourceRect": [
+            659,
+            619,
+            936,
+            878
+          ],
+          "offset": [
+            37,
+            84
+          ],
+          "size": [
+            181,
+            169
+          ]
+        },
+        {
+          "sourceRect": [
+            987,
+            618,
+            1257,
+            879
+          ],
+          "offset": [
+            40,
+            83
+          ],
+          "size": [
+            176,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            42,
+            915,
+            299,
+            1177
+          ],
+          "offset": [
+            44,
+            82
+          ],
+          "size": [
+            167,
+            171
+          ]
+        },
+        {
+          "sourceRect": [
+            342,
+            915,
+            616,
+            1177
+          ],
+          "offset": [
+            38,
+            82
+          ],
+          "size": [
+            179,
+            171
+          ]
+        },
+        {
+          "sourceRect": [
+            669,
+            917,
+            938,
+            1177
+          ],
+          "offset": [
+            40,
+            84
+          ],
+          "size": [
+            175,
+            169
+          ]
+        },
+        {
+          "sourceRect": [
+            981,
+            915,
+            1256,
+            1177
+          ],
+          "offset": [
+            38,
+            82
+          ],
+          "size": [
+            179,
+            171
+          ]
+        }
+      ]
+    },
+    "high-3": {
+      "source": "high-3-source.png",
+      "sourceSha256": "e3261dfe378e22b2b79b61d0e7a4a58e1883a1916e39ff8aeacbd4b5479546ef",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: about 52 degrees above ground, distinctly elevated with tops of body and head visible, rear three-quarter, Hero looks away toward upper-left, rump nearer than muzzle. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
+        "rect": [
+          41,
+          753,
+          258,
+          254
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/high-3.webp",
+      "runtimeSha256": "550633caaa070c4946c9529fcfae975186112fefb944ad4348ec58de9ef7b111",
+      "packing": [
+        {
+          "sourceRect": [
+            47,
+            11,
+            277,
+            294
+          ],
+          "offset": [
+            57,
+            79
+          ],
+          "size": [
+            141,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            355,
+            10,
+            592,
+            294
+          ],
+          "offset": [
+            55,
+            79
+          ],
+          "size": [
+            145,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            671,
+            11,
+            907,
+            294
+          ],
+          "offset": [
+            55,
+            79
+          ],
+          "size": [
+            145,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            987,
+            10,
+            1223,
+            293
+          ],
+          "offset": [
+            55,
+            79
+          ],
+          "size": [
+            145,
+            174
+          ]
+        },
+        {
+          "sourceRect": [
+            49,
+            321,
+            271,
+            582
+          ],
+          "offset": [
+            60,
+            93
+          ],
+          "size": [
+            136,
+            160
+          ]
+        },
+        {
+          "sourceRect": [
+            364,
+            326,
+            586,
+            574
+          ],
+          "offset": [
+            60,
+            101
+          ],
+          "size": [
+            136,
+            152
+          ]
+        },
+        {
+          "sourceRect": [
+            676,
+            341,
+            913,
+            574
+          ],
+          "offset": [
+            55,
+            110
+          ],
+          "size": [
+            145,
+            143
+          ]
+        },
+        {
+          "sourceRect": [
+            981,
+            362,
+            1241,
+            573
+          ],
+          "offset": [
+            48,
+            123
+          ],
+          "size": [
+            160,
+            130
+          ]
+        },
+        {
+          "sourceRect": [
+            52,
+            621,
+            277,
+            874
+          ],
+          "offset": [
+            59,
+            98
+          ],
+          "size": [
+            138,
+            155
+          ]
+        },
+        {
+          "sourceRect": [
+            361,
+            624,
+            583,
+            876
+          ],
+          "offset": [
+            60,
+            98
+          ],
+          "size": [
+            136,
+            155
+          ]
+        },
+        {
+          "sourceRect": [
+            673,
+            620,
+            907,
+            888
+          ],
+          "offset": [
+            56,
+            88
+          ],
+          "size": [
+            144,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            982,
+            623,
+            1223,
+            888
+          ],
+          "offset": [
+            54,
+            90
+          ],
+          "size": [
+            148,
+            163
+          ]
+        },
+        {
+          "sourceRect": [
+            59,
+            921,
+            278,
+            1202
+          ],
+          "offset": [
+            61,
+            81
+          ],
+          "size": [
+            134,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            360,
+            914,
+            593,
+            1201
+          ],
+          "offset": [
+            56,
+            77
+          ],
+          "size": [
+            143,
+            176
+          ]
+        },
+        {
+          "sourceRect": [
+            657,
+            914,
+            908,
+            1202
+          ],
+          "offset": [
+            51,
+            76
+          ],
+          "size": [
+            154,
+            177
+          ]
+        },
+        {
+          "sourceRect": [
+            989,
+            918,
+            1223,
+            1201
+          ],
+          "offset": [
+            56,
+            79
+          ],
+          "size": [
+            144,
+            174
+          ]
+        }
+      ]
+    },
+    "high-4": {
+      "source": "high-4-source.png",
+      "sourceSha256": "35b27f58b687f8e8f759fab44205df0f80d566c1a3308bd25f07b23a81c834f6",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: about 52 degrees above ground, distinctly elevated with tops of body and head visible, straight rear, exactly centered behind her, Hero facing directly AWAY, backs of ears and paired heels, face hidden. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/combat/rear-high-standing/hero-standing-rear-high-v5.png",
+        "rect": [
+          0,
+          0,
+          192,
+          270
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/high-4.webp",
+      "runtimeSha256": "6e5f06bb3e55bd8ec92673c5f99fb52e12e3bef40f6b3207fd9378ea5b8f93c7",
+      "packing": [
+        {
+          "sourceRect": [
+            91,
+            5,
+            228,
+            295
+          ],
+          "offset": [
+            85,
+            73
+          ],
+          "size": [
+            85,
+            180
+          ]
+        },
+        {
+          "sourceRect": [
+            407,
+            5,
+            543,
+            294
+          ],
+          "offset": [
+            86,
+            74
+          ],
+          "size": [
+            84,
+            179
+          ]
+        },
+        {
+          "sourceRect": [
+            723,
+            5,
+            859,
+            294
+          ],
+          "offset": [
+            86,
+            74
+          ],
+          "size": [
+            84,
+            179
+          ]
+        },
+        {
+          "sourceRect": [
+            1038,
+            5,
+            1174,
+            294
+          ],
+          "offset": [
+            86,
+            74
+          ],
+          "size": [
+            84,
+            179
+          ]
+        },
+        {
+          "sourceRect": [
+            89,
+            315,
+            232,
+            581
+          ],
+          "offset": [
+            83,
+            88
+          ],
+          "size": [
+            89,
+            165
+          ]
+        },
+        {
+          "sourceRect": [
+            396,
+            327,
+            553,
+            579
+          ],
+          "offset": [
+            79,
+            97
+          ],
+          "size": [
+            97,
+            156
+          ]
+        },
+        {
+          "sourceRect": [
+            708,
+            338,
+            867,
+            579
+          ],
+          "offset": [
+            78,
+            103
+          ],
+          "size": [
+            99,
+            150
+          ]
+        },
+        {
+          "sourceRect": [
+            1013,
+            362,
+            1192,
+            582
+          ],
+          "offset": [
+            72,
+            116
+          ],
+          "size": [
+            111,
+            137
+          ]
+        },
+        {
+          "sourceRect": [
+            77,
+            627,
+            236,
+            878
+          ],
+          "offset": [
+            78,
+            97
+          ],
+          "size": [
+            99,
+            156
+          ]
+        },
+        {
+          "sourceRect": [
+            384,
+            630,
+            560,
+            881
+          ],
+          "offset": [
+            73,
+            97
+          ],
+          "size": [
+            109,
+            156
+          ]
+        },
+        {
+          "sourceRect": [
+            726,
+            621,
+            858,
+            884
+          ],
+          "offset": [
+            87,
+            90
+          ],
+          "size": [
+            82,
+            163
+          ]
+        },
+        {
+          "sourceRect": [
+            1039,
+            621,
+            1173,
+            884
+          ],
+          "offset": [
+            86,
+            90
+          ],
+          "size": [
+            83,
+            163
+          ]
+        },
+        {
+          "sourceRect": [
+            96,
+            927,
+            226,
+            1201
+          ],
+          "offset": [
+            87,
+            83
+          ],
+          "size": [
+            81,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            405,
+            927,
+            542,
+            1201
+          ],
+          "offset": [
+            85,
+            83
+          ],
+          "size": [
+            85,
+            170
+          ]
+        },
+        {
+          "sourceRect": [
+            709,
+            923,
+            858,
+            1201
+          ],
+          "offset": [
+            82,
+            81
+          ],
+          "size": [
+            92,
+            172
+          ]
+        },
+        {
+          "sourceRect": [
+            1035,
+            929,
+            1173,
+            1201
+          ],
+          "offset": [
+            85,
+            84
+          ],
+          "size": [
+            86,
+            169
+          ]
+        }
+      ]
+    },
+    "top-0": {
+      "source": "top-0-source.png",
+      "sourceSha256": "da4fd8fddc81b282715538bd80daccb60c80d4a6175156eda4bf82d79bc17c62",
+      "prompt": "Create a transparent 4 columns \u00c3\u2014 4 rows game sprite sheet of the same small tricolor herding dog Hero. Image 1, Hero's actual approved berry painting, is the primary loose hand-painted watercolor style reference, broad softly merging washes and irregular pigment. Image 2 is the EXACT yaw, elevation, size, direction and identity target for all sixteen paintings. Image 3 is an action-anatomy reference for the scratch only, do not copy its side camera or pose for other cells. Fixed orthographic camera for every cell: exact vertical top-down, 90 degrees above ground, nose points to top of image, back and paw footprint only. Keep this body yaw and perspective throughout, especially in the seated, prone and scratch poses. Preserve the reference's amber eyes where visible, white muzzle blaze and ruff, copper and dark smoky merle patches, big pricked ears, compact build and short organic bobtail. Four rows in reading order. ROW 1: (1) neutral standing, closed mouth; (2) same stance, both visible eyes close simultaneously, with closed mouth; (3) same stance, light pant, tiny parted jaw; (4) same stance, deeper pant, slightly lowered jaw and small tongue where visible. ROW 2: (5) starts sitting, rear knees fold, rump halfway down; (6) fully seated, front paws grounded; (7) lowering toward prone, elbows bend and shoulders lower; (8) belly fully on the ground, awake, front paws stretched forward. ROW 3: (9) seated, one HIND paw lifts from her hip while both forepaws stay planted; (10) same lifted hind paw scratches just behind one ear, head leans, leg connects anatomically to seated hip, no spare limbs; (11) standing sniff, noses the air upward; (12) standing sniff, muzzle turns slightly to her left while sampling. ROW 4: (13) standing sniff, nose turns slightly right while sampling; (14) standing alert, just her ears swivel asymmetrically while head stays level; (15) standing classic curious dog head roll, one ear unmistakably lower, head rolls 22 degrees while the body and planted feet stay fixed; (16) same posture with head roll eased halfway back. Mouth closed throughout except cells 3 and 4. If the viewpoint hides the eyes or mouth, preserve that occlusion, do not turn to face camera. Sniff and curious are small head-only motions; body never changes yaw. Show backs of the paws from rear with toes pointing away. Use equal square cells and generous transparent margins around each distinct full-body sprite. Keep scale consistent; seated and lying poses naturally lower rather than increasing in size. No labels, outlines, props, ground, shadows or printed checkerboards. Exactly 16 cutouts on genuine transparent alpha, opaque cream fur.",
+      "poseReference": {
+        "role": "identity, stance, elevation and yaw",
+        "file": "public/assets/runtime/kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
+        "rect": [
+          71,
+          1022,
+          174,
+          398
+        ]
+      },
+      "runtime": "public/assets/runtime/kin/hero/sprites/world/castle/courtyard-activities/top-0.webp",
+      "runtimeSha256": "aa014b09922256b6274fc8de555243f90fcfe8fe19fd56137b0913019219c0cb",
+      "packing": [
+        {
+          "sourceRect": [
+            89,
+            13,
+            228,
+            299
+          ],
+          "offset": [
+            80,
+            29
+          ],
+          "size": [
+            96,
+            197
+          ]
+        },
+        {
+          "sourceRect": [
+            404,
+            13,
+            544,
+            299
+          ],
+          "offset": [
+            80,
+            29
+          ],
+          "size": [
+            96,
+            197
+          ]
+        },
+        {
+          "sourceRect": [
+            719,
+            13,
+            859,
+            299
+          ],
+          "offset": [
+            80,
+            29
+          ],
+          "size": [
+            96,
+            197
+          ]
+        },
+        {
+          "sourceRect": [
+            1035,
+            11,
+            1174,
+            299
+          ],
+          "offset": [
+            80,
+            29
+          ],
+          "size": [
+            96,
+            198
+          ]
+        },
+        {
+          "sourceRect": [
+            89,
+            326,
+            230,
+            599
+          ],
+          "offset": [
+            79,
+            34
+          ],
+          "size": [
+            97,
+            188
+          ]
+        },
+        {
+          "sourceRect": [
+            394,
+            336,
+            553,
+            590
+          ],
+          "offset": [
+            73,
+            40
+          ],
+          "size": [
+            109,
+            175
+          ]
+        },
+        {
+          "source": "overhead-prone-source.png",
+          "sourceRect": [
+            256,
+            35,
+            632,
+            861
+          ],
+          "offset": [
+            80,
+            22
+          ],
+          "size": [
+            96,
+            211
+          ]
+        },
+        {
+          "source": "overhead-prone-source.png",
+          "sourceRect": [
+            1149,
+            17,
+            1510,
+            870
+          ],
+          "offset": [
+            82,
+            19
+          ],
+          "size": [
+            92,
+            218
+          ]
+        },
+        {
+          "sourceRect": [
+            77,
+            631,
+            239,
+            885
+          ],
+          "offset": [
+            72,
+            40
+          ],
+          "size": [
+            111,
+            175
+          ]
+        },
+        {
+          "sourceRect": [
+            380,
+            639,
+            553,
+            885
+          ],
+          "offset": [
+            68,
+            43
+          ],
+          "size": [
+            119,
+            169
+          ]
+        },
+        {
+          "sourceRect": [
+            721,
+            621,
+            857,
+            901
+          ],
+          "offset": [
+            81,
+            32
+          ],
+          "size": [
+            93,
+            192
+          ]
+        },
+        {
+          "sourceRect": [
+            1037,
+            622,
+            1175,
+            901
+          ],
+          "offset": [
+            80,
+            32
+          ],
+          "size": [
+            95,
+            192
+          ]
+        },
+        {
+          "sourceRect": [
+            91,
+            937,
+            230,
+            1218
+          ],
+          "offset": [
+            80,
+            31
+          ],
+          "size": [
+            96,
+            193
+          ]
+        },
+        {
+          "sourceRect": [
+            399,
+            936,
+            541,
+            1218
+          ],
+          "offset": [
+            79,
+            31
+          ],
+          "size": [
+            98,
+            194
+          ]
+        },
+        {
+          "sourceRect": [
+            722,
+            931,
+            869,
+            1218
+          ],
+          "offset": [
+            77,
+            29
+          ],
+          "size": [
+            101,
+            197
+          ]
+        },
+        {
+          "sourceRect": [
+            1037,
+            934,
+            1179,
+            1218
+          ],
+          "offset": [
+            79,
+            30
+          ],
+          "size": [
+            98,
+            195
+          ]
+        }
+      ],
+      "proneRepair": {
+        "file": "overhead-prone-source.png",
+        "sha256": "5d78cd114ba0c4b11fd86d5b0a9c78e2b4719869a37f0ef13e1fa6cd968ec04d",
+        "prompt": "Author TWO isolated transparent game cutouts side by side in two equal cells, same fixed EXACT VERTICAL 90-degree TOP DOWN camera with NO horizon or front view, for Hero going prone. Image 1 is Hero's actual approved berry painting for soft hand painted storybook watercolor style. Image 2 is Hero seen exactly from above, the identity, scale, camera and nose-up orientation target. Image 3 provides the ANATOMY of the prone position ONLY; never copy the side camera. The dog's spine stays vertical in the picture and her nose points to the top, rump at bottom in both keys. Left key: she lowers elbows to ground, stretches BOTH cream forepaws noticeably in front beyond her snout, straight ahead and symmetrically to either side of the head, hindquarters beginning to fold. Right key: stretched-out prone sphinx pose with her belly on the ground, hips completely down and folded behind, both front legs stretched forward on the ground and fully legible from above. The right footprint is LONGER than a seated footprint, with the front paws projecting beyond the nose. No lifted knees or sitting upright, no eyes looking at camera, no extra limbs. Maintain recognizable smoky merle, white neck chevron and socks, copper fur and short bobtail, rounded compact structure. Same scale and alignment in both square cells, transparent gutters, true alpha, opaque pale paint, no backdrop or shadows, no text.",
+        "poseReference": {
+          "role": "identity, stance, elevation and yaw",
+          "file": "public/assets/runtime/kin/hero/sprites/combat/high-angle-standing/hero-directions-high-body-v4.png",
+          "rect": [
+            71,
+            1022,
+            174,
+            398
+          ]
+        },
+        "proneAnatomyReference": "public/assets/runtime/kin/hero/sprites/platforming/breath-and-butterfly/frames/lie-down/7.png",
+        "cells": [
+          6,
+          7
+        ]
+      }
+    }
+  }
+}

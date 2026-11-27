@@ -1,0 +1,14 @@
+{
+  "clips": [
+    { "names": ["walk"], "image": "walk.png", "cells": [0, 1, 2, 3] },
+    { "names": ["run"], "image": "carry.png", "cells": [0, 1, 2, 3] },
+    { "names": ["idle", "breath-stand"], "image": "poses.png", "cells": [0] },
+    { "names": ["jump-rise"], "image": "poses.png", "cells": [1] },
+    { "names": ["fall"], "image": "poses.png", "cells": [2] },
+    { "names": ["held", "ledge-hang", "wall-climb"], "image": "poses.png", "cells": [3], "pivot": { "x": 0.7, "y": 0.46 } },
+    { "names": ["dig"], "image": "dig.png", "cells": [0, 1, 2, 3] },
+    { "names": ["jump-prepare", "crouch"], "image": "transition.png", "cells": [0] },
+    { "names": ["jump-apex"], "image": "transition.png", "cells": [1] },
+    { "names": ["land", "ledge-climb"], "image": "transition.png", "cells": [2, 3] }
+  ]
+}

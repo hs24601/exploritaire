@@ -2,7 +2,7 @@
   "tool": "built-in image_gen",
   "references": [
     "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+    "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
   ],
   "name": "card-glyph-stone-v1",
   "group": "cards",
@@ -12,7 +12,7 @@
   "extra": "One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px.",
   "refs": [
     "C:/dev/Exploritaire/public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
-    "C:/dev/Exploritaire/public/assets/sources/ui/abilities/watercolor-v3/scratch-source.png"
+    "C:/dev/Exploritaire/public/assets/sources/abilities/scratch/light-wash/scratch-source.png"
   ],
   "prompt": "Use case: stylized-concept. Exploritaire game asset. Image 1 actual Hero berry painting is PRIMARY storybook watercolor STYLE reference only, image 2 Scratch supports soft brushwork and lighter washes ONLY, not subjects or scenery. Single chunky grey-blue stone #a9bbd0 Intended runtime 96x96; master at least 192x192, preserve that aspect ratio. Hand-painted storybook watercolor, small number of BIG softly merging water-diluted wet-on-wet washes, broad chunky rounded dabs, grouped values and quiet patches, irregular bleeding/broken lost-and-found edges, a few loose gouache highlights. Avoid microtexture, fine leaves, repeated tiny marks, hard geometric facets, glossy digital rendering, grit, paper-noise overlays. Warm late-morning top-left lighting, only internal form shading; NO baked ground/cast shadow. Opaque painted interiors, genuine transparent exterior and 6% transparent padding, no haze outside cluster, no rectangular paper, border, lettering, UI or characters. One readable irregular cluster, legible at 64px per tile. One isolated painted glyph, no scenery, ground, leaves, stems, border, text or baked glow. Broad readable silhouette at 48px. Absolutely do not import blue berries, leafy scenery, rocks or ground from style reference. Only paint the specifically requested subject.",
   "sourcePath": "C:\\Users\\ericm\\.codex\\generated_images\\01a20afc-e009-7780-ab92-bb045ed1ac3d\\exec-05aaf1a9-8a69-46a8-b706-1168427a3eb3.png"

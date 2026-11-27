@@ -2,7 +2,7 @@
 
 Two built-in ImageGen character paintings: portrait 1024×1536 and landscape 1536×1024. Identity and brushwork reference: approved `hero-watercolor-v5-ordinary-day.png`. The landscape generation also referenced the new portrait to retain the same bite action. Hero is the small tricolor corgi-like dog, amber-eyed, with charcoal/tan/cream markings and a short bobtail. A lunging three-quarter snap, small canine teeth, forward forepaws and cream/gold/charcoal tapered jaw strokes make the action readable. No victim or gore; no text, card frame, scenery or UI in the subject paintings.
 
-Both generated PNGs and their transparency are retained without raster edits. Byte-identical runtime and source copies plus dimensions/SHA-256 are recorded in `public/assets/sources/ui/holocards/hero-bite/v1/manifest.json`. Browser canvas inspection confirmed transparent outer pixels. The generated soft pigment/glow edges are retained.
+Both generated PNGs and their transparency are retained without raster edits. Byte-identical runtime and source copies plus dimensions/SHA-256 are recorded in `public/assets/sources/abilities/bite/portrait-and-landscape/manifest.json`. Browser canvas inspection confirmed transparent outer pixels. The generated soft pigment/glow edges are retained.
 
 The shared BiteFace renders a diagonal-holo TradingCard with the new subject over the existing independent painted background, plus live title, value, cost and damage copy. Portrait is the default for hand, drag, foundation and jumbo. `orientation="landscape"` selects the separately composed landscape asset for wider future placements.
 

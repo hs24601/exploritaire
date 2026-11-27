@@ -1,6 +1,8 @@
 // Pack coherent Banks paintings into the exact existing Hero rig registrations.
 const fs=require('node:fs'),{chromium}=require('playwright');
 const version=process.argv[2]||'v2';
+const style={v2:'banks-kitten',v3:'protective-adult',v4:'athletic-action',v5:'charcoal-tabby',v6:'broad-wash-tabby'}[version];
+if(!style)throw Error('Expected a Banks sprite revision from v2 to v6');
 if(!/^v\d+$/.test(version))throw Error('Expected version such as v3');
 const sitting=require('../src/proto/art/heroSittingLayout.json');
 const walking=require('../src/proto/art/heroWalkingLayout.json');
@@ -35,7 +37,8 @@ const specs={
    ic.putImageData(ip,0,0);const [x,y,tw,th]=spec.rects[i],dw=w*scale,dh=h*scale;out.drawImage(isolated,x+(tw-dw)/2,y+th-4-dh,dw,dh);return {source:[sx,sy,w,h],rect:spec.rects[i],scale};});
   const pixels=out.getImageData(0,0,output.width,output.height).data;let transparent=0,partial=0;for(let i=3;i<pixels.length;i+=4){if(!pixels[i])transparent++;else if(pixels[i]<255)partial++;}if(!transparent||!partial)throw Error('Missing watercolor RGBA');
   return {png:output.toDataURL('image/png').split(',')[1],width:output.width,height:output.height,frames,transparent,partial};
- },{data:'data:image/png;base64,'+fs.readFileSync(`public/assets/sources/characters/banks-watercolor-${version}/${name}-source.png`).toString('base64'),spec,name});
- const path=`public/assets/runtime/characters/banks/rig/watercolor/${version}/banks-${name}-watercolor-${version}.png`;fs.mkdirSync(`public/assets/runtime/characters/banks/rig/watercolor/${version}`,{recursive:true});fs.writeFileSync(path,Buffer.from(result.png,'base64'));delete result.png;report[name]={path,...result};console.log(name,result.frames.length,'frames');}
+ },{data:'data:image/png;base64,'+fs.readFileSync(`public/assets/sources/kin/banks/sprites/combat/${style}/${name}-source.png`).toString('base64'),spec,name});
+ const dir=`public/assets/runtime/kin/banks/sprites/combat/${style}`;
+ const path=`${dir}/banks-${name}-watercolor-${version}.png`;fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path,Buffer.from(result.png,'base64'));delete result.png;report[name]={path,...result};console.log(name,result.frames.length,'frames');}
  fs.writeFileSync(`docs/art/banks-watercolor-${version}-packing.json`,JSON.stringify(report,null,2)+'\n');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

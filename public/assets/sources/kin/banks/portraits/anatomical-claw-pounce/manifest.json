@@ -1,0 +1,45 @@
+{
+  "generator": "Built-in ImageGen",
+  "assets": [
+    {
+      "variant": "layered",
+      "master": "banks-watercolor-v9.png",
+      "runtime": "public/assets/runtime/kin/banks/portraits/anatomical-claw-pounce/banks-watercolor-v9.png",
+      "sha256": "5dfafcfd786b089e824dc0a224fb557532f05679f865e87bbe308d80d8cb204d",
+      "references": [
+        {
+          "path": "public/assets/runtime/kin/banks/portraits/broad-wash-pounce/banks-watercolor-v8.png",
+          "role": "Edit target, Banks identity, pose and composition"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Watercolor style reference for retouched pixels"
+        }
+      ],
+      "prompt": "This is a local retouch of the FIRST image, which is the exact edit target and Banks identity, pose and composition reference. The SECOND image is the approved Hero berry painting, sole style reference for the newly retouched pixels: soft merged watercolor washes, varied broken brush edges and restrained gouache accents. Do not import its dog, colors or forest. Change ONLY the claws and immediate ends of Banks’ two foreground paws. Preserve his head, eyes, facial expression, tail, rear paws, striped markings, pose, silhouette, framing, color and illumination. First erase the misplaced ivory claw bases from the dark grooves between the toes and restore matching fur there. Show four distinct rounded weight-bearing toes on each foreshortened front paw, with one small correctly centered curved claw per visible toe. Each claw must start just under the front edge of its own toe tip, precisely in line with the center of the rounded toe and its axis, projecting forward then gently down. No talons from the webs, sides, knuckles or pads, no long oversized talons, no extra digits or visible dewclaw. Preserve toe and leg shapes and leave the hind paws alone. No lettering. Maintain the exact original cutout registration, full tail and all paws inside canvas, original framing and genuine transparent alpha outside Banks. No backdrop, mat, ground or cast shadow.",
+      "width": 1122,
+      "height": 1402,
+      "hasAlpha": true
+    },
+    {
+      "variant": "flat",
+      "master": "banks-card-v9.png",
+      "runtime": "public/assets/runtime/kin/banks/portraits/anatomical-claw-pounce/banks-card-v9.png",
+      "sha256": "234e83fb12da09d37923483ac52b4b82035f7820def59903c72327e3362c219f",
+      "references": [
+        {
+          "path": "public/assets/runtime/kin/banks/portraits/broad-wash-pounce/banks-card-v8.png",
+          "role": "Edit target, Banks identity, pose and composition"
+        },
+        {
+          "path": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+          "role": "Watercolor style reference for retouched pixels"
+        }
+      ],
+      "prompt": "This is a local retouch of the FIRST image, which is the exact edit target and Banks identity, pose and composition reference. The SECOND image is the approved Hero berry painting, sole style reference for the newly retouched pixels: soft merged watercolor washes, varied broken brush edges and restrained gouache accents. Do not import its dog, colors or forest. Change ONLY the claws and immediate ends of Banks’ two foreground paws. Preserve his head, eyes, facial expression, tail, rear paws, striped markings, pose, silhouette, framing, color and illumination. First erase the misplaced ivory claw bases from the dark grooves between the toes and restore matching fur there. Show four distinct rounded weight-bearing toes on each foreshortened front paw, with one small correctly centered curved claw per visible toe. Each claw must start just under the front edge of its own toe tip, precisely in line with the center of the rounded toe and its axis, projecting forward then gently down. No talons from the webs, sides, knuckles or pads, no long oversized talons, no extra digits or visible dewclaw. Preserve toe and leg shapes and leave the hind paws alone. No lettering. Preserve the exact original 2:3 vertical composition, same blue starry woodland and gold ground, completely opaque with no added border.",
+      "width": 1024,
+      "height": 1536,
+      "hasAlpha": false
+    }
+  ]
+}

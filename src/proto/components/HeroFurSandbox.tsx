@@ -3,7 +3,7 @@ import { HERO_FUR_DEFAULTS, HERO_FUR_VERSION, type HeroFurPreset } from '../hero
 import { paintOffThread, paintedObjectUrl } from '../paintWorkerClient';
 import './HeroFurSandbox.css';
 
-const ART = `${import.meta.env.BASE_URL}assets/runtime/characters/hero/sleeping/watercolor/v1`;
+const ART = `${import.meta.env.BASE_URL}assets/runtime/kin/hero/sprites/world/sleeping-poses`;
 const SIZES = [{ width: 160, label: '160 px' }, { width: 320, label: '320 px' }, { width: 512, label: '512 px' }] as const;
 const STRIP = [0, 1, 2, 3];
 
