@@ -588,6 +588,7 @@ ul { padding: 0; list-style: none; }
 /* World layers (WorldLayers.tsx): terrain, hillshade, contours, hour grade, light and fog of war. */
 .vg-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
 .vg-world > * { position: absolute; pointer-events: none; }
+.vg-world.is-mini { overflow: hidden; }
 .vg-terrain { opacity: 0; transition: opacity 700ms ease; }
 .vg-world.is-ready .vg-terrain { opacity: 1; }
 .vg-hillshade, .vg-darkness { image-rendering: auto; }
@@ -651,6 +652,10 @@ ul { padding: 0; list-style: none; }
   transition: opacity 200ms ease;
 }
 .vg-chip-label.is-below { transform: translate(-50%, -2px); }
+/* On small tiles the node's 34px floor outgrows its square: drop the label clear of it. */
+.vg-feature > .vg-chip-label.is-below { margin-top: max(0px, calc(19px - var(--tile) * .5)); }
+/* Squares under 40px can't hold 16px labels without colliding: the nodes stand alone (names stay in title/aria). */
+.vg-map.is-tight .vg-chip-label { visibility: hidden; }
 .vg-chip-name { font-weight: 800; color: var(--text); }
 .vg-chip-meta { color: var(--accent); font-weight: 600; }
 .vg-feature.is-locked .vg-chip-meta { color: var(--muted); }

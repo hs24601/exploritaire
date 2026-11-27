@@ -202,7 +202,7 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
       title={mini ? undefined : 'Right or middle drag to pan · Wheel or pinch to zoom · Home resets the camera'}
       {...(!mini ? camera.handlers : {})} onContextMenu={mini ? undefined : event => event.preventDefault()}>
     {!mini && <div className="vg-map-field" style={fieldStyle} aria-hidden="true"><div className="vg-grid" /></div>}
-    <div className={`vg-map${mini ? ' is-mini' : ''}${placing ? ' is-placing' : ''}${transposed ? ' is-transposed' : ''}`} style={style}
+    <div className={`vg-map${mini ? ' is-mini' : ''}${placing ? ' is-placing' : ''}${transposed ? ' is-transposed' : ''}${!mini && cell < 40 ? ' is-tight' : ''}`} style={style}
       onPointerDown={startLasso} onPointerMove={moveLasso} onPointerLeave={() => setHoverReference(null)} onPointerUp={finishLasso} onPointerCancel={finishLasso}
       onClickCapture={e => { if (swallowClick.current && e.detail) { swallowClick.current = false; e.stopPropagation(); e.preventDefault(); } }}>
       <Ground tile={tile} transposed={transposed} fogLifted={game.rankReached >= 2} />

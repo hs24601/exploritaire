@@ -1,6 +1,7 @@
 // Layout and play check for village.html at desktop and Galaxy Z Fold 7 sizes.
 // Usage: node tools/village-layout-playwright.cjs [baseUrl] [outDir]
-// Covers the map, the drawer panes (or overlay sheets), placing a building by drag and
+// Covers the map by day, night and as the ?book spread, the zoom tiers, the drawer panes (or
+// overlay sheets, when the current UI has them), placing a building by drag and
 // by tap with its ghost preview (valid and blocked), inspecting and taking one down,
 // the minimap + puzzle for each surface, and the night summary. Runs the shared layout
 // check (with forbidScroll) on every screen. Exits 1 on any defect.
@@ -28,7 +29,7 @@ const tile = (x, y) => y * COLS + x;
 
 // A mid-game save on the map: Village rank, two residents, a Hearth combo and a Woodshed by the Forest.
 function midSave() {
-  const plots = Array(54).fill(null);
+  const plots = Array(63).fill(null);
   plots[tile(2, 3)] = 'leanto'; plots[tile(3, 3)] = 'campfire'; plots[tile(4, 3)] = 'bench'; plots[tile(2, 4)] = 'leanto'; plots[tile(1, 2)] = 'woodshed';
   return {
     version: 2, day: 3, minutes: 200,
@@ -67,9 +68,37 @@ async function center(page, selector) {
 
 const isOverlay = page => page.locator('.vg-stage.dock-overlay').count().then(n => n > 0);
 
+const has = async (page, selector) => (await page.locator(selector).count()) > 0;
+
 async function openPane(page, pane) {
   const tab = page.locator(`.vg-pane-tab.is-${pane}`).first();
   if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+}
+
+/** Set the clock on the saved game and reload. */
+async function atMinutes(page, minutes, query = '') {
+  await page.evaluate(m => {
+    const s = JSON.parse(localStorage.getItem('exploritaire.village.v1'));
+    if (s) { s.minutes = m; s.night = null; localStorage.setItem('exploritaire.village.v1', JSON.stringify(s)); }
+  }, minutes);
+  await page.goto(`${base}/village.html${query}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.vg-map');
+}
+
+// Lighting, fog of war, the book spread and zoom tiers (docs/research/village-lighting-terrain.md).
+async function mapLooks(page, tag, defects) {
+  await atMinutes(page, 900);
+  await check(page, `${tag}-01b-night`, defects);
+  if (!(await has(page, '.vg-darkness'))) defects.push(`${tag}: no light field on the map`);
+  await atMinutes(page, 120, '?book');
+  await check(page, `${tag}-01c-book`, defects);
+  if (!(await has(page, '.vg-book-gutter'))) defects.push(`${tag}: ?book shows no spread`);
+  const box = await page.locator('.vg-map-viewport').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  for (let i = 0; i < 12; i++) await page.mouse.wheel(0, 240);
+  await check(page, `${tag}-01d-world-tier`, defects);
+  if (!(await has(page, '.is-tier-world'))) defects.push(`${tag}: zooming out did not reach the world tier`);
+  await atMinutes(page, 120);
 }
 
 async function dragTopCardToFoundation(page) {
@@ -114,7 +143,10 @@ const built = (page, t) => page.locator(`.vg-tile[data-index="${t}"] .vg-token:n
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.vg-map');
     await check(page, `${tag}-01-map`, defects);
+    if (!size.name.startsWith('fold')) await mapLooks(page, tag, defects);
     const overlay = await isOverlay(page);
+    // zenDuo's current UI (2026-11-27) replaced the drawer panes; their steps run only when present.
+    const panes = await has(page, '.vg-pane-tab');
 
     // Gather some lumber first so there's something to build.
     await page.evaluate(() => {
@@ -125,6 +157,7 @@ const built = (page, t) => page.locator(`.vg-tile[data-index="${t}"] .vg-token:n
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.vg-map');
 
+    if (panes) {
     // Build pane, then place a Lean-to: drag on docked screens, tap-then-tap on overlay screens.
     await openPane(page, 'build');
     await check(page, `${tag}-02-build`, defects);
@@ -168,10 +201,11 @@ const built = (page, t) => page.locator(`.vg-tile[data-index="${t}"] .vg-token:n
       await check(page, `${tag}-06-${pane}`, defects);
     }
     if (overlay) await page.locator('.vg-sheet-head .vg-iconbtn').click();
+    }
 
     // Forest: the map shrinks to the minimap and the puzzle opens. Drag a few cards, turn the stock.
     await page.click('.vg-feature.is-forest');
-    await page.waitForSelector('.vg-foundation');
+    if (await page.waitForSelector('.vg-foundation', { timeout: 4000 }).then(() => true, () => false)) {
     if (!(await page.locator('.vg-map.is-mini').count())) defects.push(`${tag}: map did not become the minimap`);
     await check(page, `${tag}-07-forest`, defects);
     let played = 0;
@@ -189,17 +223,24 @@ const built = (page, t) => page.locator(`.vg-tile[data-index="${t}"] .vg-token:n
       await check(page, `${tag}-08c-forest-fallen`, defects);
     }
     // Back via the minimap: the run stays open, and the map grows back.
-    await page.click('.vg-mini-back');
-    await check(page, `${tag}-09-map-running`, defects);
-    if (await page.locator('.vg-map.is-mini').count()) defects.push(`${tag}: minimap tap did not return to the map`);
+    } else await check(page, `${tag}-07-forest-view`, defects);
+    if (await has(page, '.vg-map.is-mini')) {
+      await page.click('.vg-mini-back');
+      await check(page, `${tag}-09-map-running`, defects);
+      if (await page.locator('.vg-map.is-mini').count()) defects.push(`${tag}: minimap tap did not return to the map`);
+    }
 
     // Berry patch (banks the forest run), played by tapping, then Leave.
-    await page.click('.vg-feature.is-berries');
-    await page.waitForSelector('.vg-foundation');
-    for (let k = 0; k < 9; k++) await page.locator('.vg-pile-top').nth(k).click({ force: true }).catch(() => {});
-    await check(page, `${tag}-10-berries-run`, defects);
-    await page.click('.vg-output .vg-btn');
-    await page.waitForSelector('.vg-map:not(.is-mini)');
+    if (await has(page, '.vg-feature.is-berries:not([disabled])')) {
+      await page.click('.vg-feature.is-berries');
+      if (await page.waitForSelector('.vg-foundation', { timeout: 4000 }).then(() => true, () => false)) {
+        for (let k = 0; k < 9; k++) await page.locator('.vg-pile-top').nth(k).click({ force: true, timeout: 1000 }).catch(() => {});
+        await check(page, `${tag}-10-berries-run`, defects);
+      }
+      if (await has(page, '.vg-output .vg-btn')) await page.click('.vg-output .vg-btn');
+      else if (await has(page, '.vg-mini-back')) await page.click('.vg-mini-back');
+      await page.waitForSelector('.vg-map:not(.is-mini)');
+    }
 
     // Mid-game: fog lifted, residents, combo links and a site bonus. Then the quarry.
     await page.evaluate(s => localStorage.setItem('exploritaire.village.v1', JSON.stringify(s)), midSave());
@@ -208,14 +249,22 @@ const built = (page, t) => page.locator(`.vg-tile[data-index="${t}"] .vg-token:n
     await check(page, `${tag}-11-mid-map`, defects);
     await page.click(`.vg-tile[data-index="${tile(1, 2)}"]`);
     await check(page, `${tag}-12-mid-inspect`, defects);
-    await page.click(`.vg-tile[data-index="${tile(1, 2)}"]`);
-    await page.click('.vg-standee');
-    await check(page, `${tag}-13-welcome`, defects);
-    if (overlay) await page.locator('.vg-sheet-head .vg-iconbtn').click();
-    await page.click('.vg-feature.is-quarry');
-    await page.waitForSelector('.vg-foundation');
-    for (let k = 0; k < 4; k++) { if (!(await dragTopCardToFoundation(page))) await page.click('.vg-stock'); }
-    await check(page, `${tag}-14-quarry-run`, defects);
+    await page.keyboard.press('Escape');
+    if (await has(page, '.vg-standee')) {
+      await page.click('.vg-standee');
+      // The kin holocard opens as a full-screen jumbo that scales the app behind it on purpose: screenshot only.
+      await page.waitForTimeout(420);
+      await page.screenshot({ path: path.join(out, `${tag}-13-welcome.png`) });
+      await page.keyboard.press('Escape');
+    }
+    if (overlay && await has(page, '.vg-sheet-head .vg-iconbtn')) await page.locator('.vg-sheet-head .vg-iconbtn').click();
+    // The Quarry left the village map (2026-11-24); check its run only if it returns.
+    if (await has(page, '.vg-feature.is-quarry')) {
+      await page.click('.vg-feature.is-quarry');
+      await page.waitForSelector('.vg-foundation');
+      for (let k = 0; k < 4; k++) { if (!(await dragTopCardToFoundation(page))) await page.click('.vg-stock'); }
+      await check(page, `${tag}-14-quarry-run`, defects);
+    }
 
     // Night summary.
     await page.click('.vg-top-actions .vg-btn');

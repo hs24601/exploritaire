@@ -119,8 +119,8 @@ Zoom range is now 0.3–3 on the map (was 0.55–3), split into three tiers set 
 - `npx vitest run src/village`: 41 tests pass, including 7 new light and terrain tests.
 - `tsc --noEmit`: clean.
 - **Layout:** day, night and `?book` at 1912×914, 1280×720, Fold 7 inner (884×1000) and cover (412×915), and both screens in landscape, using the shared `findLayoutDefects` with `forbidScroll`. No scrollbars and no page errors.
-- **One defect is not from this work:** at cover-landscape, a Forest node overlaps its chip label. It reproduces with the new layers switched off.
-- `tools/village-layout-playwright.cjs` no longer runs against zenDuo's current uncommitted UI: it waits for `.vg-pane-tab`, which that UI no longer renders. It needs updating alongside that work.
+- **Fixed after the merge (2026-11-27):** the Forest node overlapping its label on cover-landscape (labels now drop clear of the node's 34 px floor), labels colliding when squares are under 40 px (they hide, names stay in title and aria), and the minimap clipping the world layers.
+- `tools/village-layout-playwright.cjs` now runs against the current UI. The pane and build steps run only when the drawer panes exist, and the quarry step only if the Quarry returns. It also covers night, `?book` and the world zoom tier on desktop. It is clean at all six sizes.
 
 ## 7. Open questions for Eric
 
