@@ -31,11 +31,12 @@ export function PlayingCard({ card, surface, style, className = '', showYield }:
   }
   const label = rankLabel(card.rank);
   return (
-    <div className={`vg-card is-${surface}${card.unripe ? ' is-unripe' : ''} ${className}`}
+    <div className={`vg-card is-${surface}${card.leafCovered ? ' is-leaf-covered' : card.unripe ? ' is-unripe' : ''} ${className}`}
       style={surface === 'forest' ? { ...style, '--bark-x': `${(card.id * 37) % 100}%` } as CSSProperties : style}
-      aria-label={`${label}${card.unripe ? ', unripe' : ''}`} data-rank={card.rank}>
+      aria-label={`${label}${card.leafCovered ? ', hidden under leaves' : card.unripe ? ', unripe' : ''}`}
+      title={card.leafCovered ? 'Pick a berry on a neighbouring bush to uncover this one' : undefined} data-rank={card.rank}>
       <span className="vg-card-rank">{label}</span>
-      <Icon name={GLYPH[surface]} className="vg-card-glyph" size={28} />
+      <Icon name={card.leafCovered ? 'leaf' : GLYPH[surface]} className="vg-card-glyph" size={28} />
       {showYield && card.yield > 1 && <span className="vg-card-yield">×{card.yield}</span>}
     </div>
   );

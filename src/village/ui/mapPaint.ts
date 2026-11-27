@@ -14,7 +14,6 @@ const ART = '/assets/runtime/environment/watercolor/v1';
 const FEATURE_ART = {
   forest: `${ART}/woods-overhead-v1.png`,
   berries: `${ART}/berry-patch-overhead-v2.png`,
-  quarry: `${ART}/stone-spill-v1.png`,
 } as const;
 
 function rng(seed: number) {
@@ -76,30 +75,10 @@ function featureWash(ctx: CanvasRenderingContext2D, r: Rect, t: number, palette:
 function drawFeatureArt(ctx: CanvasRenderingContext2D, id: keyof typeof FEATURE_ART, r: Rect, t: number) {
   const img = images.get(FEATURE_ART[id]);
   if (!img) return;
-  const bleed = 0.12;
-  const x = (r.x - r.w * bleed / 2) * t, y = (r.y - r.h * bleed / 2) * t, w = r.w * (1 + bleed) * t, h = r.h * (1 + bleed) * t;
-  ctx.save();
-  if (id === 'forest') {
-    ctx.globalAlpha = 0.96;
-    ctx.drawImage(img, x, y, w, h);
-  } else if (id === 'berries') {
-    ctx.globalAlpha = 0.95;
-    const inset = 0.1 * t;
-    ctx.drawImage(img, x + inset, y + inset, w - inset * 2, h - inset * 2);
-  } else {
-    // Quarry: three loose stone piles across the pit, rotated so they don't repeat.
-    const random = rng(4242);
-    for (let i = 0; i < 3; i++) {
-      const s = t * (0.95 + random() * 0.35);
-      ctx.save();
-      ctx.translate((r.x + 0.55 + (i % 2) * 0.9 + random() * 0.2) * t, (r.y + 0.6 + Math.floor(i / 2) * 0.85 + random() * 0.15) * t);
-      ctx.rotate((random() - 0.5) * 1.2);
-      ctx.globalAlpha = 0.92;
-      ctx.drawImage(img, -s / 2, -s / 2, s, s);
-      ctx.restore();
-    }
-  }
-  ctx.restore();
+  const size = t * (id === 'berries' ? 0.82 : 0.94);
+  const scale = size / Math.max(img.width, img.height);
+  const w = img.width * scale, h = img.height * scale;
+  ctx.drawImage(img, (r.x + r.w / 2) * t - w / 2, (r.y + r.h / 2) * t - h / 2, w, h);
 }
 
 const groundCache = new Map<string, HTMLCanvasElement>();
@@ -142,9 +121,7 @@ export function bakeGround(t: number): HTMLCanvasElement {
   featureWash(ctx, FEATURES.forest.rect, t, 'wine', 302, 1.2, 0.35);
   featureWash(ctx, FEATURES.berries.rect, t, 'woodland', 311, 3, 0.9);
   featureWash(ctx, FEATURES.berries.rect, t, 'wine', 312, 1.2, 0.5);
-  featureWash(ctx, FEATURES.quarry.rect, t, 'slate', 321, 5, 1);
-  featureWash(ctx, FEATURES.quarry.rect, t, 'dirt', 322, 1.5, 0.45);
-  for (const id of ['forest', 'berries', 'quarry'] as const) drawFeatureArt(ctx, id, FEATURES[id].rect, t);
+  for (const id of ['forest', 'berries'] as const) drawFeatureArt(ctx, id, FEATURES[id].rect, t);
   // Grass and litter on the open meadow only.
   const open = (x: number, y: number) => !Object.values(FEATURES).some(f => x > f.rect.x - 0.1 && x < f.rect.x + f.rect.w + 0.1 && y > f.rect.y - 0.1 && y < f.rect.y + f.rect.h + 0.1);
   for (let i = 0; i < MAP_COLS * MAP_ROWS * 1.5; i++) {

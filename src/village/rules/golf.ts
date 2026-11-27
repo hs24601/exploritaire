@@ -12,6 +12,8 @@ export interface Card {
   yield: number;
   /** Berry patch: unripe cards can't be picked until a neighbour is picked. */
   unripe?: boolean;
+  /** Sunny Hedge: foliage hides this berry until a neighbouring bush is picked. */
+  leafCovered?: boolean;
   /** Quarry: face-down until the card above it is mined. */
   hidden?: boolean;
 }
@@ -80,11 +82,13 @@ export function foundationTop(run: Run): Card | undefined {
   return run.foundation[run.foundation.length - 1];
 }
 
+export const berryBlocked = (card: Card) => !!(card.leafCovered || card.unripe);
+
 export function canPlay(run: Run, pileIndex: number): boolean {
   const pile = run.piles[pileIndex];
   const card = pile && top(pile);
   const base = foundationTop(run);
-  if (!card || !base || card.unripe || card.hidden) return false;
+  if (!card || !base || berryBlocked(card) || card.hidden) return false;
   return adjacent(card.rank, base.rank, run.wrap);
 }
 
@@ -120,10 +124,10 @@ export function play(run: Run, pileIndex: number): Run {
   // Uncover: the next card in a shaft turns face up.
   const under = top(pile);
   if (under?.hidden) pile.cards[pile.cards.length - 1] = { ...under, hidden: false };
-  // Ripen: picking a berry ripens the top card of each orthogonal neighbour.
+  // Picking a berry reveals the top berry in each orthogonal neighbour.
   for (const n of pile.neighbours ?? []) {
     const t = top(piles[n]);
-    if (t?.unripe) piles[n].cards[piles[n].cards.length - 1] = { ...t, unripe: false };
+    if (t && berryBlocked(t)) piles[n].cards[piles[n].cards.length - 1] = t.leafCovered ? { ...t, leafCovered: false } : { ...t, unripe: false };
   }
   let gain = card.yield;
   let bonus = 0;

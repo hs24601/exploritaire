@@ -14,8 +14,10 @@ export const DAYLIGHT = {
   drawMinutes: 15,
 };
 
+export const DAY_CYCLE_MINUTES = 24 * 60;
+
 export function clockLabel(minutesIntoDay: number): string {
-  const t = DAYLIGHT.dawn + Math.max(0, Math.round(minutesIntoDay));
+  const t = (DAYLIGHT.dawn + Math.max(0, Math.round(minutesIntoDay))) % DAY_CYCLE_MINUTES;
   const h = Math.floor(t / 60), m = t % 60;
   const h12 = ((h + 11) % 12) + 1;
   return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;

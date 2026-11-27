@@ -1,33 +1,54 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties } from 'react';
-import { clockLabel, durationLabel } from './rules/daylight';
-import { daylightLeft, loadGame, reduce, saveGame, surfaceUnlocked, type GameState } from './rules/game';
-import type { SurfaceId } from './rules/surfaces';
+import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { clockLabel, DAY_CYCLE_MINUTES, durationLabel } from './rules/daylight';
+import { canPlaceDevKin, dailyStamina, daylightLeft, denPlacementBlocker, loadGame, reduce, saveGame, surfaceUnlocked, type GameState } from './rules/game';
+import { SURFACE_ORDER, type SurfaceId } from './rules/surfaces';
+import { FEATURES, featureAt, tileAt, tileIndex } from './rules/map';
+import { activeAspen, ASPEN_FALL_MS, KIN_TOKENS, type TokenKin } from './rules/aspen';
 import { KIN, RANKS, appeal, dayLength, placementPreview, type BuildingId, type KinId } from './rules/village';
 import { DragLayer, useDrag } from './ui/drag';
-import { BuildPane, HollowPane, InspectCard, KinPane, PANES, PaneTabs, PlacingCard, type Pane } from './ui/Drawer';
+import { InspectCard, KinPane, PlacingCard } from './ui/Drawer';
 import { Icon } from './ui/icons';
 import { useMeasure, useStageLayout } from './ui/layout';
 
-const FLOAT_W = 340;
-import { MapView, type Aim } from './ui/MapView';
+import { KinStack, MapView, type Aim } from './ui/MapView';
+import { KinPortrait } from './ui/KinPortrait';
 import { SurfaceView } from './ui/SurfaceView';
+import { AspenView } from './ui/AspenView';
+import { useVillageAutoSolve } from './ui/useVillageAutoSolve';
+import { useVillageReceiptFlight } from './ui/useVillageReceiptFlight';
+import { useCardJumbo } from '../proto/components/CardJumbo';
+import { FpsCounter } from '../proto/components/FpsCounter';
+import { DevConfig } from './ui/DevConfig';
+import { DenHousing, DenIdea, DenView } from './ui/DenView';
+import { DIG_KIN } from './rules/den';
 
-function TopBar({ game, onRest, onMenu }: { game: GameState; onRest: () => void; onMenu: () => void }) {
+const showDevConfig = import.meta.env.DEV || new URLSearchParams(window.location.search).has('dev');
+
+function VillageHud({ game, hudRef, onRest, onMenu, onTime }: { game: GameState; hudRef: RefObject<HTMLElement | null>;
+  onRest: () => void; onMenu: () => void; onTime?: (minutes: number) => void }) {
   const len = dayLength(game.village);
   const left = daylightLeft(game);
+  const cycleEnd = DAY_CYCLE_MINUTES - 1;
+  const minutes = Math.min(game.minutes, cycleEnd);
+  const timeLabel = clockLabel(game.minutes);
+  const trackStyle = { '--dusk-position': `${100 * len / cycleEnd}%`, '--clock-position': minutes / cycleEnd } as CSSProperties;
   const r = game.village.resources;
   return (
-    <header className="vg-top">
-      <div className="vg-brand"><span className="vg-mark" aria-hidden="true" />Hollow</div>
+    <header className="vg-hud" ref={hudRef} aria-label="Hollow status and controls">
       <div className="vg-day">
         <div className="vg-day-row">
           <span className="vg-day-n">Day {game.day}</span>
-          <span className="vg-clock"><Icon name={left > 120 ? 'sun' : 'moon'} size={18} />{clockLabel(game.minutes)}</span>
+          <span className="vg-clock" title="Current time in Hollow"><Icon name={left > 120 ? 'sun' : 'moon'} size={18} />{timeLabel}</span>
           <span className="vg-left">{durationLabel(left)} of light</span>
         </div>
-        <div className="vg-sun" role="progressbar" aria-label="Daylight left" aria-valuemin={0} aria-valuemax={len} aria-valuenow={left}>
-          <i style={{ width: `${(left / len) * 100}%` }} />
-        </div>
+        {onTime ? <div className="vg-sun" style={trackStyle}>
+          <input className="vg-time-scrubber" type="range" min={0} max={cycleEnd} value={minutes}
+            aria-label="Time of day" aria-valuetext={timeLabel} title="Drag to set the clock from dawn through the night" data-touch-hold
+            onChange={event => onTime(event.currentTarget.valueAsNumber)} />
+        </div> : <div className="vg-sun" role="meter" aria-label="Time of day" aria-valuemin={0} aria-valuemax={cycleEnd}
+          aria-valuenow={minutes} aria-valuetext={timeLabel} style={trackStyle}>
+          <i className="vg-time-marker" aria-hidden="true" />
+        </div>}
       </div>
       <div className="vg-stores">
         <span className="vg-store is-lumber" title="Lumber"><Icon name="lumber" size={18} /><b>{r.lumber}</b></span>
@@ -36,8 +57,9 @@ function TopBar({ game, onRest, onMenu }: { game: GameState; onRest: () => void;
         <span className="vg-store is-appeal" title="Appeal"><Icon name="appeal" size={18} /><b>{appeal(game.village)}</b></span>
       </div>
       <div className="vg-top-actions">
-        <button type="button" className="vg-btn is-quiet is-small" onClick={onRest}><Icon name="moon" size={18} />Rest</button>
-        <button type="button" className="vg-iconbtn" onClick={onMenu} aria-label="Menu"><Icon name="menu" size={20} /></button>
+        <button type="button" className="vg-btn is-quiet is-small" title="End the day and see the night report" onClick={onRest}><Icon name="moon" size={18} />Rest</button>
+        <FpsCounter className="vg-fps" />
+        <button type="button" className="vg-iconbtn" title="Open the Hollow menu" onClick={onMenu} aria-label="Menu"><Icon name="menu" size={20} /></button>
       </div>
     </header>
   );
@@ -60,48 +82,73 @@ function NightPanel({ game, onDawn }: { game: GameState; onDawn: () => void }) {
         <Icon name="moon" size={28} />
         <h2 id="vg-night-title">Night {game.day}</h2>
         <ul>{lines.map(l => <li key={l}>{l}</li>)}</ul>
-        <button type="button" className="vg-btn is-primary" onClick={onDawn} autoFocus>Wake at dawn</button>
+        <button type="button" className="vg-btn is-primary" title="Begin the next day" onClick={onDawn} autoFocus>Wake at dawn</button>
       </div>
     </div>
   );
 }
 
-function Menu({ onClose, onReset }: { onClose: () => void; onReset: () => void }) {
+const DEV_KIN = ['mochi', 'banks', 'demi'] as const;
+
+function Menu({ onClose, onReset, onDev, game, dispatch }: {
+  onClose: () => void; onReset: () => void; onDev?: () => void;
+  game: GameState; dispatch: (action: Parameters<typeof reduce>[1]) => void;
+}) {
   const [confirm, setConfirm] = useState(false);
+  const { begin, dragging } = useDrag();
   return (
-    <div className="vg-scrim" role="dialog" aria-modal="true" aria-label="Menu" onPointerDown={e => e.target === e.currentTarget && onClose()}>
+    <div className={`vg-scrim${dragging?.kind === 'dev-kin' ? ' is-kin-placement' : ''}`} role="dialog" aria-modal="true" aria-label="Menu" onPointerDown={e => e.target === e.currentTarget && onClose()}>
       <div className="vg-panel vg-menu">
-        <div className="vg-panel-head"><h2>Menu</h2><button type="button" className="vg-iconbtn" onClick={onClose} aria-label="Close"><Icon name="close" size={20} /></button></div>
+        <div className="vg-panel-head"><h2>Menu</h2><button type="button" className="vg-iconbtn" title="Close the menu" onClick={onClose} aria-label="Close"><Icon name="close" size={20} /></button></div>
         <p className="vg-empty">Progress saves on this device after every move.</p>
+        {onDev && <button type="button" className="vg-btn is-quiet" title="Open Hollow playtest controls" onClick={onDev}>Dev configuration</button>}
+        {onDev && game.view === 'village' && !game.night && <section className="vg-dev-kin" aria-label="Developer kin placement">
+          <p>Drag a kin onto the grid to place or move them.</p>
+          <div>{DEV_KIN.map(kin => <button key={kin} type="button" className="vg-btn is-small" data-touch-hold
+            title={`Drag ${KIN_TOKENS[kin].name} onto the map`}
+            onPointerDown={event => begin(event, { kind: 'dev-kin', id: kin, ghost: <KinStack members={[kin]} />, width: 88, height: 70 },
+              (_, hit) => {
+                if (hit.drop !== 'tile' || !canPlaceDevKin(game, hit.index)) return;
+                dispatch({ type: 'dev-place-kin', kin, tile: hit.index });
+                onClose();
+              })}>
+            <KinPortrait kin={kin} />{KIN_TOKENS[kin].name}
+          </button>)}</div>
+        </section>}
         {confirm
-          ? <div className="vg-menu-row"><span>Start over from day 1?</span><button type="button" className="vg-btn is-danger is-small" onClick={onReset}>Start over</button></div>
-          : <button type="button" className="vg-btn is-quiet" onClick={() => setConfirm(true)}>Start a new Hollow</button>}
+          ? <div className="vg-menu-row"><span>Start over from day 1?</span><button type="button" className="vg-btn is-danger is-small" title="Replace this Hollow and return to day 1" onClick={onReset}>Start over</button></div>
+          : <button type="button" className="vg-btn is-quiet" title="Open the restart confirmation" onClick={() => setConfirm(true)}>Start a new Hollow</button>}
       </div>
     </div>
   );
 }
 
-function Stage({ game, dispatch }: { game: GameState; dispatch: (a: Parameters<typeof reduce>[1]) => void }) {
+function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Parameters<typeof reduce>[1]) => void; onMenu: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const hudRef = useRef<HTMLElement>(null);
+  const hudHeight = useMeasure(hudRef, 'height', true);
   const floatRef = useRef<HTMLDivElement>(null);
   const { dragging, over } = useDrag();
-  const [pane, setPane] = useState<Pane | null>('build');
+  const [pane, setPane] = useState<'kin' | null>(null);
   const [picked, setPicked] = useState<BuildingId | null>(null);
   const [aimTile, setAimTile] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [focusKin, setFocusKin] = useState<KinId | null>(null);
+  const [partyTile, setPartyTile] = useState<number | null>(null);
+  const [selectedKin, setSelectedKin] = useState<TokenKin | null>(null);
+  const [denArmed, setDenArmed] = useState(false);
+  const [denMessage, setDenMessage] = useState('');
+  const den = game.den;
+  const denIdea = !den || (den.level === 1 && !den.dig);
+  const denSelected = den !== null && selected === den.tile;
+  const clearParty = () => { setPartyTile(null); setSelectedKin(null); };
   // On overlay screens a placing/inspect card takes room beside the tab bar and the map shrinks to fit, never under it.
-  const last = useRef<{ overlay: boolean; right: boolean }>({ overlay: false, right: false });
-  const floatOn = last.current.overlay && game.view === 'village' && pane === null && (picked !== null || (selected !== null && !!game.village.plots[selected]));
-  const floatH = useMeasure(floatRef, 'height', floatOn && !last.current.right);
-  const layout = useStageLayout(ref, floatOn ? (last.current.right ? FLOAT_W : floatH) : 0);
-  if (layout) last.current = { overlay: layout.dock === 'overlay', right: layout.bar === 'right' };
-  const view = game.view !== 'village' && !surfaceUnlocked(game, game.view) ? 'village' : game.view;
+  const floatOn = game.view === 'village' && pane === null && (picked !== null || denSelected || (selected !== null && !!game.village.plots[selected]));
+  const floatH = useMeasure(floatRef, 'height', floatOn);
+  const hudSpace = hudHeight ? hudHeight + 8 : 0;
+  const layout = useStageLayout(ref, floatOn ? floatH : 0, hudSpace);
+  const view = game.view !== 'village' && game.view !== 'den' && !surfaceUnlocked(game, game.view) ? 'village' : game.view;
   const mini = view !== 'village';
-  const overlay = layout?.dock === 'overlay';
-  // Docked drawers always show a pane; overlay sheets start closed.
-  const shownPane: Pane | null = overlay ? pane : pane ?? 'build';
-  useEffect(() => { if (overlay) setPane(null); }, [overlay]);
 
   const dragBuilding = dragging?.kind === 'building' ? (dragging.id as BuildingId) : null;
   const placing = dragBuilding ?? picked;
@@ -117,13 +164,41 @@ function Stage({ game, dispatch }: { game: GameState; dispatch: (a: Parameters<t
     dispatch({ type: 'build', building: b, tile });
     clear();
   };
-  const pick = (b: BuildingId) => {
+  const placeDen = (tile: number) => {
+    const blocker = denPlacementBlocker(game, tile, !!den);
+    setDenMessage(blocker ?? '');
+    if (blocker) return;
+    dispatch({ type: 'den-place', tile, improve: !!den });
+    setDenArmed(false);
     setSelected(null);
-    if (picked === b) { clear(); return; }
-    setPicked(b); setAimTile(null);
-    if (overlay) setPane(null);
+  };
+  const useDen = (from: number, kin?: TokenKin) => {
+    if (!den) return;
+    const party = game.parties.find(p => p.tile === from);
+    if (den.dig) {
+      const digger = kin ?? party?.members.find(member => DIG_KIN.includes(member));
+      if (digger && DIG_KIN.includes(digger)) {
+        dispatch({ type: 'den-start', from, kin: digger });
+        setSelected(null);
+      } else setSelected(den.tile);
+    } else {
+      const resident = kin ?? (party?.members.length === 1 ? party.members[0] : undefined);
+      if (resident && !den.residents.includes(resident)) dispatch({ type: 'den-house', kin: resident });
+      setSelected(den.tile);
+    }
+    setPane(null);
+    clearParty();
   };
   const onTile = (i: number, e: React.MouseEvent) => {
+    if (denArmed && denIdea) { placeDen(i); return; }
+    if (den?.tile === i) {
+      if (partyTile !== null) useDen(partyTile, selectedKin ?? undefined);
+      else setSelected(denSelected ? null : i);
+      return;
+    }
+    if (partyTile !== null) {
+      dispatch({ type: 'move-party', from: partyTile, to: i, kin: selectedKin ?? undefined }); clearParty(); return;
+    }
     if (placing) {
       // Mouse: hovering already previews, so a click builds. Touch: the first tap previews, Build confirms.
       const mouse = (e.nativeEvent as PointerEvent).pointerType === 'mouse';
@@ -135,54 +210,82 @@ function Stage({ game, dispatch }: { game: GameState; dispatch: (a: Parameters<t
     setSelected(null);
   };
   const onWanderer = (kin: KinId) => { clear(); setSelected(null); setFocusKin(kin); setPane('kin'); };
-  const onFeature = (id: SurfaceId) => { clear(); setSelected(null); dispatch({ type: 'open', surface: id }); };
+  const deploy = (from: number, surface: SurfaceId, kin?: TokenKin) => {
+    clear(); setSelected(null); clearParty();
+    dispatch({ type: 'deploy', from, surface, kin });
+  };
+  const onFeature = (surface: SurfaceId) => {
+    if (!surfaceUnlocked(game, surface)) return;
+    const node = FEATURES[surface].node, index = tileIndex(node.x, node.y);
+    const from = partyTile ?? game.parties.find(p => p.tile === index)?.tile;
+    if (from === undefined) {
+      clear(); setSelected(null);
+      dispatch({ type: 'inspect-biome', surface });
+      return;
+    }
+    deploy(from, surface, selectedKin ?? undefined);
+  };
+  const onParty = (tile: number) => {
+    clear(); setSelected(null);
+    if (partyTile !== null && partyTile !== tile) {
+      const { x, y } = tileAt(tile);
+      const surface = featureAt(x, y);
+      if (surface) deploy(partyTile, surface, selectedKin ?? undefined);
+      else { dispatch({ type: 'move-party', from: partyTile, to: tile, kin: selectedKin ?? undefined }); clearParty(); }
+    } else {
+      setPartyTile(partyTile === tile && !selectedKin ? null : tile);
+      setSelectedKin(null);
+    }
+  };
 
   const card = picked
     ? <PlacingCard building={picked} aim={aim} onBuild={() => aim && build(aim.building, aim.tile)} onCancel={clear} />
+    : denSelected ? <DenHousing game={game} dispatch={dispatch} onClose={() => setSelected(null)} />
     : selected !== null && game.village.plots[selected]
       ? <InspectCard game={game} tile={selected} onTakeDown={() => { dispatch({ type: 'demolish', tile: selected }); setSelected(null); }} onClose={() => setSelected(null)} />
       : null;
 
-  const paneBody = (p: Pane) => p === 'build'
-    ? <BuildPane game={game} picked={picked} onPick={pick} onDrop={build} />
-    : p === 'kin' ? <KinPane game={game} focus={focusKin} dispatch={dispatch} /> : <HollowPane game={game} />;
-
-  const d = layout?.drawer;
-  const drawerStyle: CSSProperties | undefined = d ? { left: d.x, top: d.y, width: d.w, height: d.h } : undefined;
-  const stageVars = layout ? { ['--pad' as string]: `${layout.pad}px`, ['--mini-w' as string]: `${layout.cols * layout.miniTile}px`, ['--mini-h' as string]: `${layout.rows * layout.miniTile}px` } : undefined;
+  const stageVars = layout ? { ['--pad' as string]: `${layout.pad}px`, ['--mini-w' as string]: `${layout.cols * layout.miniTile}px`, ['--mini-h' as string]: `${layout.rows * layout.miniTile}px`, ['--hud-space' as string]: `${hudSpace}px` } : undefined;
 
   return (
-    <main className={`vg-stage${mini ? ' is-puzzle' : ' is-map'}${layout ? ` dock-${layout.dock} bar-${layout.bar}` : ''}${overlay && pane && !mini ? ' has-sheet' : ''}`} ref={ref} style={stageVars}>
+    <main className={`vg-stage dock-overlay bar-bottom${mini ? ' is-puzzle' : ' is-map'}${pane && !mini ? ' has-sheet' : ''}`} ref={ref} style={stageVars}>
+      <VillageHud game={game} hudRef={hudRef} onRest={() => dispatch({ type: 'rest' })} onMenu={onMenu}
+        onTime={showDevConfig && !game.night ? minutes => dispatch({ type: 'dev-config', minutes }) : undefined} />
       {layout && (
         <>
-          {mini && <SurfaceView key={view} game={game} surface={view} dispatch={dispatch} />}
+          {view === 'forest' && game.aspen && <AspenView clock={game} grove={game.aspen} stamina={game.stamina} staminaCaps={dailyStamina(game.denRest)} cards={game.aspenCards} dispatch={dispatch} />}
+          {view === 'den' && den && <DenView game={game} dispatch={dispatch} />}
+          {view !== 'village' && view !== 'forest' && view !== 'den' && <SurfaceView key={view} game={game} surface={view} dispatch={dispatch} />}
           <MapView game={game} layout={layout} mini={mini} placing={placing} aim={aim} selected={selected}
+            denPlacement={denIdea && (denArmed || dragging?.kind === 'den-idea')}
             onTile={onTile} onHover={t => { if (picked) setAimTile(t); }} onFeature={onFeature} onWanderer={onWanderer}
+            partyTile={partyTile} selectedKin={selectedKin} onParty={onParty}
+            onKin={(tile, kin) => { clear(); setSelected(null); setPartyTile(tile); setSelectedKin(selectedKin === kin ? null : kin); }}
+            onGroup={members => { clear(); setSelected(null); clearParty(); dispatch({ type: 'group-kin', members }); }}
+            onPartyDrop={(from, drop, i, kin) => {
+              if (drop === 'feature' && SURFACE_ORDER[i]) deploy(from, SURFACE_ORDER[i], kin);
+              if (drop === 'tile') {
+                if (den?.tile === i) useDen(from, kin);
+                else { dispatch({ type: 'move-party', from, to: i, kin }); clearParty(); }
+              }
+            }}
             onMini={() => dispatch({ type: 'view', view: 'village' })} />
-          {!mini && !overlay && (
-            <aside className="vg-drawer" style={drawerStyle} aria-label="Village">
-              <PaneTabs pane={shownPane} onPane={p => { setPane(p); clear(); setSelected(null); }} gate={game.village.gate.length} />
-              <div className="vg-drawer-body">{card ?? paneBody(shownPane!)}</div>
-            </aside>
-          )}
-          {!mini && overlay && (
+          {!mini && (
             <>
-              <nav className="vg-bar" style={drawerStyle} aria-label="Village panes">
-                <PaneTabs pane={pane} onPane={p => { setPane(pane === p ? null : p); clear(); setSelected(null); }} gate={game.village.gate.length} vertical={layout.bar === 'right'} />
-              </nav>
+              {!pane && !card && denIdea && <DenIdea improve={!!den} seed={game.seed} armed={denArmed}
+                onArm={() => { setDenArmed(!denArmed); setDenMessage(''); clearParty(); }} onPlace={placeDen} />}
+              {!pane && denMessage && <span className="vg-den-message" role="status">{denMessage}</span>}
               {pane && (
-                <section className="vg-sheet" aria-label={PANES.find(p => p.id === pane)!.label}
-                  style={layout.bar === 'right' ? { right: layout.drawer.w + layout.pad * 2 } : { bottom: layout.drawer.h + layout.pad * 2 }}>
+                <section className="vg-sheet" aria-label="Kin">
                   <div className="vg-sheet-head">
-                    <h2>{PANES.find(p => p.id === pane)!.label}</h2>
-                    <button type="button" className="vg-iconbtn" onClick={() => setPane(null)} aria-label="Back to the map"><Icon name="map" size={20} /></button>
+                    <h2>Kin</h2>
+                    <button type="button" className="vg-iconbtn" title="Back to the map" onClick={() => setPane(null)} aria-label="Back to the map"><Icon name="map" size={20} /></button>
                   </div>
-                  <div className="vg-sheet-body">{paneBody(pane)}</div>
+                  <div className="vg-sheet-body"><KinPane game={game} focus={focusKin} dispatch={dispatch} /></div>
                 </section>
               )}
               {!pane && card && (
-                <div className="vg-float" ref={floatRef}
-                  style={layout.bar === 'right' ? { right: layout.drawer.w + layout.pad * 2, width: FLOAT_W } : { bottom: layout.drawer.h + layout.pad * 2 }}>{card}</div>
+                <div className="vg-float" ref={floatRef}>{card}</div>
               )}
             </>
           )}
@@ -193,16 +296,30 @@ function Stage({ game, dispatch }: { game: GameState; dispatch: (a: Parameters<t
 }
 
 export function VillageApp() {
-  const [game, dispatch] = useReducer(reduce, undefined, loadGame);
+  const [game, dispatchGame] = useReducer(reduce, undefined, loadGame);
   const [menu, setMenu] = useState(false);
+  const [dev, setDev] = useState(false);
+  const jumbo = useCardJumbo();
+  const root = useRef<HTMLDivElement>(null);
+  const blocked = menu || dev || !!jumbo?.isOpen;
+  const receive = useVillageReceiptFlight(root, dispatchGame, blocked);
+  const dispatch = useVillageAutoSolve(game, blocked, receive);
   useEffect(() => saveGame(game), [game]);
+  const aspenPhase = activeAspen(game.aspen)?.phase;
+  useEffect(() => {
+    if (aspenPhase !== 'falling') return;
+    const timer = window.setTimeout(() => dispatch({ type: 'aspen-land' }),
+      matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ASPEN_FALL_MS);
+    return () => clearTimeout(timer);
+  }, [aspenPhase, dispatch]);
   return (
     <DragLayer>
-      <div className={`vg-app${game.night ? ' is-night' : ''}`}>
-        <TopBar game={game} onRest={() => dispatch({ type: 'rest' })} onMenu={() => setMenu(true)} />
-        <Stage game={game} dispatch={dispatch} />
+      <div ref={root} className={`vg-app${game.night ? ' is-night' : ''}`}>
+        <Stage game={game} dispatch={dispatch} onMenu={() => { setDev(false); setMenu(true); }} />
         {game.night && <NightPanel game={game} onDawn={() => dispatch({ type: 'dawn' })} />}
-        {menu && <Menu onClose={() => setMenu(false)} onReset={() => { dispatch({ type: 'reset' }); setMenu(false); }} />}
+        {menu && <Menu game={game} dispatch={dispatch} onClose={() => setMenu(false)} onReset={() => { dispatch({ type: 'reset' }); setMenu(false); }}
+          onDev={showDevConfig ? () => { setMenu(false); setDev(true); } : undefined} />}
+        {dev && <DevConfig game={game} onApply={dispatch} onClose={() => setDev(false)} />}
       </div>
     </DragLayer>
   );

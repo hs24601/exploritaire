@@ -1,6 +1,6 @@
 // Village rules: buildings, combos, kin, rank and nightfall. Pure functions.
 import { DAYLIGHT } from './daylight';
-import { MAP_TILES, featureAt, fogged, isGate, neighboursOf, tileAt, touchesFeature } from './map';
+import { MAP_TILES, featureAt, fogged, isGate, isSapling, neighboursOf, tileAt, touchesFeature, validTileIndex, type MapSurfaceId } from './map';
 import type { ResourceId, SurfaceId } from './surfaces';
 
 export type Tag = 'Warm' | 'Quiet' | 'Sweet' | 'Bright';
@@ -29,7 +29,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   rack: { id: 'rack', name: 'Drying Rack', cost: { lumber: 30 }, rank: 1, effect: 'Halves spoilage. By the Berry Patch: none.' },
   woodshed: { id: 'woodshed', name: 'Woodshed', cost: { lumber: 25 }, rank: 1, effect: 'By the Forest: +1 lumber per felled tree.' },
   burrow: { id: 'burrow', name: 'Burrow', cost: { lumber: 50, stone: 40 }, beds: 2, appeal: 1, rank: 2, effect: 'Shelter for 2. +1 appeal.' },
-  lantern: { id: 'lantern', name: 'Lantern Post', cost: { lumber: 20, stone: 25 }, appeal: 1, tag: 'Bright', rank: 2, effect: 'Bright. Dusk 1h later. By the Quarry: deep rock +1.' },
+  lantern: { id: 'lantern', name: 'Lantern Post', cost: { lumber: 20, stone: 25 }, appeal: 1, tag: 'Bright', rank: 2, effect: 'Bright. Dusk 1h later.' },
   well: { id: 'well', name: 'Stone Well', cost: { stone: 50 }, appeal: 3, rank: 2, effect: '+3 appeal.' },
 };
 export const BUILD_ORDER: BuildingId[] = ['leanto', 'campfire', 'bench', 'stall', 'rack', 'woodshed', 'burrow', 'lantern', 'well'];
@@ -56,15 +56,15 @@ export interface KinDef {
 }
 const ART = '/assets/runtime';
 export const KIN: Record<KinId, KinDef> = {
-  mochi: { id: 'mochi', name: 'Mochi', portrait: `${ART}/characters/mochi/expressions/emojis/watercolor/v1/mochi_emoji_happy.png`,
+  mochi: { id: 'mochi', name: 'Mochi', portrait: `${ART}/kin/mochi/expressions/watercolor-emojis/mochi_emoji_happy.png`,
     appealNeeded: 0, likes: ['Sweet', 'Warm'], eats: 8, surface: 'berries',
     perk: 'Berry Patch: every chain of 5 picks gives +1 food.', perkShort: 'Berries: +1 food per 5-chain' },
-  banks: { id: 'banks', name: 'Banks', portrait: `${ART}/characters/banks/expressions/emojis/watercolor/v4/banks_emoji_happy.png`,
+  banks: { id: 'banks', name: 'Banks', portrait: `${ART}/kin/banks/expressions/charcoal-tabby/banks_emoji_happy.png`,
     appealNeeded: 4, likes: ['Quiet', 'Warm'], eats: 10, surface: 'forest',
     perk: 'Forest: felling a tree gives +2 more lumber.', perkShort: 'Forest: +2 per felled tree' },
   cir: { id: 'cir', name: 'Cir', portrait: `${ART}/keru/cir/cir-watercolor-v1.png`,
-    appealNeeded: 8, likes: ['Bright'], eats: 6, surface: 'quarry',
-    perk: 'Quarry: the first stock card each run costs no daylight.', perkShort: 'Quarry: first stock card free' },
+    appealNeeded: 8, likes: ['Bright'], eats: 6,
+    perk: '', perkShort: '' },
 };
 export const KIN_ORDER: KinId[] = ['mochi', 'banks', 'cir'];
 
@@ -134,15 +134,12 @@ export function activeCombos(plots: (BuildingId | null)[]): { combo: ComboDef; a
 
 // ---------- Position on the map ----------
 
-export interface SiteBonusDef { id: 'woodshed' | 'rack' | 'lantern'; building: BuildingId; feature: SurfaceId; name: string; effect: string }
+export interface SiteBonusDef { id: 'woodshed' | 'rack'; building: BuildingId; feature: MapSurfaceId; name: string; effect: string }
 /** Buildings that do more when they share an edge with a land feature. One is enough; they don't stack. */
 export const SITE_BONUSES: SiteBonusDef[] = [
   { id: 'woodshed', building: 'woodshed', feature: 'forest', name: 'Woodshed by the Forest', effect: '+1 lumber per felled tree' },
   { id: 'rack', building: 'rack', feature: 'berries', name: 'Rack by the Berry Patch', effect: 'no overnight spoilage' },
-  { id: 'lantern', building: 'lantern', feature: 'quarry', name: 'Lantern by the Quarry', effect: 'deep rock pays +1' },
 ];
-/** Quarry cards at this yield or more count as deep rock. */
-export const DEEP_ROCK_YIELD = 3;
 
 /** Active site bonuses, with the tile that earns each one. */
 export function siteBonuses(plots: (BuildingId | null)[]): { bonus: SiteBonusDef; at: number }[] {
@@ -166,17 +163,18 @@ export function spoilage(plots: (BuildingId | null)[], food: number): number {
 
 /** Why a building can't go on a tile, or null when it can. Rank and cost are checked separately. */
 export function placeBlocker(v: VillageState, rankReached: number, building: BuildingId, tile: number): string | null {
-  if (!Number.isInteger(tile) || tile < 0 || tile >= MAP_TILES) return 'Off the map';
+  if (!validTileIndex(tile)) return 'Off the map';
   const { x, y } = tileAt(tile);
   const feature = featureAt(x, y);
   if (feature) return `That's the ${FEATURE_NAMES[feature]}`;
+  if (isSapling(x, y)) return 'The Curious Sapling grows here';
   if (isGate(x, y)) return 'The gate stays clear';
   if (fogged(x, y, rankReached)) return 'Under fog until Village rank';
   if (v.plots[tile]) return 'Already built here';
   if (building === 'campfire' && touchesFeature(tile, 'forest')) return "A campfire can't touch the Forest";
   return null;
 }
-const FEATURE_NAMES: Record<SurfaceId, string> = { forest: 'Forest', berries: 'Berry Patch', quarry: 'Quarry' };
+const FEATURE_NAMES: Record<MapSurfaceId, string> = { forest: 'Forest', berries: 'Berry Patch' };
 
 export interface PlacementPreview {
   blocker: string | null;
@@ -244,7 +242,7 @@ export function hasResident(v: VillageState, kin: KinId): boolean {
 export type RankId = 1 | 2 | 3;
 export const RANKS: Record<RankId, { name: string; residents: number; appeal: number; unlocks: string }> = {
   1: { name: 'Hamlet', residents: 0, appeal: 0, unlocks: 'Forest and Berry Patch' },
-  2: { name: 'Village', residents: 2, appeal: 5, unlocks: 'the Quarry and stone buildings' },
+  2: { name: 'Village', residents: 2, appeal: 5, unlocks: 'stone buildings' },
   3: { name: 'Town', residents: 3, appeal: 12, unlocks: 'the end of this slice' },
 };
 

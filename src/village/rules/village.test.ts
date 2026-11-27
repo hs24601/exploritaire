@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DAYLIGHT } from './daylight';
-import { migrate, newGame, reduce, type Action, type GameState } from './game';
+import { planVillageReceipts } from './autoSolve';
+import { activeAspen, aspenSeed, aspenSpill } from './aspen';
+import { dailyMaxApBonus, migrate, newGame, reduce, type Action, type GameState } from './game';
 import { type Pile, type Rank, type Run, canPlay, draw, heldLumber, legalPlays, play, rng, runEnd } from './golf';
-import { FEATURES, GATE, MAP_COLS, MAP_ROWS, fogged, neighboursOf, tileIndex } from './map';
+import { FEATURES, GATE, MAP_COLS, MAP_ROWS, SAPLING, WORLD_TILES, fogged, gridReference, neighboursOf, parseGridReference, tileAt, tileIndex, worldCoordinate } from './map';
 import { planner } from './players';
 import { SURFACES } from './surfaces';
 import {
@@ -11,6 +13,174 @@ import {
 } from './village';
 
 const last = <T,>(xs: T[]): T | undefined => xs[xs.length - 1];
+
+it('starts Hero five squares south of the sapling and updates the old opening spawn', () => {
+  const game = newGame(42);
+  const { x, y } = tileAt(game.parties[0].tile);
+  expect(worldCoordinate(x, y)).toEqual({ x: 0, y: -5 });
+  const old = { ...game, parties: [{ tile: tileIndex(4, 7), members: ['hero'] }] };
+  expect(migrate(old)?.parties).toEqual(game.parties);
+  expect(migrate({ ...old, minutes: 5 })?.parties).toEqual(old.parties);
+});
+
+it('places, digs, houses, and upgrades a den across multiple days', () => {
+  let game = newGame(42);
+  expect(game.parties.flatMap(party => party.members)).toEqual(['hero']);
+  game = reduce(game, { type: 'dev-place-kin', kin: 'banks', tile: tileIndex(3, 3) });
+  const hero = game.parties.find(party => party.members.includes('hero'))!;
+  const banks = game.parties.find(party => party.members.includes('banks'))!;
+  const plot = tileIndex(1, 4);
+  const act = (action: Action) => { game = reduce(game, action); };
+  act({ type: 'den-place', tile: plot, improve: false });
+  expect(game.den?.dig?.piles.map(pile => pile.length)).toEqual(Array(7).fill(4));
+  expect(reduce(game, { type: 'den-start', from: banks.tile })).toBe(game);
+  act({ type: 'den-start', from: hero.tile });
+  const plan = planVillageReceipts(game);
+  expect(plan).toHaveLength(14);
+  for (const move of plan) act(move);
+  expect(game.den?.dig?.piles.map(pile => pile.length)).toEqual(Array(7).fill(4));
+  expect(game.den?.level).toBe(0);
+  expect(game.stamina.hero).toBe(6);
+  for (let draw = 0; draw < 6; draw++) {
+    act({ type: 'den-draw' });
+    expect(planVillageReceipts(game)).toEqual([]);
+  }
+  act({ type: 'rest' }); act({ type: 'dawn' });
+  expect(game.day).toBe(2);
+  expect(game.stamina.hero).toBe(5);
+  expect(dailyMaxApBonus(game, 'hero')).toBe(0);
+  act({ type: 'den-start', from: plot });
+  act({ type: 'den-draw' });
+  const deep = planVillageReceipts(game);
+  expect(deep).toHaveLength(10);
+  for (const move of deep) act(move);
+  expect(game.den?.level).toBe(1);
+  expect(game.den?.residents).toEqual(['hero']);
+  expect(game.stamina.hero).toBe(4);
+  expect(reduce(game, { type: 'den-house', kin: 'banks' })).toBe(game);
+  act({ type: 'rest' }); act({ type: 'dawn' });
+  expect(game.day).toBe(3);
+  expect(game.stamina.hero).toBe(7);
+  expect(dailyMaxApBonus(game, 'hero')).toBe(1);
+  expect(reduce(game, { type: 'den-place', tile: plot, improve: true })).toBe(game);
+  act({ type: 'dev-config', resources: { lumber: 3, stone: 0, food: 10 } });
+  act({ type: 'den-place', tile: plot, improve: true });
+  expect(game.village.resources.lumber).toBe(0);
+  act({ type: 'den-start', from: plot });
+  for (let move = 0; move < 7; move++) act({ type: 'den-play', column: move % 3 });
+  expect(game.den?.dig?.piles.flat()).toHaveLength(2);
+  game = migrate(JSON.parse(JSON.stringify(game)))!;
+  act({ type: 'rest' }); act({ type: 'dawn' });
+  act({ type: 'den-start', from: plot });
+  act({ type: 'den-play', column: 1 }); act({ type: 'den-play', column: 2 });
+  expect(game.den?.level).toBe(2);
+  act({ type: 'den-house', kin: 'banks' });
+  act({ type: 'rest' }); act({ type: 'dawn' });
+  expect(game.stamina).toMatchObject({ hero: 8, banks: 8, demi: 6 });
+  expect(dailyMaxApBonus(game, 'banks')).toBe(1);
+});
+
+it('charges 1 AP for a den foundation draw and allows sequences at zero AP', () => {
+  let game = newGame(42);
+  const hero = game.parties.find(party => party.members.includes('hero'))!;
+  game = reduce(game, { type: 'den-place', tile: tileIndex(1, 4), improve: false });
+  game = reduce(game, { type: 'den-start', from: hero.tile });
+  const opening = planVillageReceipts(game);
+  const nextRank = game.den!.dig!.foundation;
+  game = { ...game, stamina: { ...game.stamina, hero: 1 }, den: {
+    ...game.den!, dig: { ...game.den!.dig!, stock: [nextRank] },
+  } };
+  const drawn = reduce(game, { type: 'den-draw' });
+  expect(drawn.stamina.hero).toBe(0);
+  expect(drawn.minutes).toBe(game.minutes + DAYLIGHT.drawMinutes);
+  expect(drawn.den?.dig?.stock).toEqual([nextRank]);
+  expect(reduce(drawn, { type: 'den-draw' })).toBe(drawn);
+  expect(planVillageReceipts(drawn)).toEqual(opening);
+  expect(reduce(drawn, opening[0]).stamina.hero).toBe(0);
+});
+
+it('uncovering Sunny Hedge leaves preserves berry ranks and upgrades old saves', () => {
+  const game = reduce(newGame(42), { type: 'open', surface: 'berries' });
+  const run = game.active!.run;
+  run.foundation = [{ id: 90, rank: 5, yield: 1 }];
+  for (const [index, pile] of run.piles.entries()) {
+    pile.cards = [{ id: 100 + index, rank: 6, yield: 1, unripe: index !== 4 }];
+  }
+  const sunny = migrate(game)!.active!.run;
+  expect(canPlay(sunny, 1)).toBe(false);
+  expect(last(sunny.piles[1].cards)).toMatchObject({ rank: 6, leafCovered: true, unripe: false });
+  const revealed = play(sunny, 4);
+  for (const index of [1, 3, 5, 7]) expect(last(revealed.piles[index].cards)).toMatchObject({ rank: 6, leafCovered: false });
+  expect(last(revealed.piles[0].cards)?.leafCovered).toBe(true);
+  expect(SURFACES.berries.deal(42, 1).piles.some(pile => pile.cards.some(card => card.unripe))).toBe(true);
+});
+
+it('collects a spilled card once and sequences it through a matching foundation', () => {
+  let seed = 1;
+  while (aspenSpill(aspenSeed(seed, 0)) === undefined) seed++;
+  let game = newGame(seed);
+  const hero = game.parties.find(p => p.members.includes('hero'))!;
+  game = reduce(game, { type: 'deploy', surface: 'forest', from: hero.tile });
+  game = reduce(game, { type: 'aspen-target', tree: 0 });
+  const grove = game.aspen!;
+  const run = activeAspen(grove)!;
+  grove.trees[0] = { ...run, hp: 0, phase: 'falling' };
+  game = reduce(game, { type: 'aspen-land' });
+  const rank = activeAspen(game.aspen)!.spill!;
+  game = reduce(game, { type: 'aspen-collect', tree: 0 });
+  game = reduce(game, { type: 'aspen-gather-card', tree: 0 });
+  expect(game.aspenCards).toEqual([rank]);
+  expect(reduce(game, { type: 'aspen-gather-card', tree: 0 })).toBe(game);
+  game = migrate(JSON.parse(JSON.stringify(game)))!;
+  game = reduce(game, { type: 'aspen-target', tree: 1 });
+  const target = activeAspen(game.aspen)!;
+  target.piles = [[], [], [], [], [], [], []];
+  target.foundations[0].rank = (rank === 1 ? 13 : rank - 1) as Rank;
+  const plan = planVillageReceipts(game);
+  expect(plan).toEqual([{ type: 'aspen-play-card', card: 0, foundation: 0 }]);
+  const played = reduce(game, plan[0]);
+  expect(played.aspenCards).toEqual([]);
+  expect(activeAspen(played.aspen)!.hp).toBe(target.hp - 1);
+  expect(played.stamina.hero).toBe(5);
+});
+
+it('edits day, time, inventory, kin stamina and unlocks independently for playtesting', () => {
+  const game = newGame(2);
+  game.stamina.hero = 0;
+  game.stamina.banks = 2;
+  const edited = reduce(game, { type: 'dev-config', day: 8, minutes: 120, restoreKin: 'hero', unlock: 3,
+    resources: { lumber: 10, food: 0, stone: 20 } });
+  expect([edited.day, edited.minutes, edited.rankReached]).toEqual([8, 120, 3]);
+  expect(edited.stamina).toMatchObject({ hero: 6, banks: 2 });
+  expect(edited.village.resources).toEqual({ lumber: 10, food: 0, stone: 20 });
+});
+
+it('spends only the receiving kin’s stamina and keeps tree progress through dawn', () => {
+  let game = newGame(42);
+  const hero = game.parties.find(p => p.members.includes('hero'))!;
+  game = reduce(game, { type: 'deploy', surface: 'forest', from: hero.tile });
+  game = reduce(game, { type: 'aspen-target', tree: 0 });
+  const plan = planVillageReceipts(game);
+  expect(plan).toHaveLength(6);
+  const initialHp = activeAspen(game.aspen)!.hp;
+  for (const move of plan) game = reduce(game, move);
+  expect(game.stamina).toEqual({ hero: 0, mochi: 6, banks: 6, demi: 6 });
+  expect(activeAspen(game.aspen)!.hp).toBe(initialHp - 6);
+  expect(planVillageReceipts(game)).toEqual([]);
+  expect(reduce(game, { type: 'aspen-play', pile: 0, foundation: 0 })).toBe(game);
+  game = reduce(game, { type: 'aspen-draw', foundation: 0 });
+  expect(game.stamina.hero).toBe(0);
+  expect(migrate(JSON.parse(JSON.stringify(game)))!.stamina.hero).toBe(0);
+  game = { ...reduce(game, { type: 'view', view: 'village' }), rankReached: 2 };
+  const deployed = game.parties.find(p => p.members.includes('hero'))!;
+  game = reduce(game, { type: 'deploy', surface: 'berries', from: deployed.tile });
+  expect(game.active?.surface).toBe('berries');
+  expect(planVillageReceipts(game)).toEqual([]);
+  expect(reduce(game, { type: 'play', pile: 0 })).toBe(game);
+  game = reduce(reduce(game, { type: 'rest' }), { type: 'dawn' });
+  expect(game.stamina.hero).toBe(6);
+  expect(activeAspen(game.aspen)!.hp).toBe(initialHp - 6);
+});
 
 describe('golf surfaces', () => {
   it('forest deals 8 columns of 4 (4 trees) with one card on the foundation', () => {
@@ -162,56 +332,67 @@ describe('village', () => {
 });
 
 describe('the map', () => {
-  it('has fixed features, a gate and the quarry under fog', () => {
-    expect(MAP_COLS * MAP_ROWS).toBe(54);
-    expect(FEATURES.forest.rect).toEqual({ x: 0, y: 0, w: 3, h: 2 });
+  it('has single-square features and stable references across the whole map', () => {
+    expect(MAP_COLS * MAP_ROWS).toBe(63);
+    expect(FEATURES.forest.rect).toEqual({ x: 2, y: 1, w: 1, h: 1 });
     for (const f of Object.values(FEATURES)) {
       const { x, y } = f.node;
       expect(x >= f.rect.x && x < f.rect.x + f.rect.w && y >= f.rect.y && y < f.rect.y + f.rect.h).toBe(true);
     }
-    expect(fogged(FEATURES.quarry.node.x, FEATURES.quarry.node.y, 1)).toBe(true);
-    expect(fogged(FEATURES.quarry.node.x, FEATURES.quarry.node.y, 2)).toBe(false);
-    expect(neighboursOf(tileIndex(0, 0)).sort((a, b) => a - b)).toEqual([1, MAP_COLS]);
+    expect(fogged(8, 3, 1)).toBe(true);
+    expect(fogged(8, 3, 2)).toBe(false);
+    expect(gridReference(worldCoordinate(SAPLING.x, SAPLING.y))).toBe('(0, 0)');
+    expect(parseGridReference('(-10000, 2048)')).toEqual({ x: -10000, y: 2048 });
+    expect(parseGridReference('(9007199254740992, 0)')).toBeNull();
+    for (let i = 0; i < MAP_COLS * MAP_ROWS; i++) {
+      const { x, y } = tileAt(i);
+      const coordinate = worldCoordinate(x, y);
+      expect(parseGridReference(gridReference(coordinate))).toEqual(coordinate);
+    }
+    expect(neighboursOf(tileIndex(0, 0)).map(tileAt)).toEqual([{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }]);
+    expect(worldCoordinate(4, 7)).toEqual({ x: 0, y: -4 });
   });
 
   it('only lets buildings onto open, revealed, empty land', () => {
     const v = place(newVillage(), { '3,3': 'bench' });
-    expect(placeBlocker(v, 1, 'bench', tileIndex(1, 1))).toMatch(/Forest/);
-    expect(placeBlocker(v, 1, 'bench', tileIndex(6, 0))).toMatch(/Berry Patch/);
+    expect(placeBlocker(v, 1, 'bench', tileIndex(2, 1))).toMatch(/Forest/);
+    expect(placeBlocker(v, 1, 'bench', tileIndex(6, 1))).toMatch(/Berry Patch/);
+    expect(placeBlocker(v, 1, 'bench', tileIndex(SAPLING.x, SAPLING.y))).toMatch(/Sapling/);
     expect(placeBlocker(v, 1, 'bench', tileIndex(GATE.x, GATE.y))).toMatch(/gate/);
     expect(placeBlocker(v, 1, 'bench', tileIndex(8, 3))).toMatch(/fog/);
     expect(placeBlocker(v, 2, 'bench', tileIndex(8, 3))).toBeNull();
     expect(placeBlocker(v, 1, 'bench', tileIndex(3, 3))).toMatch(/Already/);
     expect(placeBlocker(v, 1, 'bench', -1)).toMatch(/Off the map/);
-    expect(placeBlocker(v, 1, 'bench', MAP_COLS * MAP_ROWS)).toMatch(/Off the map/);
+    expect(placeBlocker(v, 1, 'bench', WORLD_TILES)).toMatch(/Off the map/);
+    expect(placeBlocker(v, 1, 'bench', tileIndex(4, 8))).toBeNull();
   });
 
   it('keeps a campfire off the Forest edge', () => {
     const v = newVillage();
-    expect(placeBlocker(v, 1, 'campfire', tileIndex(1, 2))).toMatch(/campfire/);
+    expect(placeBlocker(v, 1, 'campfire', tileIndex(2, 2))).toMatch(/campfire/);
     expect(placeBlocker(v, 1, 'campfire', tileIndex(3, 1))).toMatch(/campfire/);
     expect(placeBlocker(v, 1, 'campfire', tileIndex(3, 2))).toBeNull();
-    expect(placeBlocker(v, 1, 'bench', tileIndex(1, 2))).toBeNull();
+    expect(placeBlocker(v, 1, 'bench', tileIndex(2, 2))).toBeNull();
   });
 
   it('turns on site bonuses only for an edge with the right feature', () => {
-    expect(siteBonuses(place(newVillage(), { '1,2': 'woodshed' }).plots).map(s => s.bonus.id)).toEqual(['woodshed']);
+    expect(siteBonuses(place(newVillage(), { '2,2': 'woodshed' }).plots).map(s => s.bonus.id)).toEqual(['woodshed']);
     expect(siteBonuses(place(newVillage(), { '4,3': 'woodshed' }).plots)).toHaveLength(0);
-    expect(siteBonuses(place(newVillage(), { '8,1': 'rack' }).plots).map(s => s.bonus.id)).toEqual(['rack']);
-    expect(siteBonuses(place(newVillage(), { '5,4': 'lantern' }).plots).map(s => s.bonus.id)).toEqual(['lantern']);
+    expect(siteBonuses(place(newVillage(), { '7,1': 'rack' }).plots).map(s => s.bonus.id)).toEqual(['rack']);
+    expect(siteBonuses(place(newVillage(), { '5,4': 'lantern' }).plots).map(s => s.bonus.id)).toHaveLength(0);
     expect(siteBonuses(place(newVillage(), { '5,3': 'lantern' }).plots)).toHaveLength(0);
   });
 
   it('previews appeal, combos and site bonuses before the drop', () => {
-    const v = place(newVillage(), { '3,3': 'campfire', '4,2': 'stall' });
-    const p = placementPreview(v, 1, 'bench', tileIndex(4, 3));
+    const v = place(newVillage(), { '3,3': 'campfire', '5,3': 'stall' });
+    const p = placementPreview(v, 1, 'bench', tileIndex(3, 4));
     expect(p.blocker).toBeNull();
     expect(p.appeal).toBe(1 + 2);
     expect(p.combos.map(c => c.id)).toEqual(['hearth']);
     const rack = placementPreview(v, 1, 'rack', tileIndex(5, 2));
     expect(rack.combos.map(c => c.id)).toEqual(['pantry']);
     expect(rack.bonuses).toHaveLength(0);
-    expect(placementPreview(v, 1, 'rack', tileIndex(7, 2)).bonuses.map(b => b.id)).toEqual(['rack']);
+    expect(placementPreview(v, 1, 'rack', tileIndex(6, 2)).bonuses.map(b => b.id)).toEqual(['rack']);
     expect(placementPreview(v, 1, 'campfire', tileIndex(3, 1)).blocker).toMatch(/campfire/);
   });
 });
@@ -221,7 +402,7 @@ describe('building on the map', () => {
 
   it('builds only where placement allows, and charges the cost', () => {
     let g = rich(newGame(3));
-    g = reduce(g, { type: 'build', building: 'campfire', tile: tileIndex(1, 2) });
+    g = reduce(g, { type: 'build', building: 'campfire', tile: tileIndex(2, 2) });
     expect(g.village.resources.lumber).toBe(500);
     g = reduce(g, { type: 'build', building: 'campfire', tile: tileIndex(3, 3) });
     expect(g.village.plots[tileIndex(3, 3)]).toBe('campfire');
@@ -265,26 +446,11 @@ describe('building on the map', () => {
       return reduce(g, { type: 'play', pile: i });
     };
     const plain = fell(newGame(seed));
-    const shed = fell(place2(newGame(seed), { '1,2': 'woodshed' }));
+    const shed = fell(place2(newGame(seed), { '2,2': 'woodshed' }));
     expect(shed.village.resources.lumber - plain.village.resources.lumber).toBe(1);
     expect(shed.active?.siteBonus ?? shed.lastRun?.siteBonus).toBe(1);
   });
 
-  it('a lantern by the Quarry pays +1 for deep rock only', () => {
-    const quarryGame = (at: Record<string, BuildingId>, yieldOf: number) => {
-      let g = place2({ ...newGame(5), rankReached: 2 as const }, at);
-      g = reduce(g, { type: 'open', surface: 'quarry' });
-      const run = g.active!.run;
-      const base = run.foundation[run.foundation.length - 1].rank;
-      const rankUp = (base % 13) + 1;
-      const piles = run.piles.map((p, k) => (k === 0 ? { ...p, cards: [{ id: 900, rank: rankUp as 1, yield: 9 }, { id: 901, rank: rankUp as 1, yield: yieldOf }] } : p));
-      g = { ...g, active: { ...g.active!, run: { ...run, piles } } };
-      return reduce(g, { type: 'play', pile: 0 }).village.resources.stone;
-    };
-    expect(quarryGame({ '5,4': 'lantern' }, 3) - quarryGame({}, 3)).toBe(1);
-    expect(quarryGame({ '5,4': 'lantern' }, 2) - quarryGame({}, 2)).toBe(0);
-    expect(quarryGame({ '3,3': 'lantern' }, 3) - quarryGame({}, 3)).toBe(0);
-  });
 });
 
 describe('working a node', () => {
@@ -307,7 +473,7 @@ describe('working a node', () => {
     g = reduce(g, { type: 'open', surface: 'berries' });
     expect(g.active?.surface).toBe('berries');
     expect(g.lastRun).toBeNull();
-    expect(reduce(newGame(4), { type: 'open', surface: 'quarry' }).active).toBeNull();
+    expect(reduce({ ...newGame(4), rankReached: 2 }, { type: 'open', surface: 'quarry' }).active).toBeNull();
   });
 
   it('an untouched run re-deals when the location changes; a played one keeps it', () => {
@@ -325,7 +491,7 @@ describe('working a node', () => {
     const old = { ...newGame(1), version: 1, village: { ...newVillage(), plots } };
     const g = migrate(old)!;
     expect(g.version).toBe(2);
-    expect(g.village.plots).toHaveLength(54);
+    expect(g.village.plots).toHaveLength(63);
     expect(activeCombos(g.village.plots).map(c => c.combo.id)).toEqual(['hearth']);
     for (const [i, b] of g.village.plots.entries()) if (b) expect(placeBlocker({ ...g.village, plots: g.village.plots.map((p, k) => (k === i ? null : p)) }, 1, b, i)).toBeNull();
     expect(migrate({ version: 9 })).toBeNull();
@@ -341,18 +507,17 @@ function playSlice(seed: number, maxDays = 20): GameState {
   let g = newGame(seed);
   const rand = rng(seed);
   const act = (a: Action) => { g = reduce(g, a); };
-  const order: BuildingId[] = ['leanto', 'campfire', 'bench', 'leanto', 'stall', 'rack', 'burrow', 'lantern', 'well'];
-  const at: [number, number][] = [[2, 3], [3, 3], [4, 3], [2, 4], [4, 2], [5, 2], [3, 4], [5, 4], [4, 4]];
+  const order: BuildingId[] = ['leanto', 'campfire', 'bench', 'leanto', 'stall', 'rack'];
+  const at: [number, number][] = [[2, 3], [3, 3], [3, 4], [2, 4], [4, 2], [5, 2]];
   const plotFor: Partial<Record<number, number>> = Object.fromEntries(at.map(([x, y], i) => [i, tileIndex(x, y)]));
   let next = 0;
   const p = planner(4);
-  while (g.day <= maxDays && rank(g.village) < 3) {
+  while (g.day <= maxDays && rank(g.village) < 2) {
     // Gather toward the next building, keeping a food buffer for the kin.
     const want = order[next] ? BUILDINGS[order[next]].cost : {};
     const eats = g.village.residents.length * 9 + 10;
     const surface = g.village.resources.food < eats ? 'berries'
-      : (want.stone ?? 0) > g.village.resources.stone && g.rankReached >= 2 ? 'quarry'
-        : (want.food ?? 0) > g.village.resources.food ? 'berries' : 'forest';
+      : (want.food ?? 0) > g.village.resources.food ? 'berries' : 'forest';
     act({ type: 'open', surface });
     let draws = 0;
     while (g.active) {
@@ -373,9 +538,8 @@ function playSlice(seed: number, maxDays = 20): GameState {
 }
 
 describe('the slice loop', () => {
-  it('a plain player reaches Town in about a week', () => {
-    const days = [1, 2, 3, 4, 5, 6, 7, 8].map(seed => playSlice(seed)).map(g => (rank(g.village) === 3 ? g.day : Infinity));
+  it('a plain player reaches Village without mining', () => {
+    const days = [1, 2, 3, 4, 5, 6, 7, 8].map(seed => playSlice(seed)).map(g => (rank(g.village) >= 2 ? g.day : Infinity));
     for (const d of days) expect(d).toBeLessThanOrEqual(12);
-    expect(Math.min(...days)).toBeGreaterThanOrEqual(3);
   });
 });

@@ -1,6 +1,6 @@
 // Simulated players for the daylight balance pass (tools/village-daylight-sim.ts)
 // and for tests. Not used by the UI.
-import { draw, legalPlays, play, runEnd, type Run } from './golf';
+import { berryBlocked, draw, legalPlays, play, runEnd, type Run } from './golf';
 
 export type Policy = (run: Run) => number | 'draw';
 
@@ -35,7 +35,7 @@ export function planner(depthLimit = 7): Policy {
 
 function exposedPlayable(run: Run): number {
   // Tie-break: prefer leaving ripe, face-up cards exposed.
-  return run.piles.reduce((n, p) => { const t = p.cards[p.cards.length - 1]; return n + (t && !t.unripe && !t.hidden ? 1 : 0); }, 0);
+  return run.piles.reduce((n, p) => { const t = p.cards[p.cards.length - 1]; return n + (t && !berryBlocked(t) && !t.hidden ? 1 : 0); }, 0);
 }
 
 export interface RunStats { plays: number; draws: number; earned: number; cleared: boolean; bestChain: number; felled: number }

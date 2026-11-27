@@ -15,7 +15,7 @@ export interface SurfaceDef {
   deal: (seed: number, location?: 0 | 1) => Run;
 }
 
-export interface LocationDef { name: string; note: string; masteryNeeded: number }
+export interface LocationDef { name: string; note: string; masteryNeeded: number; twist?: string }
 
 const WRAP = true;
 
@@ -42,9 +42,9 @@ function dealForest(seed: number, location: 0 | 1 = 0): Run {
   return baseRun(piles, ranks.map(card), location ? OLD_OAK_FELL_BONUS : FELL_BONUS);
 }
 
-/** Berry patch: 3x3 bushes of 4. Unripe berries ripen when a neighbour is picked. */
+/** Berry patch: 3x3 bushes of 4. Picking a neighbour reveals a blocked berry. */
 export const BERRY_DEPTH = 4;
-export const UNRIPE_CHANCE = 0.3;
+export const LEAF_COVER_CHANCE = 0.3;
 export const THICKET_UNRIPE_CHANCE = 0.5;
 const GRID_NEIGHBOURS = [[1, 3], [0, 2, 4], [1, 5], [0, 4, 6], [1, 3, 5, 7], [2, 4, 8], [3, 7], [4, 6, 8], [5, 7]];
 function dealBerries(seed: number, location: 0 | 1 = 0): Run {
@@ -52,10 +52,11 @@ function dealBerries(seed: number, location: 0 | 1 = 0): Run {
   const ranks = shuffledDeck(rand);
   let id = 0;
   const piles: Pile[] = GRID_NEIGHBOURS.map(n => ({ cards: [] as Card[], neighbours: n }));
-  for (let row = 0; row < BERRY_DEPTH; row++) for (const p of piles) p.cards.push({ id: id++, rank: ranks.pop()!, yield: location ? 2 : 1, unripe: rand() < (location ? THICKET_UNRIPE_CHANCE : UNRIPE_CHANCE) });
-  // Never open on a fully green patch: the centre bush always starts ripe.
+  for (let row = 0; row < BERRY_DEPTH; row++) for (const p of piles) p.cards.push({ id: id++, rank: ranks.pop()!, yield: location ? 2 : 1,
+    ...(location ? { unripe: rand() < THICKET_UNRIPE_CHANCE } : { leafCovered: rand() < LEAF_COVER_CHANCE }) });
+  // The centre bush always starts with a pickable berry.
   const centre = piles[4].cards;
-  centre[centre.length - 1] = { ...centre[centre.length - 1], unripe: false };
+  centre[centre.length - 1] = { ...centre[centre.length - 1], ...(location ? { unripe: false } : { leafCovered: false }) };
   return baseRun(piles, ranks.map(rank => ({ id: id++, rank, yield: 1 })));
 }
 
@@ -81,11 +82,12 @@ export const SURFACES: Record<SurfaceId, SurfaceDef> = {
     locations: [{ name: 'Birch Stand', note: 'Light timber', masteryNeeded: 1 }, { name: 'Old Oaks', note: `Felling pays +${OLD_OAK_FELL_BONUS}`, masteryNeeded: 3 }],
     twist: `Two columns make a tree. A column pays only once it's finished; finish both to fell the tree for +${FELL_BONUS}.` },
   berries: { id: 'berries', name: 'Berry Patch', skill: 'Foraging', resource: 'food', layout: 'grid', deal: dealBerries,
-    locations: [{ name: 'Sunny Hedge', note: 'Sweet and easy', masteryNeeded: 1 }, { name: 'Bramble Thicket', note: 'Greener, 2 food a berry', masteryNeeded: 3 }],
-    twist: 'Green berries ripen when a bush beside them is picked.' },
+    locations: [{ name: 'Sunny Hedge', note: 'Berries hide under leaves', masteryNeeded: 1 },
+      { name: 'Bramble Thicket', note: 'Greener, 2 food a berry', masteryNeeded: 3, twist: 'Green berries ripen when a bush beside them is picked.' }],
+    twist: 'Pick a berry to brush aside leaves on neighbouring bushes and reveal the berries underneath.' },
   quarry: { id: 'quarry', name: 'Quarry', skill: 'Mining', resource: 'stone', layout: 'shafts', deal: dealQuarry,
     locations: [{ name: 'Rubble Pit', note: 'Shallow stone', masteryNeeded: 1 }, { name: 'Deep Seam', note: 'Richer at depth', masteryNeeded: 3 }],
     twist: 'Rock is hidden until you dig to it. Deeper rock pays more.' },
 };
 
-export const SURFACE_ORDER: SurfaceId[] = ['forest', 'berries', 'quarry'];
+export const SURFACE_ORDER = ['forest', 'berries'] as const;

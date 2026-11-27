@@ -6,6 +6,7 @@ import { FOREST_DEPTH, QUARRY_DEPTH, type SurfaceId } from '../rules/surfaces';
 import { durationLabel } from '../rules/daylight';
 import { useDrag } from './drag';
 import { PlayingCard } from './PlayingCard';
+import { StaminaPips } from './StaminaPips';
 
 const RATIO = 1.4;
 const FAN = 0.3;
@@ -22,6 +23,8 @@ interface Props {
   run: Run;
   drawCost: number;
   canDraw: boolean;
+  canWork: boolean;
+  worker?: { name: string; stamina: number; max: number };
   onPlay: (pile: number) => void;
   onDraw: () => void;
 }
@@ -64,7 +67,7 @@ function cardLayout(layout: Props['layout'], piles: number, depth: number, w: nu
   return side > stacked * 1.08 ? { cw: clamp(side), side: true } : { cw: clamp(stacked), side: false };
 }
 
-export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDraw }: Props) {
+export function Tableau({ surface, layout, run, drawCost, canDraw, canWork, worker, onPlay, onDraw }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const box = useBox(ref);
   const { begin, dragging, over } = useDrag();
@@ -86,8 +89,8 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
   const tryPlay = (i: number) => (canPlay(run, i) ? onPlay(i) : setShake(i));
   const press = (i: number) => (e: React.PointerEvent) => {
     const card = top(run.piles[i]);
-    if (!card || card.hidden) return;
-    begin(e, { kind: 'card', id: i, width: w, height: h, ghost: <PlayingCard card={card} surface={surface} style={size} /> },
+    if (!canWork || !card || card.hidden) return;
+    begin(e, { kind: 'card', id: i, width: w, height: h, anchor: 'top-left', ghost: <PlayingCard card={card} surface={surface} style={size} /> },
       (_p, t) => { if (t.drop === 'foundation') tryPlay(i); },
       () => tryPlay(i));
   };
@@ -106,7 +109,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
             const isTop = k === pile.cards.length - 1;
             if (!isTop) return <div key={c.id} className="vg-under" style={{ ...size, top: -(pile.cards.length - 1 - k) * 4, left: (pile.cards.length - 1 - k) * 2 }} />;
             return (
-              <div key={c.id} className={`vg-pile-top${shake === i ? ' is-shake' : ''}${lifted ? ' is-lifted' : ''}`} style={{ ...size, top: 0 }} onPointerDown={press(i)}>
+              <div key={c.id} data-receipt-source={`surface-${i}`} data-tooltip-action title="Tap or drag to play this card on the foundation" className={`vg-pile-top${shake === i ? ' is-shake' : ''}${lifted ? ' is-lifted' : ''}`} style={{ ...size, top: 0 }} onPointerDown={press(i)}>
                 <PlayingCard card={c} surface={surface} style={size} />
               </div>
             );
@@ -120,7 +123,7 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
               : { ...size, top: k * step };
             return (
               <div key={c.id} className={`vg-pile-card${isTop ? ' vg-pile-top' : ''}${isTop && shake === i ? ' is-shake' : ''}${isTop && lifted ? ' is-lifted' : ''}`}
-                style={style} onPointerDown={isTop ? press(i) : undefined}>
+                style={style} data-receipt-source={isTop ? `surface-${i}` : undefined} data-tooltip-action={isTop || undefined} title={isTop ? 'Tap or drag to play this card on the foundation' : undefined} onPointerDown={isTop ? press(i) : undefined}>
                 <PlayingCard card={c} surface={surface} style={size} showYield={layout === 'shafts'} />
               </div>
             );
@@ -156,13 +159,15 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, onPlay, onDra
           </div>
           <div className="vg-playrow">
             <button type="button" className="vg-stock" style={size} onClick={onDraw} disabled={!canDraw}
+              title={`Turn a stock card · ${drawCost ? durationLabel(drawCost) + ' of daylight' : 'Free'}`}
               aria-label={`Turn a stock card, ${drawCost} minutes of daylight`}>
               {run.stock.length > 0 ? <div className={`vg-card is-back is-${surface}`} style={size} /> : <div className="vg-slot" style={size} />}
               <span className="vg-stock-count">{run.stock.length}</span>
               <span className="vg-stock-cost">{drawCost ? `+${durationLabel(drawCost)}` : 'free'}</span>
             </button>
-            <div className={`vg-foundation${overFoundation ? ' is-over' : ''}`} data-drop="foundation" style={size}>
+            <div className={`vg-foundation${overFoundation ? ' is-over' : ''}`} title={worker ? `${worker.name} · ${worker.stamina ? `${worker.stamina} stamina` : 'Exhausted until dawn'}` : 'Drop a matching card onto the foundation'} data-drop="foundation" style={size}>
               {base && <PlayingCard key={base.id} card={base} surface={surface} style={size} className="is-landed is-foundation" />}
+              {worker && <StaminaPips value={worker.stamina} max={worker.max} />}
             </div>
             <div className="vg-runstats">
               <div><span className="vg-k">Played</span><span className="vg-v">{run.receipts}</span></div>

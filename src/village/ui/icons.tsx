@@ -1,11 +1,12 @@
 // Small line icons for the village UI. 24px grid, stroke = currentColor.
 import type { ReactNode } from 'react';
 
-export type IconName = 'lumber' | 'food' | 'stone' | 'sun' | 'moon' | 'appeal' | 'village' | 'forest' | 'berries' | 'quarry' | 'lock' | 'bed' | 'menu' | 'close' | 'chain' | 'clock' | 'flame' | 'lamp' | 'rack' | 'well' | 'burrow' | 'bench' | 'stall' | 'woodshed' | 'map';
+export type IconName = 'lumber' | 'food' | 'leaf' | 'stone' | 'sun' | 'moon' | 'appeal' | 'village' | 'forest' | 'berries' | 'quarry' | 'lock' | 'bed' | 'menu' | 'close' | 'chain' | 'clock' | 'flame' | 'lamp' | 'rack' | 'well' | 'burrow' | 'bench' | 'stall' | 'woodshed' | 'map';
 
 const paths: Record<IconName, ReactNode> = {
   lumber: <><ellipse cx="17" cy="12" rx="3" ry="5" /><path d="M17 7H6a3 5 0 0 0 0 10h11" /><path d="M16.2 12h1.6" /></>,
   food: <><circle cx="9" cy="14" r="4" /><circle cx="15.5" cy="15" r="3.5" /><path d="M10 10c0-3 2-5 5-6" /><path d="M13 6c2 0 3.5 1 4 2.5" /></>,
+  leaf: <><path d="M6 17C2 10 9 4 20 4c0 11-6 17-13 14M4 21 15 10" /><path d="m10 15 5 1m-4-3-1-4" /></>,
   stone: <><path d="M4 17l3-8 5-3 6 3 2 8z" /><path d="M7 9l5 3 6-3M12 12v8" /></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" /></>,
   moon: <path d="M19 15A8 8 0 0 1 9 5a7 7 0 1 0 10 10z" />,
