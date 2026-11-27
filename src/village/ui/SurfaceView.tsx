@@ -71,7 +71,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
               worker={shownWorker ? { name: KIN_TOKENS[shownWorker].name, stamina: game.stamina[shownWorker], max: maxStamina(game, shownWorker) } : undefined}
               canWork={!!active && (!actors.length || !!worker)}
               drawCost={cost} canDraw={!!active && shown.run.stock.length > 0 && cost <= left}
-              onPlay={pile => active && dispatch({ type: 'play', pile })} onDraw={() => active && dispatch({ type: 'draw' })} />
+              onPlay={pile => active && dispatch({ type: 'play', pile })} onFall={active ? side => dispatch({ type: 'fall', side }) : undefined} onDraw={() => active && dispatch({ type: 'draw' })} />
           ) : (
             <div className="vg-idle">
               <Icon name={surface} size={40} />

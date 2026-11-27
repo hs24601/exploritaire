@@ -283,6 +283,25 @@ ul { padding: 0; list-style: none; }
     linear-gradient(90deg, #2c1d12, #47301f 35%, #3a2717 65%, #2a1b10);
   border-color: rgba(255, 220, 170, 0.16);
 }
+/* Birch Stand: face-up crown over each trunk; a cleared birch asks which way to fall. */
+.vg-birch { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.vg-crown { display: flex; justify-content: center; align-items: center; gap: 2px; border-radius: 12px 12px 6px 6px;
+  background: radial-gradient(ellipse at 50% 70%, rgba(116, 196, 135, 0.28), rgba(116, 196, 135, 0.08) 70%); }
+.vg-crown:empty { background: none; }
+.vg-crown-card { min-width: 0; flex: 0 1 auto; padding: 1px 3px; border-radius: 5px; background: #e6efd6; letter-spacing: -0.04em; border: 1px solid #8fb07a; color: #2f4a26; font: 700 16px/1.2 var(--font-card); }
+.vg-card.is-forest.is-branch:not(.is-foundation) {
+  --bark: #4f5a32;
+  background:
+    radial-gradient(ellipse 30% 20% at 70% 72%, rgba(140, 190, 110, 0.35), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 6%, rgba(22, 12, 5, 0.45) 6% 8.5%, transparent 8.5% 16%, rgba(220, 240, 190, 0.08) 16% 18%, transparent 18% 27%) var(--bark-x, 0) 0 / 100% 100%,
+    linear-gradient(90deg, #3e452a, #5f6b3c 30%, var(--bark) 55%, #66713f 80%, #3f4629);
+}
+.vg-slot.is-stump { border-style: solid; border-color: #4b3a29; background: radial-gradient(circle at 50% 50%, #c9a271 0 18%, #8c6236 19% 22%, transparent 23%); }
+.vg-fall { position: absolute; left: 0; top: 0; display: grid; grid-template-rows: 1fr 1fr; gap: 4px; z-index: 5; }
+.vg-fall-btn { border: 1px solid var(--sun); border-radius: 7px; background: rgba(20, 25, 32, 0.92); color: var(--sun); font: 800 22px/1 var(--font); cursor: pointer; }
+.vg-fall-btn.is-ground { border-color: var(--line-2); color: var(--muted); }
+.vg-fall-btn:hover { background: var(--raise); }
+.vg-fall-hint { margin: 4px 0 0; color: var(--sun); font-weight: 700; max-width: 140px; }
 .vg-tree { position: relative; display: flex; flex-direction: column; align-items: center; }
 .vg-tree-cols { position: relative; display: flex; }
 /* The trunk shows in the seam between a tree's two columns and runs down to the stump. */

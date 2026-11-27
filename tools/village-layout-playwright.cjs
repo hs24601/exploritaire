@@ -41,7 +41,7 @@ function midSave() {
 const PARTS = [
   '.vg-top', '.vg-brand', '.vg-day', '.vg-stores', '.vg-store', '.vg-top-actions', '.vg-drawer', '.vg-bar', '.vg-sheet', '.vg-float', '.vg-panes', '.vg-pane-tab',
   '.vg-build-row', '.vg-kin', '.vg-section', '.vg-rules li', '.vg-card-panel', '.vg-map', '.vg-chip-label', '.vg-node',
-  '.vg-location', '.vg-felt', '.vg-output', '.vg-table', '.vg-costs', '.vg-btn', '.vg-tableau', '.vg-playrow', '.vg-runstats', '.vg-stock', '.vg-foundation', '.vg-stump',
+  '.vg-location', '.vg-felt', '.vg-output', '.vg-table', '.vg-costs', '.vg-btn', '.vg-tableau', '.vg-playrow', '.vg-runstats', '.vg-stock', '.vg-foundation', '.vg-stump', '.vg-crown', '.vg-crown-card', '.vg-fall-btn', '.vg-fall-hint',
 ].join(', ');
 
 async function check(page, label, defects, root = '.vg-app') {
@@ -76,7 +76,7 @@ async function dragTopCardToFoundation(page) {
   // Try each exposed top card until one lands (no legal-move hints in the UI).
   const tops = page.locator('.vg-pile-top');
   const n = await tops.count();
-  const before = await page.locator('.vg-runstats .vg-v').first().textContent();
+  const before = await page.locator('.vg-runstats').textContent();
   for (let i = 0; i < n; i++) {
     const a = await tops.nth(i).boundingBox();
     const b = await page.locator('.vg-foundation').boundingBox();
@@ -87,7 +87,7 @@ async function dragTopCardToFoundation(page) {
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
     await page.mouse.up();
     await page.waitForTimeout(60);
-    const after = await page.locator('.vg-runstats .vg-v').first().textContent();
+    const after = await page.locator('.vg-runstats').textContent();
     if (after !== before) return true;
   }
   return false;
@@ -178,6 +178,16 @@ const built = (page, t) => page.locator(`.vg-tile[data-index="${t}"] .vg-token:n
     for (let k = 0; k < 6; k++) { if (await dragTopCardToFoundation(page)) played++; else await page.click('.vg-stock'); }
     if (!played) defects.push(`${tag}: could not drag any forest card onto the foundation`);
     await check(page, `${tag}-08-forest-run`, defects);
+    // Birch Stand: keep cutting until a trunk is cleared, then check the fall choice and fell it.
+    for (let k = 0; k < 30 && !(await page.locator('.vg-fall').count()) && (await page.locator('.vg-pile-top').count()); k++) {
+      if (!(await dragTopCardToFoundation(page))) { if (await page.locator('.vg-stock:not([disabled])').count()) await page.click('.vg-stock'); else break; }
+    }
+    if (await page.locator('.vg-fall').count()) {
+      await check(page, `${tag}-08b-forest-fall`, defects);
+      await page.locator('.vg-fall-btn').last().click();
+      if (await page.locator('.vg-fall').count()) defects.push(`${tag}: choosing a fall did nothing`);
+      await check(page, `${tag}-08c-forest-fallen`, defects);
+    }
     // Back via the minimap: the run stays open, and the map grows back.
     await page.click('.vg-mini-back');
     await check(page, `${tag}-09-map-running`, defects);

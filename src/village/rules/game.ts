@@ -1,6 +1,6 @@
 // Whole-game reducer for village.html: day clock, active surface run, village.
 import { DAYLIGHT, DAY_CYCLE_MINUTES } from './daylight';
-import { draw, play, rng, runEnd, shuffledDeck, type Rank, type Run } from './golf';
+import { draw, fall, play, rng, runEnd, shuffledDeck, type Rank, type Run, type Side } from './golf';
 import { SURFACES, type SurfaceId } from './surfaces';
 import { FEATURES, MAP_TILES, featureAt, fogged, isGate, isSapling, SAPLING, tileAt, tileIndex, validTileIndex } from './map';
 import { activeAspen, aspenAcceptsRank, aspenDraw, aspenPlay, aspenReceive, aspenSeed, aspenSpill, aspenTop, ASPEN_TREE_COUNT, KIN_STAMINA_MAX, dealAspen, freshStamina, startingParties,
@@ -102,6 +102,8 @@ export type Action =
   | { type: 'start'; surface: SurfaceId }
   | { type: 'play'; pile: number }
   | { type: 'draw' }
+  /** Birch Stand: choose which way a cleared birch falls. */
+  | { type: 'fall'; side: Side }
   | { type: 'leave' }
   | { type: 'build'; building: BuildingId; tile: number }
   | { type: 'demolish'; tile: number }
@@ -374,27 +376,30 @@ export function reduce(s: GameState, a: Action): GameState {
       if (daylightLeft(s) <= DAYLIGHT.startMinutes) return s;
       return deal(s, a.surface);
     }
-    case 'play': {
+    case 'play':
+    case 'fall': {
       const act = s.active;
       if (!act) return s;
       const workers = surfaceWorkers(s, act.surface);
       const worker = workers.find(kin => s.stamina[kin] > 0);
-      if (workers.length && !worker) return s;
+      if (a.type === 'play' && workers.length && !worker) return s;
       const before = act.run;
-      let run = play(before, a.pile);
+      const run = a.type === 'play' ? play(before, a.pile) : fall(before, a.side);
       if (run === before) return s;
       let units = run.earned - before.earned;
       let perkBonus = act.perkBonus;
       let siteBonus = act.siteBonus ?? 0;
       const felled = run.felled > before.felled;
       if (act.surface === 'forest' && felled && hasResident(s.village, 'banks')) { units += 2; perkBonus += 2; }
-      if (act.surface === 'berries' && run.chain % 5 === 0 && hasResident(s.village, 'mochi')) { units += 1; perkBonus += 1; }
+      if (a.type === 'play' && act.surface === 'berries' && run.chain % 5 === 0 && hasResident(s.village, 'mochi')) { units += 1; perkBonus += 1; }
       if (act.surface === 'forest' && felled && hasSiteBonus(s.village.plots, 'woodshed')) { units += 1; siteBonus += 1; }
       let next = credit(s, act.surface, units);
-      next = { ...next, mastery: { ...next.mastery, [act.surface]: next.mastery[act.surface] + 1 },
-        stamina: worker ? { ...s.stamina, [worker]: s.stamina[worker] - 1 } : s.stamina,
-        active: { ...act, run, perkBonus, siteBonus, minutes: act.minutes + DAYLIGHT.playMinutes } };
-      next = spend(next, DAYLIGHT.playMinutes);
+      // Choosing a fall is free: only the play that cleared the trunk cost daylight and stamina.
+      const minutes = a.type === 'play' ? DAYLIGHT.playMinutes : 0;
+      next = { ...next, mastery: a.type === 'play' ? { ...next.mastery, [act.surface]: next.mastery[act.surface] + 1 } : next.mastery,
+        stamina: worker && a.type === 'play' ? { ...s.stamina, [worker]: s.stamina[worker] - 1 } : s.stamina,
+        active: { ...act, run, perkBonus, siteBonus, minutes: act.minutes + minutes } };
+      if (minutes) next = spend(next, minutes);
       if (next.active && runEnd(next.active.run)) next = finishRun(next);
       return next;
     }

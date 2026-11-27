@@ -16,6 +16,8 @@ export interface Card {
   leafCovered?: boolean;
   /** Quarry: face-down until the card above it is mined. */
   hidden?: boolean;
+  /** Birch Stand: a branch from a tree's crown. */
+  branch?: boolean;
 }
 
 export interface Pile {
@@ -27,6 +29,9 @@ export interface Pile {
   tree?: number;
   /** Forest: lumber cut from this column but not yet paid (it pays when the column is finished). */
   held?: number;
+  /** Birch Stand: the tree's crown, face up. When the column is cleared the tree falls left or right
+   *  and the crown lands on top of the standing neighbour on that side (or on open ground, and is lost). */
+  crown?: Card[];
 }
 
 export interface Run {
@@ -47,7 +52,11 @@ export interface Run {
   felled: number;
   /** Forest: felling a whole tree (both its columns) pays this many extra units. */
   fellBonus: number;
+  /** Birch Stand: a cleared column waiting for the player to choose which way it falls. */
+  pendingFall?: number | null;
 }
+
+export type Side = -1 | 1;
 
 export function rng(seed: number): () => number {
   let s = seed >>> 0 || 1;
@@ -88,7 +97,7 @@ export function canPlay(run: Run, pileIndex: number): boolean {
   const pile = run.piles[pileIndex];
   const card = pile && top(pile);
   const base = foundationTop(run);
-  if (!card || !base || berryBlocked(card) || card.hidden) return false;
+  if (!card || !base || berryBlocked(card) || card.hidden || run.pendingFall != null) return false;
   return adjacent(card.rank, base.rank, run.wrap);
 }
 
@@ -110,6 +119,7 @@ export function tableauLeft(run: Run): number {
 export type RunEnd = 'cleared' | 'stuck' | null;
 
 export function runEnd(run: Run): RunEnd {
+  if (run.pendingFall != null) return null;
   if (tableauLeft(run) === 0) return 'cleared';
   if (run.stock.length === 0 && legalPlays(run).length === 0) return 'stuck';
   return null;
@@ -144,9 +154,16 @@ export function play(run: Run, pileIndex: number): Run {
     } else {
       pile.held = held;
     }
+  } else if (pile.cards.length === 0 && pile.crown?.length && fallTargets(piles, pileIndex).some(t => t != null)) {
+    // Birch Stand: the tree is down to its stump; the player chooses which way it falls.
+    return {
+      ...run, piles, foundation: [...run.foundation, card], receipts: run.receipts + 1, earned: run.earned + gain,
+      chain: run.chain + 1, bestChain: Math.max(run.bestChain, run.chain + 1), pendingFall: pileIndex,
+    };
   } else if (pile.cards.length === 0) {
     felledNow = 1;
     bonus = run.fellBonus;
+    if (pile.crown?.length) pile.crown = [];
   }
   const chain = run.chain + 1;
   return {
@@ -162,9 +179,27 @@ export function play(run: Run, pileIndex: number): Run {
   };
 }
 
+/** Birch Stand: the standing neighbour a tree would land on, for each side [left, right]; null is open ground. */
+export function fallTargets(piles: Pile[], i: number): [number | null, number | null] {
+  const at = (j: number) => (piles[j] && piles[j].cards.length > 0 ? j : null);
+  return [at(i - 1), at(i + 1)];
+}
+
+/** Birch Stand: fell the pending tree to one side. Its crown lands face up on that neighbour's column. */
+export function fall(run: Run, side: Side): Run {
+  const i = run.pendingFall;
+  if (i == null) return run;
+  const piles = run.piles.map(p => ({ ...p, cards: p.cards.slice() }));
+  const target = fallTargets(piles, i)[side < 0 ? 0 : 1];
+  const crown = piles[i].crown ?? [];
+  if (target != null) piles[target].cards.push(...crown);
+  piles[i].crown = [];
+  return { ...run, piles, pendingFall: null, felled: run.felled + 1, earned: run.earned + run.fellBonus, bonus: run.bonus + run.fellBonus };
+}
+
 /** Turn the next stock card onto the foundation. */
 export function draw(run: Run): Run {
-  if (run.stock.length === 0) return run;
+  if (run.stock.length === 0 || run.pendingFall != null) return run;
   const stock = run.stock.slice();
   const card = stock.pop()!;
   return { ...run, stock, foundation: [...run.foundation, { ...card, unripe: false, hidden: false }], draws: run.draws + 1, chain: 0 };
