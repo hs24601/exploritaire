@@ -427,11 +427,11 @@ export function IsoMapView({ game, placing, aim, selected, denPlacement, onTile,
     const standee = (s: Standee, zb: number) => {
       const lt = tileLight(Math.floor(s.gx), Math.floor(s.gy));
       const p = toScreen(s.gx, s.gy, zb);
-      const sprite = drawSprite(`kin.${s.kin}`, s.gx, s.gy, zb, s.heading);
-      // Contact shadow first, then the token: a small upright disc on a peg.
+      // Contact shadow first, then the sprite, or the placeholder token: a small upright disc on a peg.
       const w = Math.max(22, TILE_W * z * 0.3);
+      ctx.fillStyle = 'rgba(12,16,10,.35)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, w * 0.42, w * 0.42 * TILE_H / TILE_W, 0, 0, Math.PI * 2); ctx.fill();
+      const sprite = drawSprite(`kin.${s.kin}`, s.gx, s.gy, zb, s.heading);
       if (!sprite) {
-        ctx.fillStyle = 'rgba(12,16,10,.35)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, w * 0.42, w * 0.42 * TILE_H / TILE_W, 0, 0, Math.PI * 2); ctx.fill();
         const cy = p.y - w * 0.78;
         ctx.fillStyle = '#3b3328'; ctx.fillRect(p.x - 1.5, cy, 3, p.y - cy);
         ctx.beginPath(); ctx.arc(p.x, cy, w / 2, 0, Math.PI * 2);

@@ -44,16 +44,36 @@ export const ISO_SPRITE_SETS = [
 
 export const DEFAULT_CELL: [number, number] = [256, 256];
 export const DEFAULT_PIVOT: [number, number] = [128, 239];
-/** Kin read at about half a plot wide unless their set says otherwise. */
-export const DEFAULT_KIN_TILE_WIDTH_PX = 512;
+/** A 256 px kin cell spans about 0.64 of a plot's width unless the set says otherwise. */
+export const DEFAULT_KIN_TILE_WIDTH_PX = 400;
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  const res = await fetch(url, { cache: 'no-cache' });
+  // The dev server answers a missing file with the app's HTML, so check the type.
+  return res.ok && (res.headers.get('content-type') ?? '').includes('json') ? await res.json() as T : null;
+}
+
+/**
+ * Eric's Hero sheets ship a frames.json (columns front, front-quarter, side,
+ * rear-quarter, rear; the side painted facing screen right; rows stand, walk 0-3,
+ * ready). Read its `iso` sheet as the Hero sprite when no manifest.json exists.
+ */
+interface HeroFrames { cellSize: number; sheets: Record<string, { file: string; anchor: [number, number] }> }
+const heroFramesSet = (f: HeroFrames): IsoSpriteSet | null => f.sheets?.iso ? {
+  set: 'hero-frames', version: 1,
+  sprites: { 'kin.hero': { src: f.sheets.iso.file, cell: [f.cellSize, f.cellSize], pivot: f.sheets.iso.anchor,
+    tileWidthPx: DEFAULT_KIN_TILE_WIDTH_PX, headings: { S: 0, SE: 1, E: 2, NE: 3, N: 4 } } },
+} : null;
 
 async function loadSet(url: string): Promise<Map<string, LoadedSprite>> {
   const out = new Map<string, LoadedSprite>();
   try {
-    const res = await fetch(url, { cache: 'no-cache' });
-    // The dev server answers a missing file with the app's HTML, so check the type.
-    if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) return out;
-    const set = await res.json() as IsoSpriteSet;
+    let set = await fetchJson<IsoSpriteSet>(url);
+    if (!set && url.includes('/kin/hero/')) {
+      const frames = await fetchJson<HeroFrames>(url.replace(/manifest\.json$/, 'frames.json'));
+      set = frames && heroFramesSet(frames);
+    }
+    if (!set) return out;
     const base = url.slice(0, url.lastIndexOf('/') + 1);
     await Promise.all(Object.entries(set.sprites ?? {}).map(async ([key, def]) => {
       const image = new Image();

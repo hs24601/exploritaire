@@ -50,9 +50,10 @@ span one tile diamond's width. The renderer scales each sprite by
 
 * Buildings, props and features default to `tileWidthPx: 256`, so a 1 × 1
   building painted edge to edge fills a 256 px canvas.
-* Kin default to `tileWidthPx: 512`, so a 256 × 256 Hero cell stands about half
-  a plot wide (a plot holds a party of up to four). Change it per sheet if Hero
-  should read larger or smaller.
+* Kin default to `tileWidthPx: 400`, so a 256 × 256 Hero cell spans about 0.64
+  of a plot's width and Hero herself stands about a quarter plot wide (a plot
+  holds a party of up to four). Change it per sheet if Hero should read larger
+  or smaller.
 
 ## 3. Canvases and the ground anchor
 
@@ -107,11 +108,17 @@ The renderer reads these files if they exist:
 A missing manifest, or a missing key inside one, falls back to the placeholder
 block for that piece.
 
+Hero's folder already works without a manifest: when `manifest.json` is absent
+the renderer reads Eric's `frames.json` and uses its `iso` sheet (columns front,
+front-quarter, side, rear-quarter, rear as S, SE, E, NE, N; the side faces
+screen right; anchor from the sheet). The first slice shows the `stand` row;
+walk rows come with movement.
+
 ```json
 {
   "set": "hero-painterly-zootopia-v1",
   "version": 1,
-  "tileWidthPx": 512,
+  "tileWidthPx": 400,
   "sprites": {
     "kin.hero": {
       "src": "hero-idle-sheet-v1.png",
@@ -181,8 +188,8 @@ then the highest terrain face under the pointer.
 
 ## 8. Open questions for Eric
 
-* Hero's `tileWidthPx` (how big Hero stands against a plot). The default 512
-  makes the 256 cell half a plot wide.
+* Hero's `tileWidthPx` (how big Hero stands against a plot). The default 400
+  makes the 256 cell about two thirds of a plot wide.
 * Whether painted building light should stay upper-left or follow the
   village's sun. The renderer grades for time of day either way.
 * Whether the berm should block movement once terrain gains rules. It is
