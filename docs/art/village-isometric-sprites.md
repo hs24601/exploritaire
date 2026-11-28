@@ -2,8 +2,14 @@
 
 Status: first slice, 2026-11-27. The isometric map is a toggle beside the
 top-down map on `village.html` (button under the HUD, or `?iso` / `?iso=0`).
-Every piece is a generated placeholder block until its art and manifest entry
-exist. The code lives in `src/village/iso/` and `src/village/ui/IsoMapView.tsx`.
+The renderer prefers authored sprite sets, then compatible watercolor art, then
+generated placeholder geometry. The code lives in `src/village/iso/` and `src/village/ui/IsoMapView.tsx`.
+
+The painted renderer projects the meadow and mountain washes onto the world grid.
+It reuses the existing watercolor feature, building, and den paintings wherever
+available. Seeded stones and undergrowth sit off the center of each tile. Unknown
+terrain stays flat under dark pigment fog, with softened edges on the known side.
+Exploration memory and light sources are shared with the top-down view.
 
 ## 1. Camera
 
@@ -103,7 +109,7 @@ The renderer reads these files if they exist:
 | Set | Path |
 | --- | --- |
 | Village buildings, props, features, sapling, den, gate | `public/assets/runtime/village/iso/v1/manifest.json` (proposed; sources in `public/assets/sources/village/iso/v1/`) |
-| Hero | `public/assets/runtime/kin/hero/sprites/world/painterly-zootopia-v1/manifest.json` |
+| Hero | `public/assets/runtime/kin/hero/sprites/world/animal-forward-world-v1/manifest.json` |
 
 A missing manifest, or a missing key inside one, falls back to the placeholder
 block for that piece.
@@ -116,7 +122,7 @@ walk rows come with movement.
 
 ```json
 {
-  "set": "hero-painterly-zootopia-v1",
+  "set": "hero-animal-forward-world-v1",
   "version": 1,
   "tileWidthPx": 400,
   "sprites": {

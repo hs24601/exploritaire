@@ -1,0 +1,8 @@
+{
+  "masterSha256": "36e5086acc3742d1733076ba9f7f346313dd28ee312110b5cb8391aa6eeb5c04",
+  "packing": "Trimmed transparent margins for runtime. The scene angles the twig upward at the ground contact.",
+  "generator": "Built-in ImageGen",
+  "styleReference": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+  "prompt": "A quality transparent alpha PNG game sprite, like a botanical sticker cutout. Tiny starter twig: in profile, a short irregular bare ochre-brown twig, one tiny folded olive leaf and two pea-sized tightly closed spring-green buds when twig is pulled back to tabletop scale. Flat soft ambient daylight. Use only the watercolor pigment texture and warm loose watercolor brushwork of the Hero reference. Do not use any of its lighting or scene. ART ON EMPTY TRANSPARENT PIXELS, edges clean, tight bounds, no glow effect, no bloom, no blur outside the twig, no shadow, no vignette, and no ground. Show the silhouette distinctly against transparent empty surroundings.",
+  "runtimeSha256": "ca318a0d71c9157f4d4a64ba7ffe3e797ee9fd9736e6fd6527384f26c7af84a6"
+}

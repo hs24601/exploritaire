@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { KIN_TOKENS, type TokenKin } from '../rules/aspen';
 import { DAYLIGHT } from '../rules/daylight';
-import { digAccepts, digRemaining, IMPROVED_DEN_WOOD, SIMPLE_DEN_SOIL } from '../rules/den';
+import { digAccepts, digRemaining, SIMPLE_DEN_SOIL } from '../rules/den';
 import { dailyMaxApBonus, daylightLeft, maxStamina, type Action, type GameState } from '../rules/game';
 import { useDrag } from './drag';
 import { Icon } from './icons';
@@ -9,22 +9,6 @@ import { KinPortrait } from './KinPortrait';
 import { rankLabel } from './PlayingCard';
 import { StaminaPips } from './StaminaPips';
 import { PuzzleAtmosphere } from './PuzzleAtmosphere';
-
-export function DenIdea({ improve, seed, armed, onArm, onPlace }: {
-  improve: boolean; seed: number; armed: boolean; onArm: () => void; onPlace: (tile: number) => void;
-}) {
-  const { begin } = useDrag();
-  const face = <><span>Improvement Idea</span><Icon name="burrow" size={34} /><strong>{improve ? 'Improved Den' : 'Simple Den'}</strong>
-    <span>{improve ? `${IMPROVED_DEN_WOOD} wood · Dig` : 'Dig · 1 resident'}</span></>;
-  return <button type="button" className="vg-den-idea" aria-pressed={armed} style={{ '--idea-tilt': `${seed % 9 - 4}deg` } as CSSProperties}
-    title={improve ? 'Apply this idea to the finished Simple Den' : 'Drag this idea to an empty map plot, or select it then choose a plot'}
-    onClick={event => { if (event.detail === 0) onArm(); }}
-    onPointerDown={event => {
-      const width = event.currentTarget.offsetWidth;
-      begin(event, { kind: 'den-idea', id: 'den', anchor: 'top-left', ghost: <div className="vg-den-idea-face">{face}</div>, width, height: width * 88 / 63 },
-        (_, hit) => { if (hit.drop === 'tile') onPlace(hit.index); }, onArm);
-    }}>{face}</button>;
-}
 
 export function DenHousing({ game, dispatch, onClose }: { game: GameState; dispatch: (action: Action) => void; onClose: () => void }) {
   const den = game.den!;

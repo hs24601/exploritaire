@@ -99,7 +99,7 @@ const centre = (i: number) => { const t = tileAt(i); return { x: t.x + 0.5, y: t
 /** Every light source on the map right now. */
 export function villageLights(game: GameState): VillageLight[] {
   const lights: VillageLight[] = [
-    { id: 'sapling', x: SAPLING.x + 0.5, y: SAPLING.y + 0.5, radius: 2.4, strength: 0.78, color: '#e8f59a' },
+    { id: 'sapling', x: SAPLING.x + 0.5, y: SAPLING.y + 0.5, radius: 1.25, strength: 0.78, color: '#e8f59a' },
   ];
   for (const party of game.parties) {
     const p = centre(party.tile);
@@ -120,8 +120,14 @@ export function villageLights(game: GameState): VillageLight[] {
 }
 
 /** One light's steady contribution at a grid point. */
-export const contribution = (l: VillageLight, x: number, y: number) =>
-  l.strength * lightFalloff(Math.hypot(x - l.x, y - l.y) * LIGHT_CELL_SIZE, l.radius);
+const unobstructedLight = (l: VillageLight, distance: number) =>
+  l.strength * lightFalloff(distance * LIGHT_CELL_SIZE, l.radius);
+
+export const contribution = (l: VillageLight, x: number, y: number) => {
+  const distance = Math.hypot(x - l.x, y - l.y);
+  const spill = l.id.startsWith('party-') && distance > .32 ? .1 : 1;
+  return unobstructedLight(l, distance) * spill;
+};
 
 /** Combined local light at a point (screen-combined, never above 1). */
 export function localLight(lights: readonly VillageLight[], x: number, y: number): number {
@@ -169,7 +175,7 @@ export function revealedBy(lights: readonly VillageLight[], rankReached: number)
     const cx = Math.floor(l.x), cy = Math.floor(l.y);
     for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
       if (!onVillageGrid(x, y) || fogged(x, y, rankReached)) continue;
-      if (contribution(l, x + 0.5, y + 0.5) >= LIGHT_LEVEL_THRESHOLDS.dim) out.push(tileIndex(x, y));
+      if (unobstructedLight(l, Math.hypot(x + .5 - l.x, y + .5 - l.y)) >= LIGHT_LEVEL_THRESHOLDS.dim) out.push(tileIndex(x, y));
     }
   }
   return out;

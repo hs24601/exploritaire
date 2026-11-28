@@ -1,0 +1,29 @@
+{
+  "set": "hero-animal-forward-world-v1",
+  "version": 1,
+  "sprites": {
+    "kin.hero": {
+      "src": "iso.png",
+      "cell": [
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        239
+      ],
+      "tileWidthPx": 400,
+      "headings": {
+        "S": 0,
+        "SE": 1,
+        "E": 2,
+        "NE": 3,
+        "N": 4
+      },
+      "walk": {
+        "frames": 4,
+        "fps": 6
+      }
+    }
+  }
+}

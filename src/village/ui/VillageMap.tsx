@@ -11,8 +11,9 @@ import { MapView } from './MapView';
 import { IsoMapView } from './IsoMapView';
 import { BOOK_MODE } from './MapExtras';
 import { Icon } from './icons';
+import { useTravelFrame, type VillageJourney } from './VillageTravel';
 
-type MapProps = Parameters<typeof MapView>[0];
+type MapProps = Omit<Parameters<typeof MapView>[0], 'travel'>;
 export interface MapViewChoice { iso: boolean; toggle: () => void }
 
 const VIEW_KEY = 'exploritaire.village.view.v1';
@@ -47,10 +48,11 @@ export function MapViewToggle({ view }: { view: MapViewChoice }) {
   </button>;
 }
 
-export function VillageMap({ view, ...props }: MapProps & { view: MapViewChoice }) {
+export function VillageMap({ view, journey, ...props }: MapProps & { view: MapViewChoice; journey: VillageJourney | null }) {
+  const travel = useTravelFrame(journey);
   return view.iso && !BOOK_MODE && !props.mini
-    ? <IsoMapView game={props.game} placing={props.placing} aim={props.aim} selected={props.selected} denPlacement={props.denPlacement}
+    ? <IsoMapView game={props.game} travel={travel} placing={props.placing} aim={props.aim} selected={props.selected} denPlacement={props.denPlacement}
         onTile={props.onTile} onHover={props.onHover} onFeature={props.onFeature} partyTile={props.partyTile} selectedKin={props.selectedKin}
         onParty={props.onParty} onKin={props.onKin} onWanderer={props.onWanderer} baseTile={props.layout.tile} />
-    : <MapView {...props} />;
+    : <MapView {...props} travel={travel} />;
 }

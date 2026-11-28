@@ -2,7 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, t
 import { clockLabel, DAY_CYCLE_MINUTES, durationLabel } from './rules/daylight';
 import { canPlaceDevKin, dailyStamina, daylightLeft, denPlacementBlocker, loadGame, reduce, saveGame, surfaceUnlocked, type GameState } from './rules/game';
 import { SURFACE_ORDER, type SurfaceId } from './rules/surfaces';
-import { FEATURES, featureAt, tileAt, tileIndex } from './rules/map';
+import { FEATURES, SAPLING, featureAt, tileAt, tileIndex } from './rules/map';
 import { activeAspen, ASPEN_FALL_MS, KIN_TOKENS, type TokenKin } from './rules/aspen';
 import { KIN, RANKS, appeal, dayLength, placementPreview, type BuildingId, type KinId } from './rules/village';
 import { DragLayer, useDrag } from './ui/drag';
@@ -20,8 +20,13 @@ import { useVillageReceiptFlight } from './ui/useVillageReceiptFlight';
 import { useCardJumbo } from '../proto/components/CardJumbo';
 import { FpsCounter } from '../proto/components/FpsCounter';
 import { DevConfig } from './ui/DevConfig';
-import { DenHousing, DenIdea, DenView } from './ui/DenView';
+import { DenHousing, DenView } from './ui/DenView';
+import { InspirationCard } from './ui/InspirationCard';
+import { SaplingView } from './ui/SaplingView';
+import { SelectedKinPortrait } from './ui/SelectedKinPortrait';
 import { DIG_KIN } from './rules/den';
+import { villageRoute } from './rules/travel';
+import type { VillageJourney } from './ui/VillageTravel';
 
 const showDevConfig = import.meta.env.DEV || new URLSearchParams(window.location.search).has('dev');
 
@@ -125,7 +130,10 @@ function Menu({ onClose, onReset, onDev, game, dispatch }: {
   );
 }
 
-function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Parameters<typeof reduce>[1]) => void; onMenu: () => void }) {
+type VillageAction = Parameters<typeof reduce>[1];
+type TravelAction = Extract<VillageAction, { type: 'move-party' | 'deploy' | 'sapling-open' | 'den-start' }>;
+
+function Stage({ game, dispatch, onMenu, paused }: { game: GameState; dispatch: (a: VillageAction) => void; onMenu: () => void; paused: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLElement>(null);
   const hudHeight = useMeasure(hudRef, 'height', true);
@@ -138,18 +146,53 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
   const [focusKin, setFocusKin] = useState<KinId | null>(null);
   const [partyTile, setPartyTile] = useState<number | null>(null);
   const [selectedKin, setSelectedKin] = useState<TokenKin | null>(null);
-  const [denArmed, setDenArmed] = useState(false);
+  const selectedParty = game.parties.find(party => party.tile === partyTile);
+  const portraitKin = selectedParty?.members.find(kin => kin === selectedKin) ?? selectedParty?.members[0];
+  const [inspirationArmed, setInspirationArmed] = useState(false);
   const [denMessage, setDenMessage] = useState('');
+  const [pending, setPending] = useState<(VillageJourney & { game: GameState; action: TravelAction }) | null>(null);
+  const [travelMessage, setTravelMessage] = useState('');
+  const journey = pending?.game === game && !paused ? pending : null;
+  useEffect(() => {
+    if (!journey) {
+      if (pending) setPending(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setPending(null);
+      dispatch(journey.action);
+    }, Math.max(0, journey.start + journey.duration - performance.now()));
+    return () => clearTimeout(timer);
+  }, [journey, pending, dispatch]);
   const den = game.den;
-  const denIdea = !den || (den.level === 1 && !den.dig);
+  const showInspirationCard = !den ? !!game.sapling?.collected : den.level === 1 && !den.dig;
+  const saplingTile = tileIndex(SAPLING.x, SAPLING.y);
   const denSelected = den !== null && selected === den.tile;
   const clearParty = () => { setPartyTile(null); setSelectedKin(null); };
+  const travel = (action: TravelAction, to: number) => {
+    if (journey || paused) return;
+    setTravelMessage('');
+    if (reduce(game, action) === game) return;
+    const route = villageRoute(game, action.from, to, action.type !== 'move-party');
+    if (!route) {
+      setTravelMessage('No walking route to that tile.');
+      return;
+    }
+    if (route.length === 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      dispatch(action);
+      return;
+    }
+    const kin = action.type === 'sapling-open' ? 'hero' : action.kin;
+    const members = kin ? [kin] : game.parties.find(p => p.tile === action.from)!.members;
+    setPending({ game, action, route, members, start: performance.now(),
+      duration: Math.min(5200, Math.max(300, (route.length - 1) * 155)) });
+  };
   // On overlay screens a placing/inspect card takes room beside the tab bar and the map shrinks to fit, never under it.
   const floatOn = game.view === 'village' && pane === null && (picked !== null || denSelected || (selected !== null && !!game.village.plots[selected]));
   const floatH = useMeasure(floatRef, 'height', floatOn);
   const hudSpace = hudHeight ? hudHeight + 8 : 0;
   const layout = useStageLayout(ref, floatOn ? floatH : 0, hudSpace);
-  const view = game.view !== 'village' && game.view !== 'den' && !surfaceUnlocked(game, game.view) ? 'village' : game.view;
+  const view = game.view !== 'village' && game.view !== 'den' && game.view !== 'sapling' && !surfaceUnlocked(game, game.view) ? 'village' : game.view;
   const mini = view !== 'village';
   const mapView = useMapView();
 
@@ -172,7 +215,7 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
     setDenMessage(blocker ?? '');
     if (blocker) return;
     dispatch({ type: 'den-place', tile, improve: !!den });
-    setDenArmed(false);
+    setInspirationArmed(false);
     setSelected(null);
   };
   const useDen = (from: number, kin?: TokenKin) => {
@@ -181,7 +224,7 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
     if (den.dig) {
       const digger = kin ?? party?.members.find(member => DIG_KIN.includes(member));
       if (digger && DIG_KIN.includes(digger)) {
-        dispatch({ type: 'den-start', from, kin: digger });
+        travel({ type: 'den-start', from, kin: digger }, den.tile);
         setSelected(null);
       } else setSelected(den.tile);
     } else {
@@ -193,14 +236,22 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
     clearParty();
   };
   const onTile = (i: number, e: React.MouseEvent) => {
-    if (denArmed && denIdea) { placeDen(i); return; }
+    if (journey) return;
+    if (inspirationArmed && showInspirationCard) { placeDen(i); return; }
+    if (i === saplingTile) {
+      if (selectedKin && selectedKin !== 'hero') return;
+      const from = partyTile ?? saplingTile;
+      travel({ type: 'sapling-open', from }, saplingTile);
+      clearParty();
+      return;
+    }
     if (den?.tile === i) {
       if (partyTile !== null) useDen(partyTile, selectedKin ?? undefined);
       else setSelected(denSelected ? null : i);
       return;
     }
     if (partyTile !== null) {
-      dispatch({ type: 'move-party', from: partyTile, to: i, kin: selectedKin ?? undefined }); clearParty(); return;
+      travel({ type: 'move-party', from: partyTile, to: i, kin: selectedKin ?? undefined }, i); clearParty(); return;
     }
     if (placing) {
       // Mouse: hovering already previews, so a click builds. Touch: the first tap previews, Build confirms.
@@ -214,11 +265,13 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
   };
   const onWanderer = (kin: KinId) => { clear(); setSelected(null); setFocusKin(kin); setPane('kin'); };
   const deploy = (from: number, surface: SurfaceId, kin?: TokenKin) => {
+    if (!surfaceUnlocked(game, surface)) return;
     clear(); setSelected(null); clearParty();
-    dispatch({ type: 'deploy', from, surface, kin });
+    const node = FEATURES[surface].node;
+    travel({ type: 'deploy', from, surface, kin }, tileIndex(node.x, node.y));
   };
   const onFeature = (surface: SurfaceId) => {
-    if (!surfaceUnlocked(game, surface)) return;
+    if (journey || !surfaceUnlocked(game, surface)) return;
     const node = FEATURES[surface].node, index = tileIndex(node.x, node.y);
     const from = partyTile ?? game.parties.find(p => p.tile === index)?.tile;
     if (from === undefined) {
@@ -229,12 +282,13 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
     deploy(from, surface, selectedKin ?? undefined);
   };
   const onParty = (tile: number) => {
+    if (journey) return;
     clear(); setSelected(null);
     if (partyTile !== null && partyTile !== tile) {
       const { x, y } = tileAt(tile);
       const surface = featureAt(x, y);
       if (surface) deploy(partyTile, surface, selectedKin ?? undefined);
-      else { dispatch({ type: 'move-party', from: partyTile, to: tile, kin: selectedKin ?? undefined }); clearParty(); }
+      else { travel({ type: 'move-party', from: partyTile, to: tile, kin: selectedKin ?? undefined }, tile); clearParty(); }
     } else {
       setPartyTile(partyTile === tile && !selectedKin ? null : tile);
       setSelectedKin(null);
@@ -259,26 +313,37 @@ function Stage({ game, dispatch, onMenu }: { game: GameState; dispatch: (a: Para
         <>
           {view === 'forest' && game.aspen && <AspenView clock={game} grove={game.aspen} stamina={game.stamina} staminaCaps={dailyStamina(game.denRest)} cards={game.aspenCards} dispatch={dispatch} />}
           {view === 'den' && den && <DenView game={game} dispatch={dispatch} />}
-          {view !== 'village' && view !== 'forest' && view !== 'den' && <SurfaceView key={view} game={game} surface={view} dispatch={dispatch} />}
-          <VillageMap view={mapView} game={game} layout={layout} mini={mini} placing={placing} aim={aim} selected={selected}
-            denPlacement={denIdea && (denArmed || dragging?.kind === 'den-idea')}
+          {view === 'sapling' && game.sapling && <SaplingView game={game} dispatch={dispatch} />}
+          {view !== 'village' && view !== 'forest' && view !== 'den' && view !== 'sapling' && <SurfaceView key={view} game={game} surface={view} dispatch={dispatch} />}
+          <VillageMap view={mapView} game={game} journey={journey} layout={layout} mini={mini} placing={placing} aim={aim} selected={selected}
+            denPlacement={showInspirationCard && (inspirationArmed || dragging?.kind === 'inspiration-card')}
             onTile={onTile} onHover={t => { if (picked) setAimTile(t); }} onFeature={onFeature} onWanderer={onWanderer}
             partyTile={partyTile} selectedKin={selectedKin} onParty={onParty}
-            onKin={(tile, kin) => { clear(); setSelected(null); setPartyTile(tile); setSelectedKin(selectedKin === kin ? null : kin); }}
-            onGroup={members => { clear(); setSelected(null); clearParty(); dispatch({ type: 'group-kin', members }); }}
+            onKin={(tile, kin) => { if (!journey) { clear(); setSelected(null); setPartyTile(tile); setSelectedKin(selectedKin === kin ? null : kin); } }}
+            onGroup={members => { if (!journey) { clear(); setSelected(null); clearParty(); dispatch({ type: 'group-kin', members }); } }}
             onPartyDrop={(from, drop, i, kin) => {
+              if (journey) return;
+              if (drop === 'sapling' || drop === 'tile' && i === saplingTile) {
+                if (!kin || kin === 'hero') travel({ type: 'sapling-open', from }, saplingTile);
+                clearParty();
+                return;
+              }
               if (drop === 'feature' && SURFACE_ORDER[i]) deploy(from, SURFACE_ORDER[i], kin);
               if (drop === 'tile') {
                 if (den?.tile === i) useDen(from, kin);
-                else { dispatch({ type: 'move-party', from, to: i, kin }); clearParty(); }
+                else { travel({ type: 'move-party', from, to: i, kin }, i); clearParty(); }
               }
             }}
             onMini={() => dispatch({ type: 'view', view: 'village' })} />
           {!mini && (
             <>
-              {!pane && !card && denIdea && <DenIdea improve={!!den} seed={game.seed} armed={denArmed}
-                onArm={() => { setDenArmed(!denArmed); setDenMessage(''); clearParty(); }} onPlace={placeDen} />}
+              {!pane && portraitKin && <SelectedKinPortrait kin={portraitKin} />}
+              {!pane && !card && showInspirationCard && <section className="vg-village-hand" aria-label="Inspiration hand">
+                <InspirationCard improve={!!den} seed={game.seed} armed={inspirationArmed}
+                  onArm={() => { setInspirationArmed(!inspirationArmed); setDenMessage(''); clearParty(); }} onPlace={placeDen} />
+              </section>}
               {!pane && denMessage && <span className="vg-den-message" role="status">{denMessage}</span>}
+              {!pane && !denMessage && travelMessage && <span className="vg-den-message" role="status">{travelMessage}</span>}
               {pane && (
                 <section className="vg-sheet" aria-label="Kin">
                   <div className="vg-sheet-head">
@@ -319,7 +384,7 @@ export function VillageApp() {
   return (
     <DragLayer>
       <div ref={root} className={`vg-app${game.night ? ' is-night' : ''}`}>
-        <Stage game={game} dispatch={dispatch} onMenu={() => { setDev(false); setMenu(true); }} />
+        <Stage game={game} dispatch={dispatch} paused={menu || dev} onMenu={() => { setDev(false); setMenu(true); }} />
         {game.night && <NightPanel game={game} onDawn={() => dispatch({ type: 'dawn' })} />}
         {menu && <Menu game={game} dispatch={dispatch} onClose={() => setMenu(false)} onReset={() => { dispatch({ type: 'reset' }); setMenu(false); }}
           onDev={showDevConfig ? () => { setMenu(false); setDev(true); } : undefined} />}

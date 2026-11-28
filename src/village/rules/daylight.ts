@@ -1,6 +1,11 @@
-// Daylight: the day's only limiter. Tableau plays barely move the sun; reaching
-// for the stock costs real time. Values come from the balance pass in
-// docs/research/village-daylight-balance.md (tools/village-daylight-sim.ts).
+// One receipt represents a short bout of work at the site.
+export const RECEIPT_MINUTES = {
+  sapling: 3, // Examine a clue and brush aside leaves.
+  berries: 4, // Pick and gather a handful.
+  forest: 6, // Make a series of cuts into the trunk.
+  quarry: 8, // Loosen a piece of stone.
+  den: 12, // Dig and clear a section of soil.
+} as const;
 
 export const DAYLIGHT = {
   /** Dawn 6:00 to dusk 20:00. */
@@ -8,8 +13,6 @@ export const DAYLIGHT = {
   dayMinutes: 14 * 60,
   /** Dealing a surface. No walking: the player works a node straight from the map (Eric, 2026-11-24). */
   startMinutes: 0,
-  /** Each card played from the tableau. */
-  playMinutes: 2,
   /** Each card turned from the stock. */
   drawMinutes: 15,
 };

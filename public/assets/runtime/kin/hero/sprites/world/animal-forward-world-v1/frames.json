@@ -1,0 +1,85 @@
+{
+  "cellSize": 256,
+  "projection": "orthographic visual targets",
+  "yaw": {
+    "degrees": [
+      0,
+      45,
+      90,
+      135,
+      180
+    ],
+    "order": [
+      "front",
+      "front-quarter",
+      "side",
+      "rear-quarter",
+      "rear"
+    ],
+    "paintedLateralFacing": "screen-right",
+    "oppositeLateralFacing": "mirror horizontally"
+  },
+  "actionOrder": [
+    "stand",
+    "walk-0",
+    "walk-1",
+    "walk-2",
+    "walk-3",
+    "ready"
+  ],
+  "walk": {
+    "frames": 4,
+    "previewFps": 6
+  },
+  "sheets": {
+    "low": {
+      "file": "low.png",
+      "columns": 5,
+      "rows": 6,
+      "targetPitchDegrees": 15,
+      "anchor": [
+        128,
+        239
+      ]
+    },
+    "iso": {
+      "file": "iso.png",
+      "columns": 5,
+      "rows": 6,
+      "targetPitchDegrees": 35.264,
+      "anchor": [
+        128,
+        239
+      ]
+    },
+    "high": {
+      "file": "high.png",
+      "columns": 5,
+      "rows": 6,
+      "targetPitchDegrees": 55,
+      "anchor": [
+        128,
+        239
+      ]
+    },
+    "overhead": {
+      "file": "overhead.png",
+      "columns": 3,
+      "rows": 2,
+      "targetPitchDegrees": 90,
+      "anchor": [
+        128,
+        128
+      ],
+      "forward": "up",
+      "rotateWithHeading": true
+    }
+  },
+  "worldSelection": {
+    "lowToHighDegrees": 34,
+    "highToOverheadDegrees": 72,
+    "useExistingHysteresis": true,
+    "isoTier": "fixed projection only"
+  },
+  "calibrated": false
+}

@@ -1,5 +1,5 @@
 // Whole-game reducer for village.html: day clock, active surface run, village.
-import { DAYLIGHT, DAY_CYCLE_MINUTES } from './daylight';
+import { DAYLIGHT, DAY_CYCLE_MINUTES, RECEIPT_MINUTES } from './daylight';
 import { draw, fall, play, rng, runEnd, shuffledDeck, type Rank, type Run, type Side } from './golf';
 import { SURFACES, type SurfaceId } from './surfaces';
 import { FEATURES, MAP_TILES, featureAt, fogged, isGate, isSapling, SAPLING, tileAt, tileIndex, validTileIndex } from './map';
@@ -12,8 +12,9 @@ import {
 } from './village';
 
 import { dealDig, dealSimpleDen, DEN_REST_MINUTES, DIG_KIN, digPlay, digRemaining, IMPROVED_DEN_WOOD, restSimpleDen, type DenRest, type DenSite } from './den';
+import { dealSapling, playSapling, type SaplingRun } from './sapling';
 
-export type View = 'village' | 'den' | SurfaceId;
+export type View = 'village' | 'den' | 'sapling' | SurfaceId;
 
 export interface ActiveRun {
   surface: SurfaceId;
@@ -41,6 +42,7 @@ export interface GameState {
   lastRun: ActiveRun | null;
   view: View;
   seed: number;
+  worldSeed?: number;
   night: NightReport | null;
   parties: Party[];
   /** Saves predating the developer roster had every kin on the map by default. */
@@ -50,6 +52,7 @@ export interface GameState {
   aspenCards: Rank[];
   den: DenSite | null;
   denRest: DenRest;
+  sapling: SaplingRun | null;
 }
 
 export const maxStamina = (game: GameState, kin: TokenKin) => KIN_STAMINA_MAX + (game.denRest[kin] ?? 0);
@@ -66,16 +69,25 @@ export function surfaceWorkers(game: GameState, surface: SurfaceId): TokenKin[] 
   return game.parties.find(party => party.tile === tileIndex(x, y))?.members ?? [];
 }
 
+export function surfaceDrawWorker(game: GameState, surface: SurfaceId): TokenKin | undefined {
+  const workers = surfaceWorkers(game, surface);
+  return (workers.length ? workers : ['hero'] as const).find(kin => game.stamina[kin] > 0);
+}
+
 export function newGame(seed = Date.now() % 100000): GameState {
   return {
-    version: 2, day: 1, minutes: 0, village: newVillage(),
+    version: 2, day: 1, minutes: 0, village: newVillage(), worldSeed: seed,
     mastery: { forest: 0, berries: 0, quarry: 0 },
     location: { forest: 0, berries: 0, quarry: 0 },
-    rankReached: 1, active: null, lastRun: null, view: 'village', seed, night: null, parties: startingParties(), devKinRoster: true, aspen: null, stamina: freshStamina(), aspenCards: [], den: null, denRest: {},
+    rankReached: 1, active: null, lastRun: null, view: 'village', seed, night: null, parties: startingParties(), devKinRoster: true, aspen: null, stamina: freshStamina(), aspenCards: [], den: null, denRest: {}, sapling: null,
   };
 }
 
 export type Action =
+  | { type: 'sapling-open'; from: number }
+  | { type: 'sapling-play'; column: number }
+  | { type: 'sapling-draw' }
+  | { type: 'sapling-collect' }
   | { type: 'den-place'; tile: number; improve: boolean }
   | { type: 'den-start'; from: number; kin?: TokenKin }
   | { type: 'den-play'; column: number }
@@ -150,7 +162,7 @@ function endDay(s: GameState): GameState {
 
 /** Spend daylight; dusk ends the run and the day. */
 function spend(s: GameState, minutes: number): GameState {
-  const next = { ...s, minutes: s.minutes + minutes };
+  const next = { ...s, minutes: s.minutes + Math.min(minutes, daylightLeft(s)) };
   return daylightLeft(next) <= 0 ? endDay(next) : next;
 }
 
@@ -199,8 +211,30 @@ function saveAspenTree(s: GameState, run: AspenRun): GameState {
 export function reduce(s: GameState, a: Action): GameState {
   if (s.night && a.type !== 'dawn' && a.type !== 'reset' && a.type !== 'aspen-land' && a.type !== 'dev-config') return s;
   switch (a.type) {
+    case 'sapling-open': {
+      if (s.view !== 'village' || s.den || s.sapling?.collected ||
+          !s.parties.some(party => party.tile === a.from && party.members.includes('hero'))) return s;
+      return { ...finishRun(s), view: 'sapling', sapling: s.sapling ?? dealSapling(s.seed),
+        parties: moveParty(s.parties, a.from, tileIndex(SAPLING.x, SAPLING.y), 'hero') };
+    }
+    case 'sapling-play': {
+      if (s.view !== 'sapling' || !s.sapling || !daylightLeft(s)) return s;
+      const sapling = playSapling(s.sapling, a.column);
+      if (sapling === s.sapling) return s;
+      return spend({ ...s, sapling }, RECEIPT_MINUTES.sapling);
+    }
+    case 'sapling-draw': {
+      const { sapling } = s;
+      if (s.view !== 'sapling' || !sapling?.inspiration || s.stamina.hero <= 0) return s;
+      const rank = sapling.stock[sapling.stock.length - 1];
+      return { ...s, stamina: { ...s.stamina, hero: s.stamina.hero - 1 },
+        sapling: { ...sapling, foundation: rank, stock: [rank, ...sapling.stock.slice(0, -1)] } };
+    }
+    case 'sapling-collect':
+      return s.view === 'sapling' && s.sapling?.inspiration === 0 && !s.sapling.collected
+        ? { ...s, view: 'village', sapling: { ...s.sapling, collected: true } } : s;
     case 'den-place': {
-      if (s.view !== 'village' || denPlacementBlocker(s, a.tile, a.improve)) return s;
+      if (s.view !== 'village' || (!a.improve && !s.sapling?.collected) || denPlacementBlocker(s, a.tile, a.improve)) return s;
       const den: DenSite = a.improve ? { ...s.den!, dig: dealDig(s.seed), worker: null }
         : { tile: a.tile, level: 0, dig: dealSimpleDen(), worker: null, residents: [] };
       const village = a.improve ? { ...s.village, resources: pay(s.village.resources, { lumber: IMPROVED_DEN_WOOD }) } : s.village;
@@ -219,7 +253,7 @@ export function reduce(s: GameState, a: Action): GameState {
       if (dig === den.dig) return s;
       const completed = digRemaining(dig) === 0;
       return spend({ ...s, den: completed ? { ...den, level: den.level === 0 ? 1 : 2, dig: null,
-        residents: dig.simple ? [kin] : den.residents } : { ...den, dig } }, DAYLIGHT.playMinutes);
+        residents: dig.simple ? [kin] : den.residents } : { ...den, dig } }, RECEIPT_MINUTES.den);
     }
     case 'den-draw': {
       const den = s.den, dig = den?.dig, kin = den?.worker;
@@ -326,17 +360,19 @@ export function reduce(s: GameState, a: Action): GameState {
     case 'aspen-play':
     case 'aspen-play-card': {
       const run = activeAspen(s.aspen);
-      if (s.view !== 'forest' || !run) return s;
+      if (s.view !== 'forest' || !run || !daylightLeft(s)) return s;
       const rank = a.type === 'aspen-play-card' ? s.aspenCards[a.card] : aspenTop(run, a.pile);
-      if (rank === undefined || !aspenAcceptsRank(run, rank, a.foundation, s.stamina)) return s;
-      const { kin } = run.foundations[a.foundation];
+      if (rank === undefined || !aspenAcceptsRank(run, rank, a.foundation)) return s;
       const next = a.type === 'aspen-play-card' ? aspenReceive(run, rank, a.foundation) : aspenPlay(run, a.pile, a.foundation);
       const aspenCards = a.type === 'aspen-play-card' ? s.aspenCards.filter((_, index) => index !== a.card) : s.aspenCards;
-      return saveAspenTree({ ...s, aspenCards, stamina: { ...s.stamina, [kin]: s.stamina[kin] - 1 } }, next);
+      return spend(saveAspenTree({ ...s, aspenCards }, next), RECEIPT_MINUTES.forest);
     }
     case 'aspen-draw': {
       const run = activeAspen(s.aspen);
-      return s.view === 'forest' && run ? saveAspenTree(s, aspenDraw(run, a.foundation)) : s;
+      const kin = run?.foundations[a.foundation]?.kin;
+      if (s.view !== 'forest' || !run || !kin || s.stamina[kin] <= 0) return s;
+      const next = aspenDraw(run, a.foundation);
+      return next === run ? s : saveAspenTree({ ...s, stamina: { ...s.stamina, [kin]: s.stamina[kin] - 1 } }, next);
     }
     case 'aspen-land': {
       const grove = s.aspen, run = activeAspen(grove);
@@ -356,7 +392,7 @@ export function reduce(s: GameState, a: Action): GameState {
       const trees = grove.trees.map((run, i): AspenRun | null => i === a.tree ? { ...tree, phase: 'felled' } : run);
       return credit({ ...s, aspen: { ...grove, trees } }, 'forest', 1);
     }
-    case 'view': return a.view === 'den' || (a.view !== 'village' && !surfaceUnlocked(s, a.view)) ? s : { ...s, view: a.view };
+    case 'view': return a.view === 'den' || a.view === 'sapling' || (a.view !== 'village' && !surfaceUnlocked(s, a.view)) ? s : { ...s, view: a.view };
     case 'open': {
       if (!surfaceUnlocked(s, a.surface)) return s;
       if (s.active?.surface === a.surface) return { ...s, view: a.surface };
@@ -379,10 +415,7 @@ export function reduce(s: GameState, a: Action): GameState {
     case 'play':
     case 'fall': {
       const act = s.active;
-      if (!act) return s;
-      const workers = surfaceWorkers(s, act.surface);
-      const worker = workers.find(kin => s.stamina[kin] > 0);
-      if (a.type === 'play' && workers.length && !worker) return s;
+      if (!act || !daylightLeft(s)) return s;
       const before = act.run;
       const run = a.type === 'play' ? play(before, a.pile) : fall(before, a.side);
       if (run === before) return s;
@@ -394,10 +427,9 @@ export function reduce(s: GameState, a: Action): GameState {
       if (a.type === 'play' && act.surface === 'berries' && run.chain % 5 === 0 && hasResident(s.village, 'mochi')) { units += 1; perkBonus += 1; }
       if (act.surface === 'forest' && felled && hasSiteBonus(s.village.plots, 'woodshed')) { units += 1; siteBonus += 1; }
       let next = credit(s, act.surface, units);
-      // Choosing a fall is free: only the play that cleared the trunk cost daylight and stamina.
-      const minutes = a.type === 'play' ? DAYLIGHT.playMinutes : 0;
+      // Choosing a fall is free: only the play that cleared the trunk cost daylight.
+      const minutes = a.type === 'play' ? Math.min(RECEIPT_MINUTES[act.surface], daylightLeft(s)) : 0;
       next = { ...next, mastery: a.type === 'play' ? { ...next.mastery, [act.surface]: next.mastery[act.surface] + 1 } : next.mastery,
-        stamina: worker && a.type === 'play' ? { ...s.stamina, [worker]: s.stamina[worker] - 1 } : s.stamina,
         active: { ...act, run, perkBonus, siteBonus, minutes: act.minutes + minutes } };
       if (minutes) next = spend(next, minutes);
       if (next.active && runEnd(next.active.run)) next = finishRun(next);
@@ -407,9 +439,12 @@ export function reduce(s: GameState, a: Action): GameState {
       const act = s.active;
       if (!act || act.run.stock.length === 0) return s;
       const cost = drawCost(s);
-      if (cost > daylightLeft(s)) return s;
+      const worker = surfaceDrawWorker(s, act.surface);
+      if (!worker || cost > daylightLeft(s)) return s;
       const run = draw(act.run);
-      let next: GameState = { ...s, active: { ...act, run, freeDrawUsed: act.freeDrawUsed || cost === 0, minutes: act.minutes + cost } };
+      if (run === act.run) return s;
+      let next: GameState = { ...s, stamina: { ...s.stamina, [worker]: s.stamina[worker] - 1 },
+        active: { ...act, run, freeDrawUsed: act.freeDrawUsed || cost === 0, minutes: act.minutes + cost } };
       next = spend(next, cost);
       if (next.active && runEnd(next.active.run)) next = finishRun(next);
       return next;
@@ -493,7 +528,7 @@ export function migrate(parsed: unknown): GameState | null {
     const plots = g.village.plots.slice();
     while (plots.length < MAP_TILES) plots.push(null);
     const center = tileIndex(SAPLING.x, SAPLING.y);
-    if (plots[center] || den?.tile === center || parties.some(party => party.tile === center)) {
+    if (plots[center] || den?.tile === center || !g.sapling && parties.some(party => party.tile === center)) {
       const candidates = Array.from({ length: MAP_TILES }, (_, i) => i).filter(i =>
         openLand(g as GameState, i) && !plots[i] && den?.tile !== i && !parties.some(party => party.tile === i));
       const distance = (i: number) => Math.abs(tileAt(i).x - SAPLING.x) + Math.abs(tileAt(i).y - SAPLING.y);
@@ -505,10 +540,12 @@ export function migrate(parsed: unknown): GameState | null {
         parties = moveParty(parties, center, destination);
       }
     }
-    return { ...g, version: 2, devKinRoster: true, village: { ...g.village, plots },
+    return { ...g, version: 2, worldSeed: g.worldSeed ?? g.seed, devKinRoster: true, village: { ...g.village, plots },
       parties: g.devKinRoster ? parties : parties.flatMap(({ tile, members }) => members.includes('hero') ? [{ tile, members: ['hero'] }] : []),
       aspen, stamina: { ...freshStamina(), ...g.stamina }, aspenCards: g.aspenCards ?? [],
       active: migrateRun(g.active), lastRun: migrateRun(g.lastRun), den, denRest: g.denRest ?? {},
+      sapling: g.sapling ? { ...g.sapling,
+        collected: g.sapling.collected ?? (g.sapling.inspiration === 0 && g.view !== 'sapling') } : null,
       view: g.view === 'quarry' || g.view === 'forest' && !aspen ? 'village' : g.view };
   }
   if (g?.version !== 1) return null;

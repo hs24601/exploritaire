@@ -1,0 +1,98 @@
+{
+  "method": "Built-in ImageGen",
+  "packing": "Largest connected alpha silhouette per cell, uniform resampling per sheet. Angled views use bottom-center registration and overhead uses centered registration.",
+  "masters": [
+    {
+      "tier": "low",
+      "file": "low-master.png",
+      "prompt": "Rework image 1 only, an existing low game sprite sheet. Replace its character design with the EXACT Hero anatomy of approved image 2, fully animal-forward anthro, while keeping every pose and camera heading in its existing cell. Image 2 strictly controls head/body ratio, longer canine muzzle, large cream projecting ruff visible over neckline, softly hanging natural shoulder line, canine bent hocks, natural paw hands and feet, ears and fur contours, with that same natural tail silhouette. Preserve the slight bottom-heavy doglike upright weight, NEVER the rounded large head, mitten arms or human preschool proportions of image 1. Hero wears identical plain olive shirt, khaki shorts and coral ear bows in every view, bare paws. Image 3 is the actual Hero berry painting, controlling matte soft merged watercolor washes, broad pigment masses and lost edges with opaque cream fur, not anatomy. Volumes and physical size consistent. Orthographic view 15 degrees above horizontal. 5 columns × 6 rows exactly, fixed heading columns front/right front quarter/right profile/right rear quarter/rear. Rows standing, walk contact A, walk passing B, walk contact C, walk passing D, and compact all-fours ready. Keep all 30 well separated and each row aligned. The walk phases alternate which leg leads and which arm swings. True transparent RGBA with generously spaced clean silhouettes, no paper, shadows, matte, labels or scenery.",
+      "sha256": "c4bd5d057275db353ab99f772d80da1b65b447c667d113fc5548d13b2a6e3bd9",
+      "references": [
+        {
+          "file": "low.png",
+          "sha256": "25696362f911a64418237ab21e95569904682d9ba77308d0f3afe54d3a27003c",
+          "role": "Pose and camera layout"
+        },
+        {
+          "file": "standing-master.png",
+          "sha256": "244bda704a8e67a5bb91a51bd4656ec1358567363bb0e2b825a5011092c8532d",
+          "role": "Approved design and wardrobe"
+        },
+        {
+          "file": "hero-snuffling-berries-blue-paint-v3.png",
+          "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+          "role": "Controlling watercolor style"
+        }
+      ]
+    },
+    {
+      "tier": "iso",
+      "file": "iso-master.png",
+      "prompt": "Rework image 1 only, an existing iso game sprite sheet. Replace its character design with the EXACT Hero anatomy of approved image 2, fully animal-forward anthro, while keeping every pose and camera heading in its existing cell. Image 2 strictly controls head/body ratio, longer canine muzzle, large cream projecting ruff visible over neckline, softly hanging natural shoulder line, canine bent hocks, natural paw hands and feet, ears and fur contours, with that same natural tail silhouette. Preserve the slight bottom-heavy doglike upright weight, NEVER the rounded large head, mitten arms or human preschool proportions of image 1. Hero wears identical plain olive shirt, khaki shorts and coral ear bows in every view, bare paws. Image 3 is the actual Hero berry painting, controlling matte soft merged watercolor washes, broad pigment masses and lost edges with opaque cream fur, not anatomy. Volumes and physical size consistent. Orthographic view 35.264 degrees above horizontal. 5 columns × 6 rows exactly, fixed heading columns front/right front quarter/right profile/right rear quarter/rear. Rows standing, walk contact A, walk passing B, walk contact C, walk passing D, and compact all-fours ready. Keep all 30 well separated and each row aligned. The walk phases alternate which leg leads and which arm swings. True transparent RGBA with generously spaced clean silhouettes, no paper, shadows, matte, labels or scenery.",
+      "sha256": "164253f168deff4da25c90e46753bf7eb0104bf35781efd5e0bd965b8d93880f",
+      "references": [
+        {
+          "file": "iso.png",
+          "sha256": "3a7133edd9d82f62aa677342068cdcac06bf1ce578d3e4f9de8b0e00542359b2",
+          "role": "Pose and camera layout"
+        },
+        {
+          "file": "standing-master.png",
+          "sha256": "244bda704a8e67a5bb91a51bd4656ec1358567363bb0e2b825a5011092c8532d",
+          "role": "Approved design and wardrobe"
+        },
+        {
+          "file": "hero-snuffling-berries-blue-paint-v3.png",
+          "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+          "role": "Controlling watercolor style"
+        }
+      ]
+    },
+    {
+      "tier": "high",
+      "file": "high-master.png",
+      "prompt": "Rework image 1 only, an existing high game sprite sheet. Replace its character design with the EXACT Hero anatomy of approved image 2, fully animal-forward anthro, while keeping every pose and camera heading in its existing cell. Image 2 strictly controls head/body ratio, longer canine muzzle, large cream projecting ruff visible over neckline, softly hanging natural shoulder line, canine bent hocks, natural paw hands and feet, ears and fur contours, with that same natural tail silhouette. Preserve the slight bottom-heavy doglike upright weight, NEVER the rounded large head, mitten arms or human preschool proportions of image 1. Hero wears identical plain olive shirt, khaki shorts and coral ear bows in every view, bare paws. Image 3 is the actual Hero berry painting, controlling matte soft merged watercolor washes, broad pigment masses and lost edges with opaque cream fur, not anatomy. Volumes and physical size consistent. Orthographic view 55 degrees above horizontal. 5 columns × 6 rows exactly, fixed heading columns front/right front quarter/right profile/right rear quarter/rear. Rows standing, walk contact A, walk passing B, walk contact C, walk passing D, and compact all-fours ready. Keep all 30 well separated and each row aligned. The walk phases alternate which leg leads and which arm swings. True transparent RGBA with generously spaced clean silhouettes, no paper, shadows, matte, labels or scenery. Projection correction: visibly pitch the camera DOWN at 55 degrees so the crown, shoulder tops and tops of paws are clearly visible. The nose of a front view is lower in the projected head silhouette. Rear views show the top surface of the shoulders too. Strong vertical foreshortening. Keep fixed grid.",
+      "sha256": "6b243746cc143afe6feb4efc86edc5585a2a40b759f1d718849cb7badbfe789b",
+      "references": [
+        {
+          "file": "exec-854776cf-1d4c-4929-9e6c-493d8a6a92fc.png",
+          "sha256": "03eebfa29dfa9550b55aff82f40fb707d1de94100f39296d722897267843661a",
+          "role": "Pose and camera layout"
+        },
+        {
+          "file": "standing-master.png",
+          "sha256": "244bda704a8e67a5bb91a51bd4656ec1358567363bb0e2b825a5011092c8532d",
+          "role": "Approved design and wardrobe"
+        },
+        {
+          "file": "hero-snuffling-berries-blue-paint-v3.png",
+          "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+          "role": "Controlling watercolor style"
+        }
+      ]
+    },
+    {
+      "tier": "overhead",
+      "file": "overhead-master.png",
+      "prompt": "Rework image 1 only, an existing overhead game sprite sheet. Replace its character design with the EXACT Hero anatomy of approved image 2, fully animal-forward anthro, while keeping every pose and camera heading in its existing cell. Image 2 strictly controls head/body ratio, longer canine muzzle, large cream projecting ruff visible over neckline, softly hanging natural shoulder line, canine bent hocks, natural paw hands and feet, ears and fur contours, with that same natural tail silhouette. Preserve the slight bottom-heavy doglike upright weight, NEVER the rounded large head, mitten arms or human preschool proportions of image 1. Hero wears identical plain olive shirt, khaki shorts and coral ear bows in every view, bare paws. Image 3 is the actual Hero berry painting, controlling matte soft merged watercolor washes, broad pigment masses and lost edges with opaque cream fur, not anatomy. Volumes and physical size consistent. Orthographic view 90 degrees above horizontal. 3 columns × 2 rows, exact existing order idle, walk 0, walk 1, walk 2, walk 3, ready, head forward to top, true directly overhead, crown occludes upper body. True transparent RGBA with generously spaced clean silhouettes, no paper, shadows, matte, labels or scenery. Projection correction: true 90-degree overhead. Standing and walking must compress to a crown-dominant near-circular map token, with most of the torso and legs hidden directly UNDER the head. No visible eyes, shortened muzzle tip toward top. Read as directly above, not looking toward the back from an elevated angle.",
+      "sha256": "cee4508c50fc3d25aeae32a86d051e2fe5b27f169a99c6e542c67310732ccf3f",
+      "references": [
+        {
+          "file": "exec-1bfeefc4-eb69-4f94-a97b-c0685b6d460e.png",
+          "sha256": "f2abc47e6c1bc4ca6b7ad085271a1301b09040288d40afd860f702c0c415b756",
+          "role": "Pose and camera layout"
+        },
+        {
+          "file": "standing-master.png",
+          "sha256": "244bda704a8e67a5bb91a51bd4656ec1358567363bb0e2b825a5011092c8532d",
+          "role": "Approved design and wardrobe"
+        },
+        {
+          "file": "hero-snuffling-berries-blue-paint-v3.png",
+          "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+          "role": "Controlling watercolor style"
+        }
+      ]
+    }
+  ]
+}

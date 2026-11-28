@@ -1,0 +1,31 @@
+{
+  "method": "Built-in ImageGen",
+  "references": {
+    "identity": "Supplied watercolor scout screenshot, proportions and personlike anatomy",
+    "style": "public/assets/runtime/ui/quests/hero-snuffling-berries-blue-paint-v3.png",
+    "gear": "hero-scout-v3 atlas, gear design"
+  },
+  "masters": [
+    {
+      "file": "idle-master.png",
+      "prompt": "Game atlas, exactly eight full-body upright Heroes, 4 columns 2 rows, RGBA transparent cutouts. Ref 1 is the controlling character design and body proportion reference: this is an anthropomorphic animated animal citizen who can wear human cut scout clothing, fully personlike body language, NOT a real corgi rearing up. Reconstruct the exact scout silhouette as a natural fur-covered character base with all accessories removed. Head is big and expressive and muzzle compact. Below the canine head show a short clear neck, squared humanlike shoulder belt, arms hanging from shoulders with recognizable upper arm, elbow, forearm and soft thumbed paws, compact humanlike ribcage narrowing to waist, pelvis, straight weight-bearing separated humanlike legs with knees, ankles, flat paw feet. Keep each proportion exactly as the scout outfit implies. Cream blaze and tricolor coat in LARGE quiet contiguous soft paint masses, natural fur-covered animal anatomy. A small natural bobtail hugs the rump. Relaxed weight-bearing symmetrical upright pose, friendly subtle confidence, no hunch, no forward-canted dog torso, no thick furry chest bib concealing the torso. Ref 2 Hero berry painting is exclusively the paint-style reference from art.md: hand-painted storybook watercolor, light translucent soft merging washes, subtle irregular blooms and lost edges, broad pigment masses with sparse matte gouache. No sharp glossy CGI. Same fixed orthographic visibly elevated 35-degree downward game camera and scale on all frames. Row1 front, front-right 45 degrees, right profile, rear-right 45. Row2 back, rear-left 45, left profile, front-left 45. No text, no clothing, no ground, no fog or backdrop. Genuine fully transparent spaces and opaque fur. Generous equal gutters.",
+      "sha256": "3f17e9f0b4ca54b9852772b0f7d5fae954fbe33a3c93b445ecad370e47b63719"
+    },
+    {
+      "file": "motion-draft.png",
+      "prompt": "Exactly five isolated full-length UNGEARED furry anthropomorphic Hero game sprites. Ref 1 is the actual body to animate, use its second figure's proportions, recognizable character and short bobtail. Ref 2 controls the soft wet-on-wet watercolor washes, broad pooled pigment shapes and gouache highlights. Absolutely zero clothes, shoes, collars, bows, flag or accessories. Only natural opaque tricolor animal fur and bare paw hands/feet. Fixed elevated 35-degree three-quarter facing screen lower-right camera in every frame. 3 x 2 grid strict: top row left foot forward, right leg passing under hips, right foot forward. Bottom row left leg passing under hips, low all-fours alert ready stance, empty. Personlike swinging arms and articulated knees in first four cells. Complete silhouettes ample padding, true transparent backdrop, no paper or ground shadows.",
+      "sha256": "cbf78e65c4655abba6b3529afb5a2d11fade65d497b7131418b7fb97bea4a8ba"
+    },
+    {
+      "file": "motion-master.png",
+      "prompt": "Remove the white grid and paper surrounding the five painted subjects in ref 1. Return true transparent PNG isolated cutouts with absolutely clear empty space between limbs and tiles, no fake transparency or any white background. Preserve the five exact painted subjects, body poses, colors and 3-column by 2-row layout. Ref 2 is the actual Hero artwork, paint finish only. Foreground is exclusively the fur-covered anthropomorphic tricolor dog. No outfit or other elements. Opaque paint inside figures. Wide margins.",
+      "sha256": "e0f46971e5a0b94e9dc139b9880a098872f7cc854a4b4400d319debc01b0a9f2"
+    },
+    {
+      "file": "gear-master.png",
+      "prompt": "A transparent production game inventory atlas of scout gear pieces ONLY, three isolated items spaced horizontally with independent padding. Each is painted using actual Hero berry painting ref 1 as controlling soft watercolor style, matte broad wet-on-wet pigment groups, gentle pooled edges. Ref 2 specifies scout outfit design. Ref 3 specifies body scale and camera; match its front-right second sprite angle, 35 degree elevated camera. From left to right: coral pink wrapped triangular neckerchief with small brass slide, projected to look fitted around a short dog neck with empty collar opening; compact olive canvas backpack with tan straps and its orange pennant bearing a yellow sun disk with dark green palm on the left, see from elevated front-right side angle; ONE compact brown leather hiking boot with muted pink laces and pink ankle sock, toe pointing lower right, see top and side. No character, no mannequin, no fur, no hands or legs, no shadows, text or ground. True RGBA transparent and generous separation.",
+      "sha256": "ed975e9606a7ebc50b05a6e33886093feaf57e24078a8c1d581c6ebfea29e329"
+    }
+  ],
+  "packing": "Keep the largest connected region at alpha 16 or above within each source cell and resample to 256-pixel cells. Center by silhouette bounds and place crop bottom at y=239. Gear fits are hand placed and only cover the supported views and slots in frames.json."
+}

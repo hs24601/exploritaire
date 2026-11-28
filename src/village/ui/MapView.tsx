@@ -18,6 +18,7 @@ import { useKinJumbo } from './useKinJumbo';
 import { useSceneCamera } from './useSceneCamera';
 import { WorldLayers, exposureFor, useVillageLight } from './WorldLayers';
 import { BOOK_MODE, BookSpread, RegionLabels, SiteDetail, zoomTier } from './MapExtras';
+import type { TravelFrame } from './VillageTravel';
 
 const KIN_HOLD_MS = 550;
 
@@ -25,6 +26,7 @@ export interface Aim { building: BuildingId; tile: number; preview: PlacementPre
 
 interface Props {
   game: GameState;
+  travel: TravelFrame;
   layout: StageLayout;
   mini: boolean;
   denPlacement: boolean;
@@ -95,7 +97,7 @@ function kinPosition(i: number, count: number): CSSProperties {
 }
 
 export function MapView({ game, layout, mini, denPlacement, placing, aim, selected, onTile, onHover, onFeature, onWanderer, onMini,
-  partyTile, selectedKin, onParty, onKin, onPartyDrop, onGroup }: Props) {
+  partyTile, selectedKin, onParty, onKin, onPartyDrop, onGroup, travel }: Props) {
   const inspectKin = useKinJumbo();
   const viewport = useRef<HTMLDivElement>(null);
   const camera = useSceneCamera(viewport, 'village-map', true, !mini);
@@ -108,6 +110,7 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
   const { tile, transposed } = layout;
   const v = game.village;
   const pos = (i: number): CSSProperties => { const t = tileAt(i); const p = toView(t.x, t.y, transposed); return { left: p.x * tile, top: p.y * tile, width: tile, height: tile }; };
+  const traveler = travel && toView(travel.x, travel.y, transposed);
   const scale = layout.miniTile / tile;
   const zoom = Math.max(camera.manual?.zoom ?? 1, layout.w / ((layout.cols + 2 * OUTER_PAD) * tile),
     layout.h / ((layout.rows + 2 * OUTER_PAD) * tile));
@@ -209,12 +212,13 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
       <WorldLayers game={game} tile={tile} transposed={transposed} mini={mini} lights={lights} ambient={ambient} known={known} />
       {BOOK_MODE && <BookSpread tile={tile} transposed={transposed} />}
       {!mini && hoverReference && <output className="vg-grid-reference" aria-live="off">{hoverReference}</output>}
-      <div className="vg-sapling" style={pos(tileIndex(SAPLING.x, SAPLING.y))}
-        role="img" aria-label={saplingTitle} title={saplingTitle} data-grid-ref={saplingRef}>
+      <button type="button" className="vg-sapling" style={pos(tileIndex(SAPLING.x, SAPLING.y))}
+        disabled={mini} aria-label={saplingTitle} title={saplingTitle} data-grid-ref={saplingRef}
+        data-drop={mini ? undefined : 'sapling'} onClick={event => onTile(tileIndex(SAPLING.x, SAPLING.y), event)}>
         <img src="/assets/runtime/village/ground/curious-sapling-overhead-seedling-v2.png" alt="" draggable={false} />
         {!mini && <span className="vg-sapling-motes" aria-hidden="true"><i /><i /><i /><i /></span>}
         {!mini && <span className="vg-chip-label vg-sapling-label">Curious Sapling</span>}
-      </div>
+      </button>
 
       {SURFACE_ORDER.map((id, i) => {
         const f = FEATURES[id];
@@ -242,7 +246,18 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
         );
       })}
 
-      {!mini && game.parties.map(({ tile: index, members }) => {
+      {!mini && travel && traveler && <>
+        {travel.route.slice(travel.segment + 1).map(index =>
+          <span key={index} className="vg-travel-waypoint" style={pos(index)} aria-hidden="true" />)}
+        <div className="vg-party-cell vg-travel-party" style={{ left: traveler.x * tile, top: traveler.y * tile, width: tile, height: tile }} aria-hidden="true">
+          <div className="vg-party" style={{ transform: `translateY(${-Math.abs(Math.sin(travel.elapsed / 53)) * 4}px)` }}>
+            <KinStack members={travel.members} />
+          </div>
+        </div>
+      </>}
+      {!mini && game.parties.map(({ tile: index, members: occupants }) => {
+        const members = occupants.filter(kin => !travel?.members.includes(kin));
+        if (!members.length) return null;
         const t = tileAt(index);
         const biome = featureAt(t.x, t.y);
         const label = members.map(kin => KIN_TOKENS[kin].name).join(', ');
@@ -257,17 +272,16 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
                 (_, hit) => onPartyDrop(index, hit.drop, hit.index), () => onParty(index))}>{members.length}</button>}
             {members.map((kin, i) => {
               const selected = partyTile === index && selectedKin === kin;
-              const choose = (anchor: HTMLButtonElement) => {
+              const choose = () => {
                 if (members.length === 1) onParty(index); else onKin(index, kin);
-                inspectKin(kin, anchor);
               };
               const held = holdingKin?.kin === kin;
               return <button type="button" key={kin} className={`vg-kin-token is-${kin}${selected ? ' is-selected' : ''}${held && holdingKin.ready ? ' is-held' : ''}`}
                 style={kinPosition(i, members.length)} aria-label={KIN_TOKENS[kin].name} data-kin-token={kin}
                 data-touch-hold
-                title={`${KIN_TOKENS[kin].name} · Open holocard · ${selected ? 'Drag to split from the party' : members.length > 1 ? 'Hold to split' : 'Hold to pick up or drag to move'}`}
-                aria-pressed={members.length === 1 ? partyTile === index : selected} aria-haspopup="dialog"
-                onClick={e => { if (e.detail === 0) choose(e.currentTarget); }}
+                title={`${KIN_TOKENS[kin].name} · Select · ${selected ? 'Drag to split from the party' : members.length > 1 ? 'Hold to split' : 'Hold to pick up or drag to move'}`}
+                aria-pressed={members.length === 1 ? partyTile === index : selected}
+                onClick={e => { if (e.detail === 0) choose(); }}
                 onPointerDown={e => {
                   const anchor = e.currentTarget;
                   let split = selected;
@@ -286,7 +300,7 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
                       return payload(split);
                     },
                   };
-                  begin(e, payload(split), (_, hit) => onPartyDrop(index, hit.drop, hit.index, split ? kin : undefined), () => choose(anchor), hold);
+                  begin(e, payload(split), (_, hit) => onPartyDrop(index, hit.drop, hit.index, split ? kin : undefined), choose, hold);
                 }}>
                 <KinPortrait kin={kin} />
                 {held && <svg className="vg-kin-hold-ring" viewBox="0 0 40 40" aria-hidden="true"
@@ -310,7 +324,7 @@ export function MapView({ game, layout, mini, denPlacement, placing, aim, select
         const hidden = fogged(x, y, game.rankReached);
         if (hidden && !b) return <span key={i} className="vg-unrevealed-tile" style={pos(i)} data-grid-ref={ref} title={`${ref} · Under fog until Village rank`} />;
         const aimed = aim?.tile === i;
-        const denDragging = dragging?.kind === 'den-idea';
+        const denDragging = dragging?.kind === 'inspiration-card';
         const denEligible = denPlacement && !denPlacementBlocker(game, i, !!game.den);
         const denTarget = denDragging && over?.drop === 'tile' && over.index === i;
         const devTarget = dragging?.kind === 'dev-kin' && over?.drop === 'tile' && over.index === i;

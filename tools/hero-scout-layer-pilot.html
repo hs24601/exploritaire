@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hero scout layer pilot</title>
+<style>
+  body { color: #f5ead8; background: #233c3b; font: 1rem system-ui; margin: 2rem auto; max-width: 36rem; padding: 0 1rem; }
+  canvas { display: block; width: min(100%, 384px); height: auto; background: #355350; margin-block: 1rem; }
+  label { display: inline-block; margin: .25rem .75rem .25rem 0; }
+  select { font: inherit; }
+</style>
+<h1>Hero scout layer pilot</h1>
+<label>Pose <select id="pose"></select></label>
+<canvas id="sprite" width="256" height="256" aria-label="Hero's selected sprite"></canvas>
+<fieldset id="gear" disabled>
+  <legend>Equipment</legend>
+  <label><input type="checkbox" value="neckerchief"> Neckerchief</label>
+  <label><input type="checkbox" value="backpack"> Backpack and pennant</label>
+  <label><input type="checkbox" value="boots"> Boots</label>
+</fieldset>
+<p id="status" role="status">Loading sprite atlases…</p>
+<script type="module">
+  const root = '/assets/runtime/kin/hero/sprites/world/scout-layer-pilot-v1/';
+  const pose = document.querySelector('#pose');
+  const gear = document.querySelector('#gear');
+  const status = document.querySelector('#status');
+  const context = document.querySelector('#sprite').getContext('2d');
+
+  try {
+    const response = await fetch(root + 'frames.json');
+    if (!response.ok) throw new Error('The frame manifest could not be loaded.');
+    const { atlases, cellSize, fits } = await response.json();
+    const images = {};
+    await Promise.all(Object.entries(atlases).map(async ([key, atlas]) => {
+      const image = new Image();
+      image.src = root + atlas.file;
+      await image.decode();
+      images[key] = image;
+    }));
+
+    for (const key of ['idle', 'motion']) {
+      atlases[key].frames.forEach((name, index) => {
+        pose.add(new Option(key === 'idle' ? `Idle · ${name}` : name, `${key}:${index}`));
+      });
+    }
+    pose.add(new Option('Walk loop', 'loop'));
+    pose.value = 'idle:1';
+
+    function render(key) {
+      const fit = fits[key];
+      gear.disabled = !fit;
+      status.textContent = fit ? 'Gear is fitted to this pose.' : 'This pose shows the base sprite.';
+      const available = new Set((fit ?? []).map(layer => layer.slot));
+      const selected = new Set();
+      for (const input of gear.querySelectorAll('input')) {
+        input.disabled = !available.has(input.value);
+        if (!input.disabled && input.checked) selected.add(input.value);
+      }
+      const layers = (fit ?? []).filter(layer => selected.has(layer.slot));
+      const [atlasKey, indexText] = key.split(':');
+      const index = Number(indexText);
+      const { columns } = atlases[atlasKey];
+      const sourceX = index % columns * cellSize;
+      const sourceY = Math.floor(index / columns) * cellSize;
+      const drawLayer = ({ item, rect }) => {
+        context.drawImage(images.gear, ...atlases.gear.rects[item], ...rect);
+      };
+
+      context.clearRect(0, 0, cellSize, cellSize);
+      layers.filter(layer => layer.pass === 'behind').forEach(drawLayer);
+      context.drawImage(images[atlasKey], sourceX, sourceY, cellSize, cellSize, 0, 0, cellSize, cellSize);
+      layers.filter(layer => layer.pass === 'front').forEach(drawLayer);
+    }
+
+    let timer;
+    function update() {
+      clearInterval(timer);
+      if (pose.value !== 'loop') {
+        render(pose.value);
+        return;
+      }
+      let index = 0;
+      render('motion:0');
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        timer = setInterval(() => {
+          index = (index + 1) % 4;
+          render(`motion:${index}`);
+        }, 140);
+      }
+    }
+
+    pose.addEventListener('change', update);
+    gear.addEventListener('change', update);
+    update();
+  } catch (error) {
+    status.textContent = error.message;
+  }
+</script>

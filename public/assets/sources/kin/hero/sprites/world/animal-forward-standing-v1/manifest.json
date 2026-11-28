@@ -1,0 +1,35 @@
+{
+  "method": "Built-in ImageGen",
+  "prompt": "Clothing-only edit of image 1. Produce exactly its THREE Hero sprites left to right front, right three-quarter, right profile, one horizontal evenly spaced row. Reproduce those exact relaxed bipedal standing poses and proportions, expressive amber eyes, narrow canine muzzle in profile, upright ears, full cream canine ruff, natural animal shoulder line, paw hands, hocks, bare hind paws, and tail silhouette. Preserve the animal-forward anatomical balance and same fur markings. No humanoid toddler proportions, no enlarged head, no body redesign. Dress that SAME figure in a simple muted olive-green short-sleeve shirt with an open roomy neckline that keeps her cream ruff visible over it, simple tan khaki shorts fitted around the natural hips and tail, small coral pink bows at each ear base. No other accessories, no socks or boots. Image 2 actual Hero berry painting is the direct art.md paint reference: loosely merging soft wet watercolor washes and matte gouache accents, softly grouped colors, irregular broken brush edges, opaque cream fur, avoid heavy outlines and shiny rendering. Image 3 is costume colors and garment cut ONLY. Do not use its anatomy, poses or footwear. If needed complete the cropped paw tips naturally. Isolate all three complete silhouettes on true transparent RGBA, generous gutters and outer padding, no shadow, no paper backing, no backdrop, no text.",
+  "master": "standing-master.png",
+  "cellSize": 256,
+  "columns": 3,
+  "rows": 1,
+  "ground": [
+    128,
+    239
+  ],
+  "frames": [
+    "front",
+    "right-three-quarter",
+    "right-profile"
+  ],
+  "references": [
+    {
+      "role": "Exact pose and canine anatomy",
+      "sha256": "0aa494287e6a4993507437fc258ce82b2b262a05f9c89f845121208a0d3c60bf",
+      "file": "codex-clipboard-4042700a-86b0-4c17-82d6-0d65657f16a3.png"
+    },
+    {
+      "role": "Watercolor style",
+      "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+      "file": "hero-snuffling-berries-blue-paint-v3.png"
+    },
+    {
+      "role": "Outfit color and cut",
+      "sha256": "6d5d762744e8365023a96ec1c70e0b3db74c9cbc0fd9d7f83f515704f8f61efa",
+      "file": "motion.png"
+    }
+  ],
+  "masterSha256": "244bda704a8e67a5bb91a51bd4656ec1358567363bb0e2b825a5011092c8532d"
+}

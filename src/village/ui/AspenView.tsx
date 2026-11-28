@@ -190,7 +190,7 @@ export function AspenView({ clock, grove, stamina, staminaCaps, cards, dispatch 
   return <section className={`vg-aspen${run ? ' is-focused' : ''}${manual ? ' is-manual' : ''}`} aria-label="Aspen Grove"
     onKeyDown={event => { if (event.key === 'Escape') { camera.reset(); overview(); } }}>
     <PuzzleAtmosphere clock={clock} aspen terrainStyle={groundStyle} shiftX={manual?.x} shiftY={manual?.y} />
-    <header className="vg-aspen-head">
+    <header className="vg-scene-title">
       <h1>Aspen <em>Grove</em></h1>
       {!run && <span>{grove.members.length ? 'Choose an aspen' : 'Bring kin to work here'}</span>}
     </header>
@@ -232,18 +232,18 @@ function AspenTableau({ run, stamina, staminaCaps, cards, dispatch }: { run: Asp
   const inspectKin = useKinJumbo();
   const [selected, setSelected] = useState(0);
   const standing = run.phase === 'standing';
-  const ready = run.foundations.findIndex(({ kin }) => stamina[kin] > 0);
-  const chosen = stamina[run.foundations[selected]?.kin] > 0 || ready < 0 ? selected : ready;
+  const chosen = run.foundations[selected] ? selected : 0;
+  const drawKin = run.foundations[chosen]?.kin;
   const playFound = (card: number, foundation?: number) => {
     const rank = cards[card];
-    const accepts = (index: number) => aspenAcceptsRank(run, rank, index, stamina);
+    const accepts = (index: number) => aspenAcceptsRank(run, rank, index);
     const target = foundation ?? (accepts(chosen) ? chosen : run.foundations.findIndex((_, i) => accepts(i)));
     if (!accepts(target)) return;
     setSelected(target);
     dispatch({ type: 'aspen-play-card', card, foundation: target });
   };
   const tap = (pile: number) => {
-    const target = aspenAccepts(run, pile, chosen, stamina) ? chosen : run.foundations.findIndex((_, i) => aspenAccepts(run, pile, i, stamina));
+    const target = aspenAccepts(run, pile, chosen) ? chosen : run.foundations.findIndex((_, i) => aspenAccepts(run, pile, i));
     if (target < 0) return;
     setSelected(target);
     dispatch({ type: 'aspen-play', pile, foundation: target });
@@ -253,7 +253,7 @@ function AspenTableau({ run, stamina, staminaCaps, cards, dispatch }: { run: Asp
         {run.piles.map((cards, pile) => <div className="vg-aspen-column" key={pile}>
           {cards.map((rank, i) => {
             const exposed = i === cards.length - 1;
-            const playable = exposed && run.foundations.some((_, n) => aspenAccepts(run, pile, n, stamina));
+            const playable = exposed && run.foundations.some((_, n) => aspenAccepts(run, pile, n));
             const className = `vg-aspen-card${exposed ? '' : ' is-covered'}${playable ? ' vg-aspen-playable' : ''}`;
             return <button type="button" key={i} className={className} style={{ '--row': i } as CSSProperties}
               data-receipt-source={exposed ? `aspen-${pile}` : undefined}
@@ -268,7 +268,7 @@ function AspenTableau({ run, stamina, staminaCaps, cards, dispatch }: { run: Asp
                 anchor: 'top-left', ghost: <span className="vg-aspen-card vg-aspen-ghost"><span className="vg-aspen-rank">{rankLabel(rank)}</span></span>,
                 width: e.currentTarget.offsetWidth, height: e.currentTarget.offsetHeight },
               (_, target) => {
-                if (target.drop !== 'aspen-foundation' || !aspenAccepts(run, pile, target.index, stamina)) return;
+                if (target.drop !== 'aspen-foundation' || !aspenAccepts(run, pile, target.index)) return;
                 setSelected(target.index);
                 dispatch({ type: 'aspen-play', pile, foundation: target.index });
               }, () => tap(pile))}><span className="vg-aspen-rank">{rankLabel(rank)}</span></button>;
@@ -279,13 +279,12 @@ function AspenTableau({ run, stamina, staminaCaps, cards, dispatch }: { run: Asp
         {run.foundations.map(({ kin, rank }, i) => {
           const dragRank = dragging?.kind === 'aspen-found-card' ? cards[Number(dragging.id)]
             : dragging?.kind === 'aspen-card' ? aspenTop(run, Number(dragging.id)) : undefined;
-          const isOver = over?.drop === 'aspen-foundation' && over.index === i && aspenAcceptsRank(run, dragRank, i, stamina);
-          const exhausted = stamina[kin] === 0;
-          return <button type="button" key={kin} className={`vg-aspen-foundation${chosen === i && !exhausted ? ' is-selected' : ''}${exhausted ? ' is-exhausted' : ''}`}
-            data-drop="aspen-foundation" data-index={i} aria-pressed={chosen === i && !exhausted} aria-haspopup="dialog"
-            title={exhausted ? `${KIN_TOKENS[kin].name} is exhausted until dawn` : `${stamina[kin]}/${staminaCaps[kin]} stamina · Accepts ranks one above or below ${rankLabel(rank)}`}
+          const isOver = over?.drop === 'aspen-foundation' && over.index === i && aspenAcceptsRank(run, dragRank, i);
+          return <button type="button" key={kin} className={`vg-aspen-foundation${chosen === i ? ' is-selected' : ''}`}
+            data-drop="aspen-foundation" data-index={i} aria-pressed={chosen === i} aria-haspopup="dialog"
+            title={`${stamina[kin]}/${staminaCaps[kin]} AP · Accepts ranks one above or below ${rankLabel(rank)}`}
             aria-label={`${KIN_TOKENS[kin].name} foundation, ${rankLabel(rank)}, ${stamina[kin]} of ${staminaCaps[kin]} stamina`}
-            onClick={event => { if (!exhausted) setSelected(i); inspectKin(kin, event.currentTarget, rankLabel(rank)); }}>
+            onClick={event => { setSelected(i); inspectKin(kin, event.currentTarget, rankLabel(rank)); }}>
             <span className={`vg-aspen-card${isOver ? ' is-over' : ''}`}>
               <KinPortrait kin={kin} />
               <strong className="vg-aspen-rank">{rankLabel(rank)}</strong>
@@ -294,12 +293,13 @@ function AspenTableau({ run, stamina, staminaCaps, cards, dispatch }: { run: Asp
             <span>{KIN_TOKENS[kin].name}</span>
           </button>;
         })}
-        <button type="button" className="vg-btn vg-aspen-draw" title="Draw a new rank for the selected foundation without spending stamina" disabled={!standing} onClick={() => dispatch({ type: 'aspen-draw', foundation: chosen })}>Draw</button>
+        <button type="button" className="vg-btn vg-aspen-draw" title="Spend 1 AP to draw a new rank for the selected foundation"
+          disabled={!standing || !drawKin || stamina[drawKin] <= 0} onClick={() => dispatch({ type: 'aspen-draw', foundation: chosen })}>Draw · 1 AP</button>
       </div>
       {cards.length > 0 && <div className="vg-aspen-found" aria-label="Found cards">
         <span>Found cards</span>
         <div className="vg-aspen-found-list">{cards.map((rank, card) => {
-          const playable = run.foundations.some((_, i) => aspenAcceptsRank(run, rank, i, stamina));
+          const playable = run.foundations.some((_, i) => aspenAcceptsRank(run, rank, i));
           return <button type="button" key={card} className="vg-aspen-found-card" disabled={!playable}
             data-receipt-source={`found-${card}`}
             aria-label={`Play found ${rankLabel(rank)}`} title={playable ? 'Play this found card onto a matching foundation' : 'Keep this card until a foundation matches'}

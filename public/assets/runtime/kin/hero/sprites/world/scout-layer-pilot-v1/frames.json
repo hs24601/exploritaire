@@ -1,0 +1,241 @@
+{
+  "cellSize": 256,
+  "ground": [
+    128,
+    239
+  ],
+  "camera": {
+    "projection": "orthographic",
+    "targetPitchDegrees": 35,
+    "calibrated": false
+  },
+  "atlases": {
+    "idle": {
+      "file": "idle.png",
+      "columns": 4,
+      "frames": [
+        "front",
+        "front-right",
+        "right",
+        "back-right",
+        "back",
+        "back-left",
+        "left",
+        "front-left"
+      ]
+    },
+    "motion": {
+      "file": "motion.png",
+      "columns": 3,
+      "frames": [
+        "walk-a",
+        "walk-b",
+        "walk-c",
+        "walk-d",
+        "ready"
+      ]
+    },
+    "gear": {
+      "file": "gear.png",
+      "rects": {
+        "neckerchief": [
+          58,
+          91,
+          140,
+          149
+        ],
+        "backpack": [
+          279,
+          46,
+          209,
+          194
+        ],
+        "boot": [
+          565,
+          71,
+          149,
+          169
+        ]
+      }
+    }
+  },
+  "fits": {
+    "idle:1": [
+      {
+        "item": "backpack",
+        "slot": "backpack",
+        "pass": "behind",
+        "rect": [
+          65,
+          84,
+          69,
+          64
+        ]
+      },
+      {
+        "item": "boot",
+        "slot": "boots",
+        "pass": "front",
+        "rect": [
+          123,
+          190,
+          39,
+          44
+        ]
+      },
+      {
+        "item": "boot",
+        "slot": "boots",
+        "pass": "front",
+        "rect": [
+          90,
+          196,
+          39,
+          44
+        ]
+      },
+      {
+        "item": "neckerchief",
+        "slot": "neckerchief",
+        "pass": "front",
+        "rect": [
+          106,
+          88,
+          49,
+          52
+        ]
+      }
+    ],
+    "motion:0": [
+      {
+        "item": "backpack",
+        "slot": "backpack",
+        "pass": "behind",
+        "rect": [
+          58,
+          79,
+          69,
+          64
+        ]
+      },
+      {
+        "item": "neckerchief",
+        "slot": "neckerchief",
+        "pass": "front",
+        "rect": [
+          114,
+          80,
+          49,
+          52
+        ]
+      }
+    ],
+    "motion:1": [
+      {
+        "item": "backpack",
+        "slot": "backpack",
+        "pass": "behind",
+        "rect": [
+          54,
+          80,
+          69,
+          64
+        ]
+      },
+      {
+        "item": "neckerchief",
+        "slot": "neckerchief",
+        "pass": "front",
+        "rect": [
+          111,
+          82,
+          49,
+          52
+        ]
+      }
+    ],
+    "motion:2": [
+      {
+        "item": "backpack",
+        "slot": "backpack",
+        "pass": "behind",
+        "rect": [
+          50,
+          81,
+          69,
+          64
+        ]
+      },
+      {
+        "item": "neckerchief",
+        "slot": "neckerchief",
+        "pass": "front",
+        "rect": [
+          112,
+          82,
+          49,
+          52
+        ]
+      }
+    ],
+    "motion:3": [
+      {
+        "item": "backpack",
+        "slot": "backpack",
+        "pass": "behind",
+        "rect": [
+          56,
+          85,
+          69,
+          64
+        ]
+      },
+      {
+        "item": "neckerchief",
+        "slot": "neckerchief",
+        "pass": "front",
+        "rect": [
+          117,
+          87,
+          49,
+          52
+        ]
+      }
+    ],
+    "motion:4": [
+      {
+        "item": "backpack",
+        "slot": "backpack",
+        "pass": "behind",
+        "rect": [
+          55,
+          79,
+          69,
+          64
+        ]
+      },
+      {
+        "item": "boot",
+        "slot": "boots",
+        "pass": "front",
+        "rect": [
+          17,
+          171,
+          43,
+          41
+        ]
+      },
+      {
+        "item": "neckerchief",
+        "slot": "neckerchief",
+        "pass": "front",
+        "rect": [
+          133,
+          149,
+          49,
+          52
+        ]
+      }
+    ]
+  }
+}

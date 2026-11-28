@@ -16,6 +16,7 @@ export function useVillageAutoSolve(game: GameState, menu: boolean, dispatch: Di
       const { game: current, menu: open } = state.current;
       if (open || current.night || current.view === 'village') return false;
       if (current.view === 'den') return !!current.den?.dig;
+      if (current.view === 'sapling') return !!current.sapling?.inspiration;
       return current.view === 'forest' && current.aspen
         ? activeAspen(current.aspen)?.phase === 'standing' : current.active?.surface === current.view;
     };

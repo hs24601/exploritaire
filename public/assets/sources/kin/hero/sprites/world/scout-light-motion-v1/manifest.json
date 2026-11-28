@@ -1,0 +1,40 @@
+{
+  "method": "Built-in ImageGen",
+  "prompt": "Precisely edit input 1, a five-pose anthropomorphic Hero movement sprite atlas. Preserve the exact distinct four upright walking frames and fifth diagonal all-fours ready pose, camera, anthropomorphic anatomy, expressions and tricolor short bobtail, same 3 columns by 2 rows with empty bottom right. Two edits in every occupied cell. First, reduce both upright ears in proportion to the head to match short compact ears in input 2 (white background), about 20–25% less extension above the skull, slightly less width, with the same little pink bows still attached at the ear bases. Keep the same face and head size. Input 2 is for ear scale only. Second, simplify the scout outfit so the ONLY clothing shown is a plain short-sleeve muted green shirt, khaki shorts, pink socks, brown hiking boots with pink laces, and those two pink ear bows. Completely erase the badge sash, all badges, backpack, shoulder straps, pennant and pole, kerchief and clasp. Repaint those regions into continuous green shirt, natural fur, or clear space as appropriate. No hat or new gear. On all-fours, put boots and socks on the hind feet and leave both front paws entirely bare. Maintain smooth garment underside near the chest and a short compact natural bobtail. Input 3 is the direct controlling art.md painting style reference, use broad gently merging wet watercolor washes, irregular pooled pigment, soft broken marks, and a few matte gouache accents. No harsh outlines, digital shininess or dense fur strands. Fully isolated opaque painted sprites with genuine transparent RGBA negative space throughout, no backdrop, cast shadow, grid lines, paper, text or halo. Plenty of clear padding between cells, no clipped ears, boots or paws.",
+  "master": "motion-master.png",
+  "runtime": "public/assets/runtime/kin/hero/sprites/world/scout-light-motion-v1/motion.png",
+  "cellSize": 256,
+  "columns": 3,
+  "rows": 2,
+  "ground": [
+    128,
+    239
+  ],
+  "frames": [
+    "walk-a",
+    "walk-b",
+    "walk-c",
+    "walk-d",
+    "ready",
+    null
+  ],
+  "packing": "Primary connected alpha region at alpha 16 or above, scaled uniformly to 48%, centered horizontally and registered to the crop bottom at local y=239.",
+  "references": [
+    {
+      "sha256": "89e2f8e09e404e7f625ef9a513941bb30bfe6f8d2407cf1b765cab91cc9410c3",
+      "file": "codex-clipboard-14e2b051-3363-4ca4-b1c2-a4973e430491.png",
+      "role": "Edit target and pose layout"
+    },
+    {
+      "sha256": "e56a5d5368bab55d9a1a0ffdb4e3b1cb3c4923998c2654bd42419ef77d469b28",
+      "file": "codex-clipboard-664cef5b-3bb7-4097-9745-d66033e727ab.png",
+      "role": "Ear scale only"
+    },
+    {
+      "sha256": "ea5d5f567be00a7042a218026ba8ea7de912ce3b3b5dcfe207bce86d02ed12ac",
+      "file": "hero-snuffling-berries-blue-paint-v3.png",
+      "role": "Controlling watercolor style"
+    }
+  ],
+  "masterSha256": "bc447a5d0f78c53cc7816f6af8c0dda3aa4cf9151e7b1f1a353dd1f667f7c685"
+}

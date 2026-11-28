@@ -3,6 +3,7 @@ import type { Action } from '../rules/game';
 
 function endpoints(action: Action): [string, string] | undefined {
   switch (action.type) {
+    case 'sapling-play': return [`sapling-${action.column}`, '[data-drop="sapling-foundation"]'];
     case 'den-play': return [`den-${action.column}`, '[data-drop="dig-foundation"]'];
     case 'aspen-play': return [`aspen-${action.pile}`, `[data-drop="aspen-foundation"][data-index="${action.foundation}"] > .vg-aspen-card`];
     case 'aspen-play-card': return [`found-${action.card}`, `[data-drop="aspen-foundation"][data-index="${action.foundation}"] > .vg-aspen-card`];

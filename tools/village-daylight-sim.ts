@@ -3,7 +3,7 @@
 import { rng } from '../src/village/rules/golf';
 import { casual, planner, playOut, step, type RunStats } from '../src/village/rules/players';
 import { SURFACE_ORDER, SURFACES } from '../src/village/rules/surfaces';
-import { DAYLIGHT } from '../src/village/rules/daylight';
+import { DAYLIGHT, RECEIPT_MINUTES } from '../src/village/rules/daylight';
 
 const N = Number(process.argv[2] ?? 400);
 /** Location index to deal (0 = first location, 1 = second). */
@@ -21,7 +21,7 @@ for (const wrap of [true, false]) {
         run.wrap = wrap;
         stats.push(playOut(run, mk(s)));
       }
-      const minutes = stats.map(st => DAYLIGHT.startMinutes + st.plays * DAYLIGHT.playMinutes + st.draws * DAYLIGHT.drawMinutes);
+      const minutes = stats.map(st => DAYLIGHT.startMinutes + st.plays * RECEIPT_MINUTES[id] + st.draws * DAYLIGHT.drawMinutes);
       const perUnit = stats.map((st, i) => minutes[i] / Math.max(1, st.earned));
       console.log(`${id.padEnd(8)} ${label.padEnd(8)} plays ${mean(stats.map(s => s.plays)).toFixed(1).padStart(5)}  draws ${mean(stats.map(s => s.draws)).toFixed(1).padStart(5)}  earned ${mean(stats.map(s => s.earned)).toFixed(1).padStart(5)}  cleared ${(100 * mean(stats.map(s => +s.cleared))).toFixed(0).padStart(3)}%  chain med ${pct(stats.map(s => s.bestChain), 0.5)}  full-run min ${mean(minutes).toFixed(0)}  min/unit ${mean(perUnit).toFixed(1)}`);
     }
@@ -49,7 +49,7 @@ for (const id of SURFACE_ORDER) {
             if (leaver && sinceDraw.length >= 4 && sinceDraw.slice(-3).every(x => x < 2)) break;
             if (DAYLIGHT.dayMinutes - minutes < DAYLIGHT.drawMinutes) break;
             r = draw(r); minutes += DAYLIGHT.drawMinutes;
-          } else if (m === 'left' || m === 'right') { r = step(r, m); } else { r = play(r, m); minutes += DAYLIGHT.playMinutes; }
+          } else if (m === 'left' || m === 'right') { r = step(r, m); } else { r = play(r, m); minutes = Math.min(DAYLIGHT.dayMinutes, minutes + RECEIPT_MINUTES[id]); }
         }
         units += r.earned;
         // Dealing is free now (no walking), so a deal that can't move before dusk ends the day.

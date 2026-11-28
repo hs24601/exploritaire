@@ -1,6 +1,6 @@
 /* Isometric village map (IsoMapView). Shares the chip label and button language of the top-down map. */
 .vg-iso { position: absolute; inset: 0; overflow: hidden; touch-action: none;
-  background: radial-gradient(120% 90% at 50% 40%, #2b3a28, #151c15 70%); }
+  background: radial-gradient(120% 90% at 50% 40%, #202d2e, #10191d 78%); }
 .vg-stage.has-sheet .vg-iso { visibility: hidden; }
 .vg-iso-canvas { display: block; cursor: grab; touch-action: none; }
 .vg-iso-canvas:active { cursor: grabbing; }

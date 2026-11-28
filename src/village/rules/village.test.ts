@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DAYLIGHT } from './daylight';
+import { DAYLIGHT, RECEIPT_MINUTES } from './daylight';
+import { dealSapling, INSPIRATION_COLUMN } from './sapling';
 import { planVillageReceipts } from './autoSolve';
 import { activeAspen, aspenSeed, aspenSpill } from './aspen';
 import { dailyMaxApBonus, migrate, newGame, reduce, type Action, type GameState } from './game';
@@ -31,10 +32,25 @@ it('places, digs, houses, and upgrades a den across multiple days', () => {
   const banks = game.parties.find(party => party.members.includes('banks'))!;
   const plot = tileIndex(1, 4);
   const act = (action: Action) => { game = reduce(game, action); };
+  expect(reduce(game, { type: 'den-place', tile: plot, improve: false })).toBe(game);
+  act({ type: 'sapling-open', from: hero.tile });
+  expect(game.sapling?.piles.map(pile => pile.length)).toEqual(Array(7).fill(4));
+  for (let remaining = 3; remaining >= 0; remaining--) {
+    const receipt = planVillageReceipts(game)[0];
+    expect(receipt).toEqual({ type: 'sapling-play', column: INSPIRATION_COLUMN });
+    act(receipt);
+    expect(game.sapling?.inspiration).toBe(remaining);
+    expect(game.minutes).toBe((4 - remaining) * RECEIPT_MINUTES.sapling);
+    expect(game.sapling?.piles.map(pile => pile.length)).toEqual(Array(7).fill(4));
+  }
+  game = migrate(JSON.parse(JSON.stringify(game)))!;
+  expect(game.sapling?.inspiration).toBe(0);
+  expect(game.sapling?.collected).toBe(false);
+  act({ type: 'sapling-collect' });
   act({ type: 'den-place', tile: plot, improve: false });
   expect(game.den?.dig?.piles.map(pile => pile.length)).toEqual(Array(7).fill(4));
   expect(reduce(game, { type: 'den-start', from: banks.tile })).toBe(game);
-  act({ type: 'den-start', from: hero.tile });
+  act({ type: 'den-start', from: tileIndex(SAPLING.x, SAPLING.y) });
   const plan = planVillageReceipts(game);
   expect(plan).toHaveLength(14);
   for (const move of plan) act(move);
@@ -82,6 +98,7 @@ it('places, digs, houses, and upgrades a den across multiple days', () => {
 
 it('charges 1 AP for a den foundation draw and allows sequences at zero AP', () => {
   let game = newGame(42);
+  game.sapling = { ...dealSapling(game.seed), inspiration: 0, collected: true };
   const hero = game.parties.find(party => party.members.includes('hero'))!;
   game = reduce(game, { type: 'den-place', tile: tileIndex(1, 4), improve: false });
   game = reduce(game, { type: 'den-start', from: hero.tile });
@@ -96,7 +113,9 @@ it('charges 1 AP for a den foundation draw and allows sequences at zero AP', () 
   expect(drawn.den?.dig?.stock).toEqual([nextRank]);
   expect(reduce(drawn, { type: 'den-draw' })).toBe(drawn);
   expect(planVillageReceipts(drawn)).toEqual(opening);
-  expect(reduce(drawn, opening[0]).stamina.hero).toBe(0);
+  const excavated = reduce(drawn, opening[0]);
+  expect(excavated.stamina.hero).toBe(0);
+  expect(excavated.minutes - drawn.minutes).toBe(RECEIPT_MINUTES.den);
 });
 
 it('uncovering Sunny Hedge leaves preserves berry ranks and upgrades old saves', () => {
@@ -141,7 +160,8 @@ it('collects a spilled card once and sequences it through a matching foundation'
   const played = reduce(game, plan[0]);
   expect(played.aspenCards).toEqual([]);
   expect(activeAspen(played.aspen)!.hp).toBe(target.hp - 1);
-  expect(played.stamina.hero).toBe(5);
+  expect(played.stamina.hero).toBe(6);
+  expect(played.minutes - game.minutes).toBe(RECEIPT_MINUTES.forest);
 });
 
 it('edits day, time, inventory, kin stamina and unlocks independently for playtesting', () => {
@@ -155,31 +175,42 @@ it('edits day, time, inventory, kin stamina and unlocks independently for playte
   expect(edited.village.resources).toEqual({ lumber: 10, food: 0, stone: 20 });
 });
 
-it('spends only the receiving kin’s stamina and keeps tree progress through dawn', () => {
+it('charges only foundation draws in Aspen Grove and Sunny Hedge', () => {
   let game = newGame(42);
   const hero = game.parties.find(p => p.members.includes('hero'))!;
   game = reduce(game, { type: 'deploy', surface: 'forest', from: hero.tile });
   game = reduce(game, { type: 'aspen-target', tree: 0 });
-  const plan = planVillageReceipts(game);
-  expect(plan).toHaveLength(6);
-  const initialHp = activeAspen(game.aspen)!.hp;
-  for (const move of plan) game = reduce(game, move);
-  expect(game.stamina).toEqual({ hero: 0, mochi: 6, banks: 6, demi: 6 });
-  expect(activeAspen(game.aspen)!.hp).toBe(initialHp - 6);
-  expect(planVillageReceipts(game)).toEqual([]);
-  expect(reduce(game, { type: 'aspen-play', pile: 0, foundation: 0 })).toBe(game);
+  const tree = activeAspen(game.aspen)!;
+  tree.stock = [tree.foundations[0].rank];
+  game.stamina.hero = 1;
   game = reduce(game, { type: 'aspen-draw', foundation: 0 });
-  expect(game.stamina.hero).toBe(0);
+  expect(game.stamina).toEqual({ hero: 0, mochi: 6, banks: 6, demi: 6 });
+  expect(reduce(game, { type: 'aspen-draw', foundation: 0 })).toBe(game);
+  const plan = planVillageReceipts(game);
+  expect(plan).toHaveLength(tree.hp);
+  game = reduce(game, plan[0]);
+  expect(activeAspen(game.aspen)!.hp).toBe(tree.hp - 1);
   expect(migrate(JSON.parse(JSON.stringify(game)))!.stamina.hero).toBe(0);
   game = { ...reduce(game, { type: 'view', view: 'village' }), rankReached: 2 };
   const deployed = game.parties.find(p => p.members.includes('hero'))!;
   game = reduce(game, { type: 'deploy', surface: 'berries', from: deployed.tile });
   expect(game.active?.surface).toBe('berries');
-  expect(planVillageReceipts(game)).toEqual([]);
-  expect(reduce(game, { type: 'play', pile: 0 })).toBe(game);
+  expect(reduce(game, { type: 'draw' })).toBe(game);
+  game.stamina.hero = 1;
+  const before = game.active!.run;
+  game = reduce(game, { type: 'draw' });
+  expect(game.stamina.hero).toBe(0);
+  expect(game.active!.run.stock).toHaveLength(before.stock.length - 1);
+  const berries = game.active!.run;
+  berries.foundation = [{ id: 90, rank: 5, yield: 1 }];
+  berries.piles[0].cards = [{ id: 91, rank: 6, yield: 1 }];
+  const receipt = planVillageReceipts(game)[0];
+  expect(receipt?.type).toBe('play');
+  game = reduce(game, receipt);
+  expect(game.stamina.hero).toBe(0);
   game = reduce(reduce(game, { type: 'rest' }), { type: 'dawn' });
   expect(game.stamina.hero).toBe(6);
-  expect(activeAspen(game.aspen)!.hp).toBe(initialHp - 6);
+  expect(activeAspen(game.aspen)!.hp).toBe(tree.hp - 1);
 });
 
 describe('golf surfaces', () => {
@@ -296,8 +327,7 @@ describe('golf surfaces', () => {
 });
 
 describe('daylight', () => {
-  it('tableau plays cost little and stock draws cost much more', () => {
-    expect(DAYLIGHT.drawMinutes).toBeGreaterThanOrEqual(DAYLIGHT.playMinutes * 5);
+  it('starts the run for free and charges daylight for a stock draw', () => {
     let g = reduce(newGame(9), { type: 'start', surface: 'forest' });
     expect(g.minutes).toBe(DAYLIGHT.startMinutes);
     g = reduce(g, { type: 'draw' });
@@ -307,10 +337,13 @@ describe('daylight', () => {
   it('the stock refuses a draw the light cannot pay for, and dusk ends the run and the day', () => {
     let seed = 1;
     while (legalPlays(SURFACES.forest.deal(seed)).length === 0) seed++;
-    let g = { ...newGame(seed), minutes: DAYLIGHT.dayMinutes - DAYLIGHT.startMinutes - DAYLIGHT.playMinutes };
+    let g = { ...newGame(seed), minutes: DAYLIGHT.dayMinutes - 1 };
     g = reduce(g, { type: 'start', surface: 'forest' });
     expect(reduce(g, { type: 'draw' })).toBe(g);
     g = reduce(g, { type: 'play', pile: legalPlays(g.active!.run)[0] });
+    expect(g.minutes).toBe(DAYLIGHT.dayMinutes);
+    expect(g.lastRun?.run.receipts).toBe(1);
+    expect(g.lastRun?.minutes).toBe(1);
     expect(g.active).toBeNull();
     expect(g.night).not.toBeNull();
   });
@@ -567,7 +600,7 @@ function playSlice(seed: number, maxDays = 20): GameState {
     }
     for (const w of g.village.gate) act({ type: 'welcome', kin: w.kin });
     if (g.night) act({ type: 'dawn' });
-    else if (!g.active && g.minutes > DAYLIGHT.dayMinutes - 60) { act({ type: 'rest' }); act({ type: 'dawn' }); }
+    else if (!g.active && (g.stamina.hero === 0 || g.minutes > DAYLIGHT.dayMinutes - 60)) { act({ type: 'rest' }); act({ type: 'dawn' }); }
   }
   return g;
 }

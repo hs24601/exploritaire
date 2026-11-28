@@ -196,13 +196,13 @@ export function Tableau({ surface, layout, run, drawCost, canDraw, canWork, work
           </div>
           <div className="vg-playrow">
             <button type="button" className="vg-stock" style={size} onClick={onDraw} disabled={!canDraw}
-              title={`Turn a stock card · ${drawCost ? durationLabel(drawCost) + ' of daylight' : 'Free'}`}
-              aria-label={`Turn a stock card, ${drawCost} minutes of daylight`}>
+              title={`Turn a stock card · 1 AP · ${durationLabel(drawCost)} of daylight`}
+              aria-label={`Turn a stock card, 1 AP and ${drawCost} minutes of daylight`}>
               {run.stock.length > 0 ? <div className={`vg-card is-back is-${surface}`} style={size} /> : <div className="vg-slot" style={size} />}
               <span className="vg-stock-count">{run.stock.length}</span>
-              <span className="vg-stock-cost">{drawCost ? `+${durationLabel(drawCost)}` : 'free'}</span>
+              <span className="vg-stock-cost">1 AP</span>
             </button>
-            <div className={`vg-foundation${overFoundation ? ' is-over' : ''}`} title={worker ? `${worker.name} · ${worker.stamina ? `${worker.stamina} stamina` : 'Exhausted until dawn'}` : 'Drop a matching card onto the foundation'} data-drop="foundation" style={size}>
+            <div className={`vg-foundation${overFoundation ? ' is-over' : ''}`} title={worker ? `${worker.name} · ${worker.stamina} AP available for draws` : 'Drop a matching card onto the foundation'} data-drop="foundation" style={size}>
               {base && <PlayingCard key={base.id} card={base} surface={surface} style={size} className="is-landed is-foundation" />}
               {worker && <StaminaPips value={worker.stamina} max={worker.max} />}
             </div>

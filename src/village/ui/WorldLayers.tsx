@@ -38,14 +38,13 @@ export function useVillageLight(game: GameState) {
   const lights = useMemo(() => villageLights(game), [game.parties, game.village.plots, game.den, game.rankReached]);
   const ambient = useMemo(() => ambientFor(game), [game.minutes, game.village, game.night]);
   const seen = useRef<{ seed: number; tiles: Set<number> } | null>(null);
-  if (!seen.current || seen.current.seed !== game.seed) seen.current = { seed: game.seed, tiles: new Set(loadSeen(game.seed)) };
-  // A fresh day-one game forgets the old map.
-  if (game.day === 1 && game.minutes === 0 && !game.village.plots.some(Boolean)) seen.current.tiles = new Set();
-  const known = useMemo(() => knownTiles(seen.current!.tiles, game, lights), [lights, game.rankReached, game.seed]);
+  const worldSeed = game.worldSeed ?? game.seed;
+  if (!seen.current || seen.current.seed !== worldSeed) seen.current = { seed: worldSeed, tiles: new Set(loadSeen(worldSeed)) };
+  const known = useMemo(() => knownTiles(seen.current!.tiles, game, lights), [lights, game.rankReached, worldSeed]);
   useEffect(() => {
-    seen.current = { seed: game.seed, tiles: known };
-    try { localStorage.setItem(SEEN_KEY, JSON.stringify({ seed: game.seed, tiles: [...known] })); } catch { /* private mode */ }
-  }, [known, game.seed]);
+    seen.current = { seed: worldSeed, tiles: known };
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify({ seed: worldSeed, tiles: [...known] })); } catch { /* private mode */ }
+  }, [known, worldSeed]);
   return { lights, ambient, known };
 }
 
@@ -64,11 +63,11 @@ function stamp(ctx: CanvasRenderingContext2D, palette: WashPalette, variation: n
 
 const terrainCache = new Map<number, HTMLCanvasElement>();
 /**
- * Terrain colour, painted like the grove floor (portals.html?tree): rotated radial-dab
+ * Terrain colour (shared with the isometric map), painted like the grove floor (portals.html?tree): rotated radial-dab
  * wash islands, here placed by the height field: ochre on hill shoulders, slate on
  * rock, white dabs on the snow line, blue in the lake basin, a worn earth berm.
  */
-function bakeTerrain(px: number, rich: boolean): HTMLCanvasElement {
+export function bakeTerrain(px: number, rich: boolean): HTMLCanvasElement {
   const hit = terrainCache.get(px);
   if (hit) return hit;
   const c = document.createElement('canvas');
@@ -119,7 +118,7 @@ function contourPaths() {
 }
 
 /** Hillshade for the current sun, at two samples per tile (smooth, upscaled by the compositor). */
-function paintShade(canvas: HTMLCanvasElement, a: Ambient) {
+export function paintShade(canvas: HTMLCanvasElement, a: Ambient) {
   const S = 2, W = B.w * S, H = B.h * S;
   if (canvas.width !== W) { canvas.width = W; canvas.height = H; }
   const ctx = canvas.getContext('2d')!;
@@ -154,7 +153,7 @@ const PAPER = { r: 205, g: 193, b: 164 };
  * Known-ness is interpolated between square centres and roughened with noise, so the
  * edge of the explored map reads like a wash that stopped, not a staircase.
  */
-function paintLight(canvas: HTMLCanvasElement, a: Ambient, lights: readonly VillageLight[], known: Set<number>, S: number) {
+export function paintLight(canvas: HTMLCanvasElement, a: Ambient, lights: readonly VillageLight[], known: Set<number>, S: number) {
   const W = B.w * S, H = B.h * S;
   if (canvas.width !== W) { canvas.width = W; canvas.height = H; }
   const ctx = canvas.getContext('2d')!;

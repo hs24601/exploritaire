@@ -1,5 +1,5 @@
-import { DAYLIGHT, durationLabel } from '../rules/daylight';
-import { daylightLeft, drawCost, maxStamina, runTotal, surfaceWorkers, type Action, type GameState } from '../rules/game';
+import { DAYLIGHT, RECEIPT_MINUTES, durationLabel } from '../rules/daylight';
+import { daylightLeft, drawCost, maxStamina, runTotal, surfaceDrawWorker, surfaceWorkers, type Action, type GameState } from '../rules/game';
 import { runEnd } from '../rules/golf';
 import { masteryProgress } from '../rules/mastery';
 import { SURFACES, type SurfaceId } from '../rules/surfaces';
@@ -17,7 +17,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
   const inspectKin = useKinJumbo();
   const def = SURFACES[surface];
   const actors = surfaceWorkers(game, surface);
-  const worker = actors.find(kin => game.stamina[kin] > 0);
+  const worker = surfaceDrawWorker(game, surface);
   const shownWorker = worker ?? actors[0];
   const active = game.active?.surface === surface ? game.active : null;
   const shown = active ?? (game.lastRun?.surface === surface ? game.lastRun : null);
@@ -69,8 +69,8 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
           {shown ? (
             <Tableau surface={surface} layout={def.layout} run={shown.run}
               worker={shownWorker ? { name: KIN_TOKENS[shownWorker].name, stamina: game.stamina[shownWorker], max: maxStamina(game, shownWorker) } : undefined}
-              canWork={!!active && (!actors.length || !!worker)}
-              drawCost={cost} canDraw={!!active && shown.run.stock.length > 0 && cost <= left}
+              canWork={!!active}
+              drawCost={cost} canDraw={!!active && !!worker && shown.run.stock.length > 0 && cost <= left}
               onPlay={pile => active && dispatch({ type: 'play', pile })} onFall={active ? side => dispatch({ type: 'fall', side }) : undefined} onDraw={() => active && dispatch({ type: 'draw' })} />
           ) : (
             <div className="vg-idle">
@@ -119,7 +119,7 @@ export function SurfaceView({ game, surface, dispatch }: { game: GameState; surf
           </table>
 
           <div className="vg-costs">
-            <div><Icon name="clock" size={18} /><span>Play a card</span><strong>{durationLabel(DAYLIGHT.playMinutes)}</strong></div>
+            <div><Icon name="clock" size={18} /><span>Play a card</span><strong>{durationLabel(RECEIPT_MINUTES[surface])}</strong></div>
             <div><Icon name="clock" size={18} /><span>Turn the stock</span><strong>{cost ? durationLabel(cost) : 'Free (Cir)'}</strong></div>
           </div>
 

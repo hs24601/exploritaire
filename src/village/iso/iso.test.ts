@@ -42,3 +42,21 @@ describe('isometric terrain tiers', () => {
     expect(raised).toBeGreaterThan(20);
   });
 });
+
+describe('drifting mist', () => {
+  it('rides the wind across the grid', async () => {
+    const { mistPockets } = await import('./mist');
+    const at = (t: number) => mistPockets(-20, -20, 20, 20, t, 1, []);
+    const a = new Map(at(0).map(p => [p.key, p])), b = at(10);
+    const moved = b.filter(p => a.has(p.key)).map(p => p.x - a.get(p.key)!.x);
+    expect(moved.length).toBeGreaterThan(10);
+    expect(moved.reduce((s, d) => s + d, 0) / moved.length).toBeGreaterThan(0.4);
+  });
+
+  it('parts around Hero', async () => {
+    const { mistPockets } = await import('./mist');
+    const near = (list: ReturnType<typeof mistPockets>) => list.filter(p => Math.hypot(p.x - 4.5, p.y - 8.5) < 1).reduce((s, p) => s + p.a, 0);
+    const open = mistPockets(0, 4, 10, 13, 5, 1, []), cleared = mistPockets(0, 4, 10, 13, 5, 1, [{ x: 4.5, y: 8.5, radius: 2 }]);
+    expect(near(cleared)).toBeLessThanOrEqual(near(open) * 0.5 + 1e-9);
+  });
+});

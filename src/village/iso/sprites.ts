@@ -23,6 +23,8 @@ export interface IsoSpriteDef {
   /** Animation frames per heading, down the rows. Default 1. */
   frames?: number;
   fps?: number;
+  /** Separate walk rows in a sheet whose row zero is the standing pose. */
+  walk?: { frames: number; fps: number };
 }
 
 export interface IsoSpriteSet {
@@ -39,7 +41,7 @@ export interface LoadedSprite { def: Required<Pick<IsoSpriteDef, 'cell' | 'pivot
 /** Where the renderer looks for sets. Eric's Hero sheets go in the kin folder. */
 export const ISO_SPRITE_SETS = [
   '/assets/runtime/village/iso/v1/manifest.json',
-  '/assets/runtime/kin/hero/sprites/world/painterly-zootopia-v1/manifest.json',
+  '/assets/runtime/kin/hero/sprites/world/animal-forward-world-v1/manifest.json',
 ];
 
 export const DEFAULT_CELL: [number, number] = [256, 256];
@@ -58,11 +60,12 @@ async function fetchJson<T>(url: string): Promise<T | null> {
  * rear-quarter, rear; the side painted facing screen right; rows stand, walk 0-3,
  * ready). Read its `iso` sheet as the Hero sprite when no manifest.json exists.
  */
-interface HeroFrames { cellSize: number; sheets: Record<string, { file: string; anchor: [number, number] }> }
+interface HeroFrames { cellSize: number; walk?: { frames: number; previewFps: number }; sheets: Record<string, { file: string; anchor: [number, number] }> }
 const heroFramesSet = (f: HeroFrames): IsoSpriteSet | null => f.sheets?.iso ? {
   set: 'hero-frames', version: 1,
   sprites: { 'kin.hero': { src: f.sheets.iso.file, cell: [f.cellSize, f.cellSize], pivot: f.sheets.iso.anchor,
-    tileWidthPx: DEFAULT_KIN_TILE_WIDTH_PX, headings: { S: 0, SE: 1, E: 2, NE: 3, N: 4 } } },
+    tileWidthPx: DEFAULT_KIN_TILE_WIDTH_PX, headings: { S: 0, SE: 1, E: 2, NE: 3, N: 4 },
+    walk: f.walk && { frames: f.walk.frames, fps: f.walk.previewFps } } },
 } : null;
 
 async function loadSet(url: string): Promise<Map<string, LoadedSprite>> {
@@ -100,12 +103,14 @@ export function loadIsoSprites(): Promise<Map<string, LoadedSprite>> {
 }
 
 /** Source rectangle and mirroring for a sprite at a heading and time. */
-export function spriteFrame(sprite: LoadedSprite, heading: Heading, ms: number) {
+export function spriteFrame(sprite: LoadedSprite, heading: Heading, ms: number, walkingMs?: number) {
   const { def } = sprite;
   const painted = def.headings?.[heading] !== undefined ? heading : MIRRORED[heading];
   const mirror = def.headings?.[heading] === undefined && painted !== undefined;
   const column = (painted && def.headings?.[painted]) ?? 0;
-  const row = def.frames > 1 && def.fps > 0 ? Math.floor(ms / (1000 / def.fps)) % def.frames : 0;
+  const row = walkingMs !== undefined && def.walk
+    ? 1 + Math.floor(walkingMs * def.walk.fps / 1000) % def.walk.frames
+    : def.frames > 1 && def.fps > 0 ? Math.floor(ms / (1000 / def.fps)) % def.frames : 0;
   const [cw, ch] = def.cell;
   return { sx: column * cw, sy: row * ch, sw: cw, sh: ch, mirror };
 }

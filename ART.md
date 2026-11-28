@@ -186,6 +186,14 @@ The primary gold standard for new art is `public/assets/runtime/ui/quests/hero-s
 3. Inspect the result beside the reference at full size and intended display size, including the face. Check for loose wash transitions, varied brush sizes, grouped values, restrained features, and a unified hand-painted surface. Check transparent cutouts on both light and dark backgrounds for opaque pale fur and clean alpha. If it looks like a detailed digital mascot or a mosaic of sharp strokes, revise the prompt and regenerate before acceptance; a watercolor label alone is not evidence of a match.
 4. Keep sources, exact prompts and reference roles with project-bound output, and preserve earlier studies as versioned alternatives. These checks guide visual judgment, not a guarantee of identical results.
 
+### Animal-forward painterly Hero
+
+Use the [approved dressed standing turnaround](./public/assets/sources/kin/hero/sprites/world/animal-forward-standing-v1/standing-master.png) as the direct design reference for Hero's anthropomorphic game sprites. The rounded, preschool-like pass called “Daniel Tiger” in review is superseded for this sprite family. Supply the actual Hero berry painting separately as the direct reference for soft watercolor washes and matte gouache. Supply real dog photos only for requested coat colors and markings.
+
+- **Anatomy.** Preserve the approved turnaround's longer canine muzzle, upright ears, prominent cream ruff, sloping shoulders, low-set natural hips, bent hocks, bare hind paws, and paw-shaped hands. Match the reference's head-to-body ratio, silhouette and visible tail across camera angles. Standing and walking remain bipedal with relaxed shoulders, alternating arm swing and weight transfer through the paws. For all-fours readiness, lower the same body through its existing joints.
+- **Wardrobe.** Fit the muted olive short-sleeve shirt and khaki shorts to Hero's anatomy. Let the ruff overlap the neckline, leave room for the tail, and keep both coral ear bows visible where the view permits. Bare paws are the default. Attach footwear or gear only when requested.
+- **ImageGen and review.** Supply the approved dressed turnaround for anatomy and wardrobe, the outgoing atlas for pose, camera, scale and cell order, and the berry painting for brushwork. Review front, three-quarter and profile at game size before accepting the orbit. Check the longer muzzle, ruff, hocks and paw shape in the standing, walk-contact and passing frames. Keep the projection, ground anchor and scale stable through the cycle. Verify complete silhouettes, transparent gutters, and pale fur that stays opaque over light and dark backgrounds.
+
 Dem's natural-pose experiment is `artifacts/dem-style-v3/dem-natural-v1.png`: the same approved character/style without supernatural ice, glow or particles. It is an alternate study, not a replacement for their elemental design. Dem is named in reference to Demeter and uses they/them pronouns throughout character authoring and copy.
 
 - Creature-based Keru direction (Eric, 2026-10-23): replace the first Dem/Bri/Sol/Vey/Flux/Axi spirit mascots with recognizable mature polar bear/stag/crane/panther/hyena/tortoise anatomy, respectively. Elemental ice, growth, radiance, shadow, chaotic weather and ordered stone motifs grow from the animal silhouette. Smaller eyes, mature proportions, natural posture and varied temperaments are required; avoid ubiquitous hyper-cuteness. Cir becomes a fierce meteor phoenix, retaining a white-hot core and long gold-orange shooting-star train; this supersedes preserving the orb/flame-arms design. Keep broad diffuse watercolor, separate transparent subjects and reusable scenery, and code-rendered card UI. Earlier sprite versions remain historical.
@@ -758,6 +766,8 @@ Source context: GAME.md / Card-driven travel (Eric, 2026-10-14).
 <a id="contract-033"></a>
 
 ### Curious Sapling
+
+- Village Sapling tableau: depict the first growth stage from the side as a short bare twig with sparse emerging green buds. Use `public/assets/runtime/village/ground/curious-sapling-bud-side-v1.png` with the master and prompt in the matching `sources/village/ground/curious-sapling-bud-side-v1/` directory.
 
 - Village seedling variant: paint the grid-map seedling in a straight-down orthographic view. The user’s maple seedling photo guides its scale and the Hero berry painting guides the watercolor treatment. The transparent sprite keeps light and particles separate for live fog and camera movement. Runtime is `public/assets/runtime/village/ground/curious-sapling-overhead-seedling-v2.png`; the matching master and exact prompt are under `public/assets/sources/village/ground/curious-sapling-overhead-seedling-v2/`. The side-view v1 study is retained.
 

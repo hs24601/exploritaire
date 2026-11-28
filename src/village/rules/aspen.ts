@@ -63,8 +63,8 @@ export function dealAspen(seed: number, members: TokenKin[]): AspenRun {
   return { piles, foundations, stock: deck, hp: maxHp, maxHp, phase: 'standing' };
 }
 
-export function aspenAccepts(run: AspenRun, pile: number, foundation: number, stamina?: KinStamina): boolean {
-  return aspenAcceptsRank(run, aspenTop(run, pile), foundation, stamina);
+export function aspenAccepts(run: AspenRun, pile: number, foundation: number): boolean {
+  return aspenAcceptsRank(run, aspenTop(run, pile), foundation);
 }
 
 export function aspenTop(run: AspenRun, pile: number): Rank | undefined {
@@ -72,9 +72,9 @@ export function aspenTop(run: AspenRun, pile: number): Rank | undefined {
   return cards && cards[cards.length - 1];
 }
 
-export function aspenAcceptsRank(run: AspenRun, rank: Rank | undefined, foundation: number, stamina?: KinStamina): boolean {
+export function aspenAcceptsRank(run: AspenRun, rank: Rank | undefined, foundation: number): boolean {
   const base = run.foundations[foundation];
-  return run.phase === 'standing' && !!base && (!stamina || stamina[base.kin] > 0) && rank !== undefined && adjacent(rank, base.rank, true);
+  return run.phase === 'standing' && !!base && rank !== undefined && adjacent(rank, base.rank, true);
 }
 
 export function aspenReceive(run: AspenRun, rank: Rank, foundation: number): AspenRun {
